@@ -1383,13 +1383,13 @@ function reverberer(S, SR) {
 }
 /* </synthese> */
 // La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
-function synthetiser(SR) {
+function synthetiser(SR, humide) { // deux envois : les sons secs tout de suite, puis leur reverberation des qu'elle est calculee
   return new Promise((ok, ko) => {
     try {
       const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() + '\n' + reverberer.toString() +
-        '\nonmessage = e => { const o = reverberer(toutesLesRecettes(creerBruitages(e.data.SR, 4242)), e.data.SR), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) { tr.push(x.L.buffer, x.R.buffer); if (x.wL) tr.push(x.wL.buffer, x.wR.buffer); } postMessage(o, tr); };';
+        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)); postMessage({ sec: o }); reverberer(o, e.data.SR); const h = {}, tr = []; for (const [k, v] of Object.entries(o)) { const l = Array.isArray(v) ? v : [v]; if (l[0].wL) h[k] = l.map(x => { tr.push(x.wL.buffer, x.wR.buffer); return { L: x.wL, R: x.wR }; }); } postMessage({ humide: h }, tr); };';
       const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
-      w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
+      w.onmessage = e => { if (e.data.sec) ok(e.data.sec); else { humide(e.data.humide); w.terminate(); URL.revokeObjectURL(url); } };
       w.onerror = e => { w.terminate(); ko(e); };
       w.postMessage({ SR });
     } catch (e) { ko(e); }
@@ -1412,12 +1412,14 @@ const Son = (() => {
     const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.15;
     const sortie = ctx.createGain(); sortie.gain.value = 0.9;
     bus = ctx.createGain(); bus.connect(coupe[0]); coupe[0].connect(coupe[1]); coupe[1].connect(allege); allege.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
-    let S;
-    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = reverberer(toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)), ctx.sampleRate); window.__sonVia = 'page'; }
-    // la reverberation est deja dans chaque son (calculee d'avance) : elle passe par ce retour, que le silence fait tomber
+    let S, H = null;
+    const mouiller = H => { for (const [k, l] of Object.entries(H)) l.forEach((s, i) => { const b = Array.isArray(B[k]) ? B[k][i] : B[k]; if (b) b.humide = tampon(s.L, s.R); }); window.__sonHumide = true; };
+    try { S = await synthetiser(ctx.sampleRate, h => B ? mouiller(h) : (H = h)); window.__sonVia = 'worker'; } catch (e) { S = reverberer(toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)), ctx.sampleRate); window.__sonVia = 'page'; }
+    // la reverberation de chaque son est calculee d'avance (un second tampon, « humide ») : elle passe par ce retour, que le silence fait tomber
     retour = ctx.createGain(); retour.gain.value = 0.6; retour.connect(bus);
     B = {};
     for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(deux) : deux(r);
+    if (H) mouiller(H);
     ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
     ambGain = ctx.createGain(); ambGain.gain.value = 0;
     ambFiltre.connect(ambGain); ambGain.connect(bus);

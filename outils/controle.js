@@ -35,11 +35,13 @@ const [,, fichier, dossier] = process.argv;
     const { browser, page, logs } = await ouvrir(fichier, { largeur: 1280, hauteur: 900 });
     const t0 = Date.now(); await page.click('#son');
     const pret = await page.waitForFunction(() => document.getElementById('son').textContent === 'Son activé', null, { timeout: 90000 }).then(() => true).catch(() => false);
-    const via = await page.evaluate(() => window.__sonVia);
+    const tPret = Date.now() - t0, via = await page.evaluate(() => window.__sonVia);
+    // la reverberation, calculee d'avance, arrive ensuite dans le meme worker
+    const tHumide = await page.waitForFunction(() => window.__sonHumide || window.__sonVia === 'page', null, { timeout: 90000 }).then(() => Date.now() - t0).catch(() => -1);
     await page.waitForTimeout(3000); await page.click('#son'); await page.waitForTimeout(300);
     const coupe = await page.textContent('#son');
     const err = logs.filter(l => /\[(error|exception)\]/.test(l));
-    bilan.push(`${pret && via === 'worker' && coupe === 'Son coupé' && !err.length ? 'ok' : 'ÉCHEC'} son : prêt en ${Date.now() - t0} ms via ${via}, puis « ${coupe} »${err.length ? '\n  ' + err.join('\n  ') : ''}`);
+    bilan.push(`${pret && via === 'worker' && tHumide > 0 && coupe === 'Son coupé' && !err.length ? 'ok' : 'ÉCHEC'} son : prêt en ${tPret} ms via ${via}, réverbération prête à ${tHumide} ms, puis « ${coupe} »${err.length ? '\n  ' + err.join('\n  ') : ''}`);
     await browser.close();
   }
   console.log(bilan.join('\n'));
