@@ -22,9 +22,10 @@ Les temps sont comptés depuis le début de l'Art, sans les arrêts sur coup (40
 
 Le même que pour les autres Arts :
 
+- coupe des sous-graves : `AudioEffectHighPassFilter` à 35 Hz, pente 24 dB, puis `AudioEffectLowShelfFilter` à 90 Hz, gain 0,71 (−3 dB) ;
 - réverbération longue et sombre, environ 3,4 s, renvoyée à 0,6 ;
-- compresseur : seuil −24 dB, ratio 5, attaque 2 ms, relâchement 300 ms ;
-- légère saturation, puis limiteur à −1,5 dB.
+- compresseur : seuil −24 dB, ratio 5, attaque 4 ms, relâchement 300 ms ;
+- légère saturation, puis limiteur à −3 dB (`AudioEffectHardLimiter`, plafond −3 dB).
 
 ## Ducking
 

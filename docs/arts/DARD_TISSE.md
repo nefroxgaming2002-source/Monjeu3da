@@ -67,7 +67,7 @@ Des souffles, des cordes qui se tendent, de la chair humide et des battements. R
 - **Éclosion** :
   - claquement ;
   - coup saturé ;
-  - grave de 60 à 22 Hz ;
+  - grave de 60 à 30 Hz (le bus coupe en dessous de 35 Hz) ;
   - déchirure humide ;
   - cordes qui se tendent ;
   - corps qui gronde.

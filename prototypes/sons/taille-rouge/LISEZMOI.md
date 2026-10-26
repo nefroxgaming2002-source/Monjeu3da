@@ -19,9 +19,10 @@ Les temps sont comptés depuis le début de l'Art, en vue cinéma avec le gel de
 
 ## Bus conseillé dans Godot
 
+- Coupe des sous-graves : `AudioEffectHighPassFilter` à 35 Hz, pente 24 dB, puis `AudioEffectLowShelfFilter` à 90 Hz, gain 0,71 (−3 dB).
 - Réverbération longue et sombre, environ 3,4 s, renvoyée à 0,6.
-- Compresseur : seuil −24 dB, ratio 5, attaque 2 ms, relâchement 300 ms.
-- Légère saturation, puis limiteur à −1,5 dB.
+- Compresseur : seuil −24 dB, ratio 5, attaque 4 ms, relâchement 300 ms.
+- Légère saturation, puis limiteur à −3 dB (`AudioEffectHardLimiter`, plafond −3 dB).
 
 ## Ducking
 

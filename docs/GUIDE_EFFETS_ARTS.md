@@ -60,6 +60,7 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
 | Tout désaturer et assombrir pendant le gel au point de ne plus rien lire | Assombrir modérément ; choisir un plan de caméra qui montre le sol et la lame. |
 | Pluie de petits éclats aigus de verre, de bronze ou de pierre (« bruits de pièces inutiles ») | Aucun tintement. La matière passe par des craquements graves, du bruit filtré et quelques chocs sourds. Le style vient des montées, des appels d'air inversés, des déchirements d'air et des impacts graves. |
+| Encore de petits grésillements « comme si ça buguait », alors que chaque son, écouté seul au casque, est propre. Deux causes dans le moteur commun : la réverbération de 3,4 s calculée en direct par un `ConvolverNode` (Chrome en calcule la queue sur un fil secondaire, qui décroche quand l'ordinateur peine), et jusqu'à 45 % de l'énergie sous 40 Hz (le haut-parleur d'un portable sature dessus) | Réverbération calculée d'avance pour chaque son (`reverberer()`), coupe à 35 Hz, limiteur à −3 dB. Ne pas toucher au moteur audio commun. `outils/son.js` refuse une page sans `reverberer()` et vérifie la part sous 40 Hz (15 % au plus). |
 | Petits clics partout, « comme si le son buguait » : crépitements à attaque instantanée et aigus, lanterne qui claque dans l'ambiance, fêlure de cloche hachée, dents de scie graves | Appliquer la règle « aucune friture » de la section 3.4, puis compter les grains au-dessus de 2 kHz dans le rendu complet (compresseur et réverbération compris) : un impact en donne un ou deux, une friture des dizaines. |
 | `smoothstep` à bornes égales, revenu sur le Dard Tissé : le rayon d'un trou pas encore ouvert valait 0, et **toute la place** est devenue violette | La règle ne suffisait pas : chercher chaque `smoothstep` dont une borne dépend d'un uniform qui peut valoir 0, puis sortir tôt (`if (r <= 0.001) return 0.0;`) ou borner (`max(r, 0.002)`). |
 | Lumière ponctuelle d'impact posée à 30 cm du sol : les dalles proches deviennent une nappe de couleur | Près du sol ou d'un corps, intensité de 1 au plus et hauteur d'au moins 0,6 m. Les fortes lumières restent en hauteur. |
@@ -128,16 +129,17 @@ Le modèle est le son d'une attaque spéciale d'anime ou d'une bande-annonce : u
 - **Impact** :
   - claquement ;
   - coup saturé ;
-  - grave de 60 à 22 Hz ;
+  - grave de 60 à 30 Hz (le bus coupe en dessous de 35 Hz) ;
   - corps d'explosion qui gronde plusieurs secondes ;
   - matière de l'Art, en craquements graves ;
   - quelques débris lourds et sourds (jamais une pluie d'éclats aigus).
 - **Contrepoint** : silence (on baisse tout, réverbération comprise), un battement sourd, puis le climax plus fort que l'impact. Chaque coup du contrepoint est précédé d'un appel d'air inversé (0,2 à 0,3 s) qui finit exactement sur lui.
 - **Clôture** : un son court et propre, sans longue résonance.
 - **Bus** :
-  - réverbération longue et sombre (environ 3,4 s) ;
-  - compresseur (seuil −24 dB, ratio 5) ;
-  - légère saturation, puis limiteur à −1,5 dB ;
+  - coupe des sous-graves : passe-haut à 35 Hz (24 dB par octave), puis −3 dB sous 90 Hz. Un haut-parleur de portable ne joue pas ces fréquences, mais il sature dessus et grésille ;
+  - réverbération longue et sombre (environ 3,4 s). Dans un prototype, elle est calculée d'avance pour chaque son (`reverberer()`, dans le moteur commun), jamais par un `ConvolverNode` en direct ;
+  - compresseur (seuil −24 dB, ratio 5, attaque 4 ms) ;
+  - légère saturation, puis limiteur à −3 dB ;
   - ambiance baissée pendant le gel et le silence.
 - **Mesure de contrôle** : environ 15 dB d'écart entre l'impact et le silence. Le climax est au niveau de l'impact ou au-dessus.
 - **Aucune friture** : tout ce qui fait de petits clics réguliers ou au hasard donne l'impression que le son bugue. Donc :

@@ -107,14 +107,14 @@ entre("// ---------------------------------------------------------------- le tr
 
 # ---------------------------------------------------------------- son
 entre("  // ---------------------------------------------------------------- l'Astrologue : air qui gronde", "    ambiance() { // vent dans les ruines", lire('son.js'))
-entre("function toutesLesRecettes(syn) {", "/* </synthese> */", lire('recettes.js'))
+entre("function toutesLesRecettes(syn) {", "// La reverberation de la place", lire('recettes.js'))
 
 # ---------------------------------------------------------------- mise en scene, camera, image, interface
 entre("// ================================================================== mise en scene", "// ================================================================== image", lire('scene.js'))
 entre("// ================================================================== image", "// ================================================================== interface", lire('image.js'))
 entre("function drawTimeline() {", "function changerVue(v) {", lire('interface.js'))
 patch("if (reduceMotion) { let n = 0; while (run.tau < T.plante + 80 && n++ < 400) step(1000 / 60); }", "if (reduceMotion) { let n = 0; while (run.tau < T.flor + 300 && n++ < 400) step(1000 / 60); }")
-patch("window.__traitEtoile = { seek(", "window.__dardTisse = { son: Son, T, get sim() { return run.sim; }, get tau() { return run.tau; }, seek(")
+patch("window.__traitEtoile = { son: Son, T, get sim() { return run.sim; }, get tau() { return run.tau; }, seek(", "window.__dardTisse = { son: Son, T, get sim() { return run.sim; }, get tau() { return run.tau; }, seek(")
 
 script = S.split('<script type="module">')[1]
 for mot in ['traitEtoile', 'lance.', 'cristaux', 'faille', 'verreScene', 'froid(', 'ASTROLOGUE', 'astres', 'uGel', 'snow.', 'givre', 'corpsNoir(u']:

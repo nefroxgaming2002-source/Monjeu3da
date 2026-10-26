@@ -1056,7 +1056,7 @@ function creerBruitages(SR, graine) {
     let cl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, cr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
     for (let i = 0; i < x.length; i++) {
       const j = o + i; if (j < 0) continue; if (j >= n) break;
-      if (pf && (i & 63) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
+      if (pf && (i & 7) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
       d.L[j] += x[i] * g * cl; d.R[j] += x[i] * g * cr;
     }
   }
@@ -1073,7 +1073,7 @@ function creerBruitages(SR, graine) {
     };
     const vf = typeof f === 'function'; if (!vf) maj(f);
     for (let i = 0; i < x.length; i++) {
-      if (vf && (i & 31) === 0) maj(f(i / SR));
+      if (vf && (i & 7) === 0) maj(f(i / SR));
       const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
     }
     return y;
@@ -1100,9 +1100,9 @@ function creerBruitages(SR, graine) {
     const y = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       if (R() >= dens(i / SR) / SR) continue;
-      const big = R() < gros, len = N(big ? RR(0.004, 0.014) : RR(0.0006, 0.003)), f = big ? RR(300, 1200) : RR(1500, 7500);
-      const amp = (big ? 0.7 : 0.35) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len);
-      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * Math.sin(w * j + ph); e *= k; }
+      const big = R() < gros, len = N(big ? RR(0.006, 0.016) : RR(0.003, 0.007)), f = big ? RR(150, 600) : RR(600, 1800);
+      const amp = (big ? 0.7 : 0.25) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len), att = N(big ? 0.002 : 0.0012);
+      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * (j < att ? 0.5 - 0.5 * Math.cos(Math.PI * j / att) : 1) * Math.sin(w * j + ph); e *= k; } // monte en douceur : pas de clic
     }
     return y;
   }
@@ -1138,7 +1138,7 @@ function creerBruitages(SR, graine) {
     const f0 = o.f0 ?? 58, f1 = o.f1 ?? 27, x = sinus(N(o.dur ?? 1.6), t => f1 + (f0 - f1) * Math.exp(-t / 0.22));
     mix(d, env(x, t => Math.min(1, t / 0.012) * Math.exp(-t / (o.tau ?? 0.5))), t0, g, 0);
   }
-  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.5; mix(d, x, t0, g, 0); }
+  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.15; x[1] += 0.3; x[2] += 0.15; mix(d, x, t0, g, 0); }
   function craque(d, t0, g, pan) { // l'armure qui cede
     const n = N(0.14), x = sat(env(filtre(blanc(n), 'bp', 1150, 0.9), t => Math.exp(-t / 0.028)), 5), y = env(filtre(blanc(n), 'bp', 3200, 1.5), t => Math.exp(-t / 0.012));
     for (let i = 0; i < n; i++) x[i] += y[i] * 0.6; mix(d, x, t0, g, pan);
@@ -1193,12 +1193,14 @@ function creerBruitages(SR, graine) {
     mix(d, env(sinus(n, t => 40 + 30 * t / dur), t => Math.pow(t / dur, 2.5)), t0, g * 0.6, 0);
   }
   // scie a bande limitee (polyBLEP) : la matiere des montees de puissance
-  function scie(n, fn) {
-    const y = new Float32Array(n); let ph = R();
+  function scie(n, fn) { // spectre de dent de scie, harmoniques dephasees au hasard (aucun front raide), coupees en douceur vers 3,2 kHz
+    const y = new Float32Array(n), H = 96, cp = new Float32Array(H + 1), sp = new Float32Array(H + 1), lim = Math.min(3200, SR * 0.4); let ph = R();
+    for (let h = 1; h <= H; h++) { const p = R() * TAU; cp[h] = Math.cos(p) / h; sp[h] = Math.sin(p) / h; }
     for (let i = 0; i < n; i++) {
-      const dt = fn(i / SR) / SR; ph += dt; if (ph >= 1) ph -= 1; let v = 2 * ph - 1;
-      if (ph < dt) { const u = ph / dt; v -= u + u - u * u - 1; } else if (ph > 1 - dt) { const u = (ph - 1) / dt; v -= u * u + u + u + 1; }
-      y[i] = v;
+      const f = fn(i / SR); ph += f / SR; if (ph >= 1) ph -= 1;
+      const c1 = Math.cos(TAU * ph), s1 = Math.sin(TAU * ph); let c = 1, s = 0, v = 0;
+      for (let h = 1; h <= H; h++) { const fh = f * h; if (fh > lim) break; const c2 = c * c1 - s * s1; s = s * c1 + c * s1; c = c2; v += (fh > 0.7 * lim ? (lim - fh) / (0.3 * lim) : 1) * (s * cp[h] + c * sp[h]); } // sin(h.a + p) par rotation
+      y[i] = v * 0.6366;
     }
     return y;
   }
@@ -1207,16 +1209,16 @@ function creerBruitages(SR, graine) {
     for (const [pan, cents] of [[-0.6, -7], [0.6, 7]]) {
       const x = new Float32Array(n);
       for (const r of [1, 1.5, 2]) { const z = scie(n, t => f0 * Math.pow(f1 / f0, k(t)) * r * Math.pow(2, cents / 1200)); for (let i = 0; i < n; i++) x[i] += z[i] * (r === 1 ? 1 : 0.6); }
-      const y = filtre(x, 'lp', t => 220 + 5200 * Math.pow(Math.min(1, t / dur), 2), 1.2);
+      const y = filtre(x, 'lp', t => 220 + 2400 * Math.pow(Math.min(1, t / dur), 2), 1.2);
       let ph = 0;
       for (let i = 0; i < n; i++) { const t = i / SR; ph += TAU * (6 + 24 * Math.min(1, t / dur)) / SR; y[i] *= Math.pow(Math.min(1, t / dur), o.courbe ?? 1.8) * (1 - 0.35 * (0.5 + 0.5 * Math.sin(ph))); }
-      mix(d, sat(y, 2.5), t0, g * 0.5, pan);
+      mix(d, sat(y, 1.8), t0, g * 0.5, pan);
     }
   }
   function chute(d, t0, g) { // le temps s'arrete : accord qui s'effondre vers le grave, etouffe
     const n = N(0.9), x = new Float32Array(n);
     for (const r of [1, 1.5, 2.01]) { const z = scie(n, t => 55 * r + 165 * r * Math.exp(-t / 0.16)); for (let i = 0; i < n; i++) x[i] += z[i]; }
-    mix(d, sat(env(filtre(x, 'lp', t => 180 + 2200 * Math.exp(-t / 0.14), 1), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
+    mix(d, sat(env(filtre(x, 'lp', t => 180 + 1300 * Math.exp(-t / 0.14), 0.8), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
   }
   function explosion(d, t0, g, o = {}) { // le coeur des grands coups : claquement, coup sature, grave, corps qui gronde, debris
     const tau = o.tau ?? 0.75, L = o.dur ?? 3.2, n = N(L);
@@ -1230,7 +1232,7 @@ function creerBruitages(SR, graine) {
       mix(d, sat(x, 2.4), t0, g * 1.1, pan);
     }
     mix(d, env(filtre(blanc(n), 'hp', 3000), t => Math.exp(-t / (tau * 0.35))), t0, g * 0.18, 0.2);
-    mix(d, crepite(n, t => (o.crep ?? 280) * Math.exp(-t / (tau * 1.4)), 0.18), t0 + 0.03, g * 0.7, -0.15);
+    mix(d, crepite(n, t => (o.crep ?? 280) * 0.3 * Math.exp(-t / (tau * 1.4)), 0.7), t0 + 0.03, g * 0.6, -0.15);
     mix(d, env(filtre(brun(n), 'lp', 110), t => Math.min(1, t / 0.05) * Math.exp(-t / (tau * 2.2))), t0, g * 1.4, 0);
   }
   function zan(d, t0, g, pan = 0) { // le "zan" de la lame : dechirure claire et courte, eclat metallique bref
@@ -1246,7 +1248,7 @@ function creerBruitages(SR, graine) {
       for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.4 + b[i] * 1.8) * Math.min(1, Math.pow(t / att, 1.4)) * Math.exp(-Math.max(0, t - att) / tau) * (1 + 0.6 * a1[i] + 0.35 * a2[i]); }
       mix(d, sat(x, 2), t0, g, pan);
     }
-    mix(d, crepite(n, t => (o.crep ?? 220) * Math.exp(-t / (tau * 1.2)), 0.15), t0 + 0.02, g * 0.6, 0.25);
+    mix(d, crepite(n, t => (o.crep ?? 220) * 0.3 * Math.exp(-t / (tau * 1.2)), 0.7), t0 + 0.02, g * 0.5, 0.25);
     mix(d, env(filtre(blanc(n), 'hp', 4000), t => Math.min(1, t / att) * Math.exp(-t / (tau * 0.5))), t0, g * 0.1, -0.25);
   }
   function battement(d, t0, g) { // un seul battement sourd dans le silence
@@ -1316,7 +1318,7 @@ function creerBruitages(SR, graine) {
       coup(d, 0.12, 0.25, { f0: 80, f1: 45, tau: 0.12, drive: 1.5 });
       return fondu(normer(d, 0.7), 0.3);
     },
-    ambiance() { // vent dans les ruines et lanterne, en boucle sans couture
+    ambiance() { // vent dans les ruines, en boucle sans couture
       const T = 8, X = 1, n = N(T + X), d = vide(T + X);
       for (const pan of [-0.7, 0.7]) {
         const m = lent(n, 0.35), am = lent(n, 0.22), x = filtre(rose(n), 'bp', t => 330 + 220 * m[Math.min(n - 1, Math.round(t * SR))], 0.6);
@@ -1324,7 +1326,6 @@ function creerBruitages(SR, graine) {
         mix(d, x, 0, 2.2, pan);
       }
       mix(d, filtre(brun(n), 'lp', 70), 0, 0.8, 0);
-      mix(d, crepite(n, () => 3, 0.15), 0, 0.15, -0.6);
       const out = vide(T), k = N(X), m = out.L.length;
       for (let i = 0; i < m; i++) { out.L[i] = d.L[i]; out.R[i] = d.R[i]; }
       for (let i = 0; i < k; i++) { const g = i / k; out.L[i] = d.L[i] * g + d.L[m + i] * (1 - g); out.R[i] = d.R[i] * g + d.R[m + i] * (1 - g); }
@@ -1342,13 +1343,51 @@ function toutesLesRecettes(syn) {
   return { reverb: syn.reverb(), charge660: syn.charge(0.66, true), charge240: syn.charge(0.24, false), lacher: syn.lacher(), ruee: syn.ruee(), impact: syn.impact(),
     entaille: [syn.entaille(), syn.entaille(), syn.entaille()], battement: syn.battement(), aspiration: syn.aspiration(), eclat: syn.eclat(), chiburi: syn.chiburi(), ambiance: syn.ambiance() };
 }
+// La reverberation de la place, calculee d'avance pour chaque son : convolution par FFT.
+// Meme niveau que le ConvolverNode normalise de Chrome qu'elle remplace : une convolution en direct, longue de 3,4 s, se hache
+// quand l'ordinateur peine (Chrome en calcule la fin sur un fil secondaire). L'ambiance n'en a pas.
+function reverberer(S, SR) {
+  const ir = S.reverb; if (!ir) return S;
+  let p = 0; for (const c of [ir.L, ir.R]) for (let i = 0; i < c.length; i++) p += c[i] * c[i];
+  p = Math.sqrt(p / (2 * ir.L.length)); if (!(p >= 0.000125)) p = 0.000125;
+  const echelle = (1 / p) * Math.pow(10, -58 / 20) * (44100 / SR);
+  function fft(re, im, inv) {   // radix 2, en place
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+      for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < h; k++) { const a = i + k, b = a + h, xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr; re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+    }
+    if (inv) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+  }
+  const hL = ir.L, hR = ir.R, cache = new Map();
+  function spectreIR(N) { if (!cache.has(N)) { const re = new Float64Array(N), im = new Float64Array(N); re.set(hL); im.set(hR); fft(re, im, false); cache.set(N, { re, im }); } return cache.get(N); }
+  function convoluer(s) {   // gauche et droite passent ensemble dans une seule FFT complexe (gauche en reel, droite en imaginaire)
+    const xL = s.L, xR = s.R, n = xL.length + hL.length - 1; let N = 1; while (N < n) N <<= 1;
+    const H = spectreIR(N), re = new Float64Array(N), im = new Float64Array(N); re.set(xL); im.set(xR); fft(re, im, false);
+    const oR = new Float64Array(N), oI = new Float64Array(N);
+    for (let k = 0; k < N; k++) {
+      const j = (N - k) & (N - 1);
+      const xlr = (re[k] + re[j]) / 2, xli = (im[k] - im[j]) / 2, xrr = (im[k] + im[j]) / 2, xri = -(re[k] - re[j]) / 2;
+      const hlr = (H.re[k] + H.re[j]) / 2, hli = (H.im[k] - H.im[j]) / 2, hrr = (H.im[k] + H.im[j]) / 2, hri = -(H.re[k] - H.re[j]) / 2;
+      const ylr = xlr * hlr - xli * hli, yli = xlr * hli + xli * hlr, yrr = xrr * hrr - xri * hri, yri = xrr * hri + xri * hrr;
+      oR[k] = ylr - yri; oI[k] = yli + yrr;
+    }
+    fft(oR, oI, true);
+    const L = new Float32Array(n), R = new Float32Array(n);
+    for (let i = 0; i < n; i++) { L[i] = oR[i] * echelle; R[i] = oI[i] * echelle; }
+    return [L, R];
+  }
+  for (const [k, v] of Object.entries(S)) if (k !== 'reverb' && k !== 'ambiance') for (const s of Array.isArray(v) ? v : [v]) [s.wL, s.wR] = convoluer(s);
+  return S;
+}
 /* </synthese> */
 // La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
 function synthetiser(SR) {
   return new Promise((ok, ko) => {
     try {
-      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() +
-        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) tr.push(x.L.buffer, x.R.buffer); postMessage(o, tr); };';
+      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() + '\n' + reverberer.toString() +
+        '\nonmessage = e => { const o = reverberer(toutesLesRecettes(creerBruitages(e.data.SR, 4242)), e.data.SR), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) { tr.push(x.L.buffer, x.R.buffer); if (x.wL) tr.push(x.wL.buffer, x.wR.buffer); } postMessage(o, tr); };';
       const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
       w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
       w.onerror = e => { w.terminate(); ko(e); };
@@ -1358,55 +1397,62 @@ function synthetiser(SR) {
 }
 
 const Son = (() => {
-  let ctx = null, on = false, pret = false, enCours = false, bus, envoi, retour, ambGain, ambFiltre, ambSrc = null, B = null;
+  let ctx = null, on = false, pret = false, enCours = false, bus, retour, ambGain, ambFiltre, ambSrc = null, B = null;
   const actifs = new Set();
-  const enBuffer = s => { const b = ctx.createBuffer(2, s.L.length, ctx.sampleRate); b.copyToChannel(s.L, 0); b.copyToChannel(s.R, 1); return b; };
+  const tampon = (L, R) => { const b = ctx.createBuffer(2, L.length, ctx.sampleRate); b.copyToChannel(L, 0); b.copyToChannel(R, 1); return b; };
+  const deux = s => ({ sec: tampon(s.L, s.R), humide: s.wL ? tampon(s.wL, s.wR) : null });
   async function preparer() {
     enCours = true;
-    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.3;
-    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.6) / Math.tanh(1.6); chaleur.curve = cv; chaleur.oversample = '2x';
-    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -1.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
-    const sortie = ctx.createGain(); sortie.gain.value = 0.95;
-    bus = ctx.createGain(); bus.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
+    // la chaine : coupe des sous-graves (sous 35 Hz ; un haut-parleur de portable ne les joue pas mais sature dessus), un peu moins de grave,
+    // compresseur, legere saturation, limiteur a -3 dB (de la marge pour les haut-parleurs et leurs traitements)
+    const coupe = [0.541, 1.307].map(q => { const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 35; f.Q.value = q; return f; });
+    const allege = ctx.createBiquadFilter(); allege.type = 'lowshelf'; allege.frequency.value = 90; allege.gain.value = -3;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.3;
+    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.25) / Math.tanh(1.25); chaleur.curve = cv; chaleur.oversample = '2x';
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.15;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.9;
+    bus = ctx.createGain(); bus.connect(coupe[0]); coupe[0].connect(coupe[1]); coupe[1].connect(allege); allege.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
     let S;
-    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)); window.__sonVia = 'page'; }
-    const verb = ctx.createConvolver(); verb.buffer = enBuffer(S.reverb);
-    envoi = ctx.createGain(); retour = ctx.createGain(); retour.gain.value = 0.6; envoi.connect(verb); verb.connect(retour); retour.connect(bus);
+    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = reverberer(toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)), ctx.sampleRate); window.__sonVia = 'page'; }
+    // la reverberation est deja dans chaque son (calculee d'avance) : elle passe par ce retour, que le silence fait tomber
+    retour = ctx.createGain(); retour.gain.value = 0.6; retour.connect(bus);
     B = {};
-    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(enBuffer) : enBuffer(r);
+    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(deux) : deux(r);
     ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
     ambGain = ctx.createGain(); ambGain.gain.value = 0;
     ambFiltre.connect(ambGain); ambGain.connect(bus);
-    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
+    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance.sec; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
     pret = true; enCours = false;
     ambiance('normal');
   }
-  function jouer(nom, g = 1, envoiV = 0.3) {
+  function jouer(nom, g = 1, envoiV = 0.3, idx, baisse) {
     if (!on || !pret) return;
-    let b = B[nom]; if (Array.isArray(b)) b = b[actifs.size % b.length];
-    const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = Math.pow(vitesse, 0.6);
-    const gn = ctx.createGain(); gn.gain.value = g; src.connect(gn); gn.connect(bus);
-    const s = ctx.createGain(); s.gain.value = envoiV; gn.connect(s); s.connect(envoi);
-    src.start(); actifs.add({ src, gn, g0: g }); src.onended = () => { for (const a of actifs) if (a.src === src) actifs.delete(a); };
+    let b = B[nom]; if (!b) return; if (Array.isArray(b)) b = b[idx ?? (actifs.size % b.length)];
+    if (baisse) for (const a of actifs) { a.niv *= baisse; for (const [n, g0] of a.g) n.gain.setTargetAtTime(g0 * a.niv, ctx.currentTime, 0.04); } // le nouveau coup passe devant
+    const v = Math.pow(vitesse, 0.6), a = { src: [], g: [], niv: 1 };
+    const brancher = (buf, gain, vers) => { const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = v; const n = ctx.createGain(); n.gain.value = gain; s.connect(n); n.connect(vers); s.start(); a.src.push(s); a.g.push([n, gain]); return s; };
+    let dernier = brancher(b.sec, g, bus);
+    if (b.humide && envoiV > 0) dernier = brancher(b.humide, g * envoiV, retour);
+    actifs.add(a); dernier.onended = () => actifs.delete(a);
   }
   function ambiance(etat) { // le vent se coupe pendant le gel et le silence, puis revient
     if (!pret) return; const t = ctx.currentTime;
     const [g, f, tc] = etat === 'fige' ? [0.3, 380, 0.04] : etat === 'silence' ? [0, 300, 0.05] : [1, 18000, 0.35];
     ambGain.gain.setTargetAtTime(g * 0.22, t, tc); ambFiltre.frequency.setTargetAtTime(f, t, 0.05);
-    if (etat === 'silence') for (const a of actifs) a.gn.gain.setTargetAtTime(a.g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
+    if (etat === 'silence') for (const a of actifs) for (const [n, g0] of a.g) n.gain.setTargetAtTime(g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
     retour.gain.setTargetAtTime(etat === 'silence' ? 0.12 : 0.6, t, etat === 'silence' ? 0.06 : 0.2);
     ambSrc.playbackRate.value = Math.pow(vitesse, 0.6);
   }
   function couper() { // a chaque relance, les bruitages en cours s'eteignent vite
     if (!pret) return; const t = ctx.currentTime;
-    for (const a of actifs) { a.gn.gain.setTargetAtTime(0, t, 0.03); try { a.src.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
+    for (const a of actifs) { for (const [n] of a.g) n.gain.setTargetAtTime(0, t, 0.03); for (const s of a.src) try { s.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
     actifs.clear(); ambiance('normal');
   }
   return {
     get on() { return on; }, get pret() { return pret; },
     async set(v) {
       on = v;
-      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
       if (!ctx) return;
       if (v) { await ctx.resume(); if (!pret && !enCours) await preparer(); } else await ctx.suspend();
     },
@@ -1857,7 +1903,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Pour les captures de controle : rejoue jusqu'a l'instant tau (ms depuis le debut de l'Art), eventuellement pendant un arret sur coup.
-window.__tailleRouge = { seek(mode, ms, pendantArret) { changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 3000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
+window.__tailleRouge = { son: Son, get T() { return run ? run.T : horaires(420); }, get sim() { return run.sim; }, get tau() { return run.tau; }, seek(mode, ms, pendantArret) { changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 3000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
 </script>
 </body>
 </html>

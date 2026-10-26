@@ -74,7 +74,9 @@ Ce sont des erreurs déjà faites, parfois plusieurs fois. Vérifie-les dans le 
   - aucun tintement ;
   - un appel d'air inversé qui finit pile sur le coup, avec un fondu de 4 ms ;
   - un silence au moins 15 dB sous le sommet ;
-  - le sommet est le contrepoint ou l'impact.
+  - le sommet est le contrepoint ou l'impact ;
+  - le moteur audio commun reste tel quel : `reverberer()` à la fin de la synthèse, pas de `ConvolverNode` en direct, coupe à 35 Hz et limiteur à −3 dB. Un assembleur qui remplace les recettes s'arrête avant `// La reverberation de la place` ;
+  - 15 % au plus de l'énergie de sortie sous 40 Hz (`son.js` le mesure) : un grave de 60 à 30 Hz suffit, le reste fait grésiller les portables.
 - [ ] **Les trois lois** : pas de musique, aucun visage visible, aucun vocabulaire de divinité ou de religion (y compris dans les noms de variables et les textes de la page).
 
 ## 4. Vérifier, en boucle, jusqu'à ce que tout passe

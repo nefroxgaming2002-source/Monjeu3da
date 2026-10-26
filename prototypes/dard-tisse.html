@@ -1801,13 +1801,51 @@ function creerBruitages(SR, graine) {
 function toutesLesRecettes(syn) {
   return { reverb: syn.reverb(), tissage: syn.tissage(), lancer: syn.lancer(), point: [syn.point(1), syn.point(2)], eclosion: syn.eclosion(), tension: syn.tension(), battement: [syn.battement(1), syn.battement(2)], avant: syn.avant(), floraison: syn.floraison(), spores: syn.spores(), cloture: syn.cloture(), ambiance: syn.ambiance() };
 }
+// La reverberation de la place, calculee d'avance pour chaque son : convolution par FFT.
+// Meme niveau que le ConvolverNode normalise de Chrome qu'elle remplace : une convolution en direct, longue de 3,4 s, se hache
+// quand l'ordinateur peine (Chrome en calcule la fin sur un fil secondaire). L'ambiance n'en a pas.
+function reverberer(S, SR) {
+  const ir = S.reverb; if (!ir) return S;
+  let p = 0; for (const c of [ir.L, ir.R]) for (let i = 0; i < c.length; i++) p += c[i] * c[i];
+  p = Math.sqrt(p / (2 * ir.L.length)); if (!(p >= 0.000125)) p = 0.000125;
+  const echelle = (1 / p) * Math.pow(10, -58 / 20) * (44100 / SR);
+  function fft(re, im, inv) {   // radix 2, en place
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+      for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < h; k++) { const a = i + k, b = a + h, xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr; re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+    }
+    if (inv) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+  }
+  const hL = ir.L, hR = ir.R, cache = new Map();
+  function spectreIR(N) { if (!cache.has(N)) { const re = new Float64Array(N), im = new Float64Array(N); re.set(hL); im.set(hR); fft(re, im, false); cache.set(N, { re, im }); } return cache.get(N); }
+  function convoluer(s) {   // gauche et droite passent ensemble dans une seule FFT complexe (gauche en reel, droite en imaginaire)
+    const xL = s.L, xR = s.R, n = xL.length + hL.length - 1; let N = 1; while (N < n) N <<= 1;
+    const H = spectreIR(N), re = new Float64Array(N), im = new Float64Array(N); re.set(xL); im.set(xR); fft(re, im, false);
+    const oR = new Float64Array(N), oI = new Float64Array(N);
+    for (let k = 0; k < N; k++) {
+      const j = (N - k) & (N - 1);
+      const xlr = (re[k] + re[j]) / 2, xli = (im[k] - im[j]) / 2, xrr = (im[k] + im[j]) / 2, xri = -(re[k] - re[j]) / 2;
+      const hlr = (H.re[k] + H.re[j]) / 2, hli = (H.im[k] - H.im[j]) / 2, hrr = (H.im[k] + H.im[j]) / 2, hri = -(H.re[k] - H.re[j]) / 2;
+      const ylr = xlr * hlr - xli * hli, yli = xlr * hli + xli * hlr, yrr = xrr * hrr - xri * hri, yri = xrr * hri + xri * hrr;
+      oR[k] = ylr - yri; oI[k] = yli + yrr;
+    }
+    fft(oR, oI, true);
+    const L = new Float32Array(n), R = new Float32Array(n);
+    for (let i = 0; i < n; i++) { L[i] = oR[i] * echelle; R[i] = oI[i] * echelle; }
+    return [L, R];
+  }
+  for (const [k, v] of Object.entries(S)) if (k !== 'reverb' && k !== 'ambiance') for (const s of Array.isArray(v) ? v : [v]) [s.wL, s.wR] = convoluer(s);
+  return S;
+}
 /* </synthese> */
 // La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
 function synthetiser(SR) {
   return new Promise((ok, ko) => {
     try {
-      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() +
-        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) tr.push(x.L.buffer, x.R.buffer); postMessage(o, tr); };';
+      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() + '\n' + reverberer.toString() +
+        '\nonmessage = e => { const o = reverberer(toutesLesRecettes(creerBruitages(e.data.SR, 4242)), e.data.SR), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) { tr.push(x.L.buffer, x.R.buffer); if (x.wL) tr.push(x.wL.buffer, x.wR.buffer); } postMessage(o, tr); };';
       const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
       w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
       w.onerror = e => { w.terminate(); ko(e); };
@@ -1817,49 +1855,55 @@ function synthetiser(SR) {
 }
 
 const Son = (() => {
-  let ctx = null, on = false, pret = false, enCours = false, bus, envoi, retour, ambGain, ambFiltre, ambSrc = null, B = null;
+  let ctx = null, on = false, pret = false, enCours = false, bus, retour, ambGain, ambFiltre, ambSrc = null, B = null;
   const actifs = new Set();
-  const enBuffer = s => { const b = ctx.createBuffer(2, s.L.length, ctx.sampleRate); b.copyToChannel(s.L, 0); b.copyToChannel(s.R, 1); return b; };
+  const tampon = (L, R) => { const b = ctx.createBuffer(2, L.length, ctx.sampleRate); b.copyToChannel(L, 0); b.copyToChannel(R, 1); return b; };
+  const deux = s => ({ sec: tampon(s.L, s.R), humide: s.wL ? tampon(s.wL, s.wR) : null });
   async function preparer() {
     enCours = true;
-    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.3;
-    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.6) / Math.tanh(1.6); chaleur.curve = cv; chaleur.oversample = '2x';
-    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -1.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
-    const sortie = ctx.createGain(); sortie.gain.value = 0.95;
-    bus = ctx.createGain(); bus.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
+    // la chaine : coupe des sous-graves (sous 35 Hz ; un haut-parleur de portable ne les joue pas mais sature dessus), un peu moins de grave,
+    // compresseur, legere saturation, limiteur a -3 dB (de la marge pour les haut-parleurs et leurs traitements)
+    const coupe = [0.541, 1.307].map(q => { const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 35; f.Q.value = q; return f; });
+    const allege = ctx.createBiquadFilter(); allege.type = 'lowshelf'; allege.frequency.value = 90; allege.gain.value = -3;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.3;
+    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.25) / Math.tanh(1.25); chaleur.curve = cv; chaleur.oversample = '2x';
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.15;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.9;
+    bus = ctx.createGain(); bus.connect(coupe[0]); coupe[0].connect(coupe[1]); coupe[1].connect(allege); allege.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
     let S;
-    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)); window.__sonVia = 'page'; }
-    const verb = ctx.createConvolver(); verb.buffer = enBuffer(S.reverb);
-    envoi = ctx.createGain(); retour = ctx.createGain(); retour.gain.value = 0.6; envoi.connect(verb); verb.connect(retour); retour.connect(bus);
+    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = reverberer(toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)), ctx.sampleRate); window.__sonVia = 'page'; }
+    // la reverberation est deja dans chaque son (calculee d'avance) : elle passe par ce retour, que le silence fait tomber
+    retour = ctx.createGain(); retour.gain.value = 0.6; retour.connect(bus);
     B = {};
-    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(enBuffer) : enBuffer(r);
+    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(deux) : deux(r);
     ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
     ambGain = ctx.createGain(); ambGain.gain.value = 0;
     ambFiltre.connect(ambGain); ambGain.connect(bus);
-    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
+    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance.sec; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
     pret = true; enCours = false;
     ambiance('normal');
   }
   function jouer(nom, g = 1, envoiV = 0.3, idx, baisse) {
     if (!on || !pret) return;
-    let b = B[nom]; if (Array.isArray(b)) b = b[idx ?? (actifs.size % b.length)];
-    if (baisse) for (const a of actifs) { a.niv = (a.niv ?? 1) * baisse; a.gn.gain.setTargetAtTime(a.g0 * a.niv, ctx.currentTime, 0.04); } // le nouveau coup passe devant
-    const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = Math.pow(vitesse, 0.6);
-    const gn = ctx.createGain(); gn.gain.value = g; src.connect(gn); gn.connect(bus);
-    const s = ctx.createGain(); s.gain.value = envoiV; gn.connect(s); s.connect(envoi);
-    src.start(); actifs.add({ src, gn, g0: g }); src.onended = () => { for (const a of actifs) if (a.src === src) actifs.delete(a); };
+    let b = B[nom]; if (!b) return; if (Array.isArray(b)) b = b[idx ?? (actifs.size % b.length)];
+    if (baisse) for (const a of actifs) { a.niv *= baisse; for (const [n, g0] of a.g) n.gain.setTargetAtTime(g0 * a.niv, ctx.currentTime, 0.04); } // le nouveau coup passe devant
+    const v = Math.pow(vitesse, 0.6), a = { src: [], g: [], niv: 1 };
+    const brancher = (buf, gain, vers) => { const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = v; const n = ctx.createGain(); n.gain.value = gain; s.connect(n); n.connect(vers); s.start(); a.src.push(s); a.g.push([n, gain]); return s; };
+    let dernier = brancher(b.sec, g, bus);
+    if (b.humide && envoiV > 0) dernier = brancher(b.humide, g * envoiV, retour);
+    actifs.add(a); dernier.onended = () => actifs.delete(a);
   }
   function ambiance(etat) { // le vent se coupe pendant le gel et le silence, puis revient
     if (!pret) return; const t = ctx.currentTime;
     const [g, f, tc] = etat === 'fige' ? [0.3, 380, 0.04] : etat === 'silence' ? [0, 300, 0.05] : [1, 18000, 0.35];
     ambGain.gain.setTargetAtTime(g * 0.22, t, tc); ambFiltre.frequency.setTargetAtTime(f, t, 0.05);
-    if (etat === 'silence') for (const a of actifs) a.gn.gain.setTargetAtTime(a.g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
+    if (etat === 'silence') for (const a of actifs) for (const [n, g0] of a.g) n.gain.setTargetAtTime(g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
     retour.gain.setTargetAtTime(etat === 'silence' ? 0.12 : 0.6, t, etat === 'silence' ? 0.06 : 0.2);
     ambSrc.playbackRate.value = Math.pow(vitesse, 0.6);
   }
   function couper() { // a chaque relance, les bruitages en cours s'eteignent vite
     if (!pret) return; const t = ctx.currentTime;
-    for (const a of actifs) { a.gn.gain.setTargetAtTime(0, t, 0.03); try { a.src.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
+    for (const a of actifs) { for (const [n] of a.g) n.gain.setTargetAtTime(0, t, 0.03); for (const s of a.src) try { s.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
     actifs.clear(); ambiance('normal');
   }
   return {
