@@ -9,7 +9,10 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 ## 1. Ce que veut le développeur
 
 - **Son ambition** : « beaucoup plus beau, cinématique, original tout en restant cohérent ». Chaque Art doit impressionner, à la hauteur des grandes attaques spéciales.
-- **Ce qu'il a refusé** : « ça fait enfantin » (formes pastel, cercles peints), « trop simple », « je m'attends à quelque chose de beaucoup plus impressionnant ».
+- **Ce qu'il a refusé** :
+  - « ça fait enfantin » (formes pastel, cercles peints) ;
+  - « trop simple », « je m'attends à quelque chose de beaucoup plus impressionnant » ;
+  - sur la première Cloche fêlée : « C'est trop simple encore une fois. Les traits sont simples, la cloche est simple, tout est simple, ça redonne l'effet dessin animé. » Voir la section 3.6 : c'est **le** défaut à ne plus jamais livrer.
 - **Ce qu'il a validé** : la Taille Rouge en version Art majeur (« Ok, là c'est beau »).
 - **Style choisi** : *Encre et braise*. C'est un mélange de ses références d'effets :
   - Elden Ring : Frenzied Flame (braises, rémanence de cendre), Bloodflame et Rivers of Blood, sorts astraux ;
@@ -35,7 +38,13 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Cœur de l'effet blanc et saturé, aspect « sabre laser » ; rouge qui vire au saumon ou au rose (le tonemapping ACES remonte le vert et le bleu des rouges très lumineux) | Corps de couleur **profond et peu lumineux** (sang : `0.42, 0.008, 0.016` en linéaire), blanc réservé à un **tranchant fin**, halo seulement sur les bords. |
 | Effet au maximum pendant la récupération | Le pic est à l'impact. Ensuite l'effet **refroidit** (chaud → couleur → charbon) et **s'effrite** en cendre et en braises. |
 | Désaturer tout l'écran, ce qui grise aussi les effets | Désaturation **sélective** : les couleurs saturées (effets, cape) restent, le monde passe au gris-bleu. |
-| Fumée en « coton rose » | Fumée d'encre **sombre** avec une **lisière** de braise fine. |
+| Fumée en « coton rose » | Fumée d'encre **sombre**. Pour le Sang seulement, une lisière de braise fine ; ailleurs, une chaleur douce par-dessous (voir la ligne sur les liserés). |
+| Cloche fêlée v1 : cloche lisse et translucide, anneaux d'or parfaits pour montrer le son, ciel en disque lumineux, fissures en traits fins (« ça redonne l'effet dessin animé ») | Appliquer la section 3.6 : une vraie matière, du détail à trois échelles, aucune primitive propre, et l'énergie montrée par son effet sur le monde. |
+| Liseré fin et brillant sur la fumée ou au bord des fragments : on croit voir des éclairs dans l'air ou des contours au néon | Fumée sombre, éclairée doucement par en dessous. Bords chauds larges, plus orange que blancs, qui refroidissent vite. |
+| Fissures et fêlures en traits fins, blancs, en zigzag : ce sont des éclairs | Une fente : bords sombres et charbonneux, largeur irrégulière, tracé sinueux, lueur orange au fond et par endroits seulement. |
+| Encre brillante (rugosité basse) sous une lumière forte : le reflet efface le trait | Encre mate (rugosité vers 0,85). |
+| Image négative vide : forme principale sombre dans une scène sombre | Faire flamber la forme principale à l'impact, puis vérifier le négatif en vue cinéma **et** en vue de jeu. |
+| Erreur de shader silencieuse : `smoothstep` avec deux bornes égales (largeur nulle) a rendu tout le haut de la cloche blanc | Multiplier par `step(ε, largeur)` partout où une largeur peut tomber à zéro. |
 | Éclats chauds trop gros et à plat ; dissolution en blocs qui fait des tirets | Petits éclats qui refroidissent vite ; dissolution par bruit continu. |
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
 | Tout désaturer et assombrir pendant le gel au point de ne plus rien lire | Assombrir modérément ; choisir un plan de caméra qui montre le sol et la lame. |
@@ -62,7 +71,7 @@ Chaque Art suit ces temps, avec des durées propres, calées sur ses fenêtres d
 
 Au minimum, chaque temps fort combine :
 
-- **une forme principale** lisible (le croissant de la Taille Rouge, la cloche de la Cloche fêlée…) ;
+- **une forme principale** lisible et **en vraie matière** (le croissant de la Taille Rouge, la cloche de bronze de la Cloche fêlée…), selon la section 3.6 ;
 - **une couche d'encre** pour le contraste sombre ;
 - **une couche de lumière** : tranchant, cœur, filament ;
 - **trois tailles de particules** : étincelles fines étirées, braises ou spores moyennes, gouttes ou éclats lourds qui retombent et marquent le sol ;
@@ -114,6 +123,31 @@ Le son se pense **par couches**, comme l'image. Rien de tonal et aigu ne doit ê
 - Les entailles retardées, les chutes à genou et les autres effets de ce genre sont du **visuel**. La vue n'écrit jamais l'état du combat : la règle du projet est que la vue ne fait que lire.
 - **Mobile** (`ProfilMateriel`, palier BAS) : pas de distorsion, pas de flou radial, pas de fumée, particules réduites de 40 %, mêmes temps et même son.
 
+### 3.6 Ne jamais retomber dans le dessin animé
+
+Ce qui fait « dessin animé », c'est le **propre** et l'**uni** : une forme lisse, un trait d'épaisseur constante, une couleur en aplat, un cercle parfait, une lumière sans source. Le beau, ici, c'est la **matière** et le **désordre organisé**.
+
+1. **La forme principale est un objet crédible**, pas un symbole :
+   - une épaisseur, un poids, un matériau physique (métal, pierre, verre, chair, tissu) : couleur de base, rugosité qui varie, usure sur les arêtes, saleté dans les creux, reflets de l'environnement ;
+   - du détail à **trois échelles** : la silhouette, les reliefs moyens (moulures, frises, écailles, nervures), le grain fin (piqûres, coulures, stries) ;
+   - jamais une forme translucide unie. Ce qui est « spectral » le montre par sa naissance et sa mort (suie qui se condense, dissolution par bruit), pas par une transparence de verre.
+2. **Aucune primitive propre dans l'image finale** : pas d'anneau, de tore, de disque, de sphère lisse, de trait à largeur constante. Tout est cassé par du bruit, varie en épaisseur, en densité et en lumière, et a une texture interne.
+3. **L'énergie se montre par son effet sur le monde** : le sol saute, les joints s'allument, la poussière roule, l'air se tord, les débris volent. Un anneau lumineux qui s'agrandit ne suffit jamais.
+4. **La chaleur suit le corps noir** : blanc au cœur, puis or, orange, ambre sombre, noir. Elle refroidit avec le temps. Un métal qui fige fait une croûte dont les fissures restent chaudes plus longtemps. Jamais d'aplat orange.
+5. **Une fissure est une fente**, pas un éclair : tracé sinueux, largeur irrégulière, bords sombres, lueur au fond par endroits.
+6. **Pas de liseré fin et brillant** sur la fumée ou sur les fragments : cela fait des éclairs ou des contours au néon.
+7. **Les débris sont de vrais morceaux** : découpés dans l'objet lui-même (fragments prédécoupés, avec leur épaisseur et leurs motifs), irréguliers, brûlants à la cassure puis froids. Jamais de confettis plats ni de pastilles orange au sol.
+8. **Un trait d'encre est un coup de pinceau** : appui au départ, poils visibles, pinceau sec en fin de course, bavures, éclaboussures. L'encre est mate.
+9. **Les particules** ne sont jamais carrées. Trois tailles au moins, et un comportement propre à la matière : par exemple, les étincelles de forge éclatent en petites étoiles.
+10. **Le décor touché par l'Art est en vrai volume** (dalles chanfreinées, pierres, colonnes), pour pouvoir réagir : se soulever, se fendre, garder une trace.
+
+**Le test du gros plan**, avant d'envoyer quoi que ce soit :
+
+- Une capture en caméra libre, à 4 ou 5 m de la forme principale, au pic de l'Art. Si elle ressemble à un jouet, à un logo ou à une icône, ce n'est pas fini.
+- Une capture à 100 % de chaque trait brillant : il faut savoir d'où il vient. En cas de doute, faire une variante avec une couche coupée ou un masque affiché en couleur (c'est ainsi qu'ont été trouvés les faux éclairs de la fumée et le bug de la fêlure).
+- Les mêmes instants côte à côte avec la Taille Rouge : la densité et la texture doivent être du même niveau.
+- Les images d'impact en vue cinéma et en vue de jeu.
+
 ## 4. L'identité de chaque voie : ce qui doit changer d'un Art à l'autre
 
 | Voie | Matière | Verbes | Pistes de son |
@@ -158,13 +192,22 @@ Pour chaque Art, change **au moins** :
    - ralenti et frise des phases.
 
    Garder ce socle, réécrire la scène de l'Art, publier, et attendre le retour avant Godot.
+
+   Pour la matière, partir aussi de `prototypes/cloche-felee.html` :
+   - le bronze : `MeshStandardMaterial` complété par `onBeforeCompile` (relief en bosselage, patine, usure, coulée qui fige en croûte, fêlure), avec une carte d'environnement ;
+   - les fragments prédécoupés (Voronoi sur la coque) ;
+   - les dalles en volume, avec les marques peintes dans leur shader ;
+   - les nuées qui tournent ;
+   - la fonction `corpsNoir()` ;
+   - les étincelles de forge.
 4. **Porter dans Godot** (section 6), sans changer les dégâts ni les durées, sauf demande.
 5. **Vérifier** :
    - captures fixes sur une campagne dédiée (sur le modèle de `--reference-encre`) ;
    - film Movie Maker. Au 25 octobre, il s'arrêtait encore parfois après une image, sans message d'erreur. Écrire l'AVI dans le dossier temporaire a aidé sans tout régler : c'est à éclaircir en premier ;
    - plusieurs angles ;
    - palier mobile ;
-   - spectrogramme et courbe de niveau du son.
+   - spectrogramme et courbe de niveau du son ;
+   - **le test du gros plan** de la section 3.6, puis la liste des dix règles, une par une.
 6. **Livrer** :
    - un lien ou une vidéo ;
    - trois lignes : ce qui a changé, ce qui reste, la question ouverte ;
@@ -184,6 +227,11 @@ Pour chaque Art, change **au moins** :
 | Rémanences | `EncreBraise.remanence()` (`bake_mesh_from_current_skeleton_pose`) |
 | Gel, arrêts sur coup, caméra | `ArretSurCoup.figer()`, `CoupeArt`, `CameraVive` |
 | Chorégraphie | `MiseEnSceneArts` et `donnees/rendu/corps.json` |
+| Bronze de la cloche : relief, patine, coulée, croûte, fêlure | un `ShaderMaterial` spatial qui reprend les mêmes fonctions (`corpsNoir`, frises, fêlure) |
+| Fragments prédécoupés | un maillage par fragment, puis `RigidBody3D` ou trajectoire précalculée à la rupture |
+| Dalles qui sautent, or dans les joints, marques peintes au sol | shader du sol avec décalage de sommets, et un plan de mortier émissif dessous |
+| Nuées qui tournent, jet de bronze | plans et cylindre avec shader |
+| Étincelles de forge qui éclatent | `GPUParticles3D` avec sous-émetteur |
 | Sons | WAV dans le dossier audio, `donnees/audio/sons.json`, `bande_son.gd`. Les nouveaux moments (silence, éclatement, clôture) doivent être autorisés dans la validation de `depot.gd`. |
 
 Les sons de la Taille Rouge sont déjà exportés dans `prototypes/sons/taille-rouge/`, avec la fiche des moments, volumes et réglages du bus. Le script `prototypes/sons/export_wav.js` les régénère ; pour un autre Art : `node prototypes/sons/export_wav.js prototypes/<art>.html prototypes/sons/<art> <prefixe>`.
@@ -196,7 +244,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 |---|---|---|
 | `TAILLE_ROUGE` | Sang | **Fait** en prototype : la barre de qualité. Son niveau en forme ONDE, « la Roue », fait tourner l'entaille autour du corps. |
 | Ruée du Sang | Sang | Là où le corps est passé, une ligne d'épines de verre de sang jaillit derrière lui (`VagueEpines`). |
-| `CLOCHE_FELEE` | Airain | **Fait** en prototype : `prototypes/cloche-felee.html`, fiche `docs/arts/CLOCHE_FELEE.md`. La cloche est peinte dans le ciel, tombe, sonne, résonne trois fois et se brise. En repli : poussière en cercle et fissures. |
+| `CLOCHE_FELEE` | Airain | **Fait** en prototype : `prototypes/cloche-felee.html`, fiche `docs/arts/CLOCHE_FELEE.md`. Le ciel tourne et s'ouvre ; la cloche s'y condense en suie, se remplit de bronze en fusion, tombe, sonne, résonne trois fois dans la pierre et se brise en vrais morceaux. En repli : poussière en cercle et fissures. |
 | `COUP_DE_BELIER` | Airain | Forme ONDE : la masse frappe le sol, il se fend, la poussière s'ouvre en cercle. Sinon : la poussière file devant le bouclier, le sol se fend au bout. |
 | `TRAIT_D_ETOILE` | Astro | « La lance d'étoile tracée par une constellation ». |
 | `NUIT_LUE` | Astro | Une constellation se lève dans le ciel (environ 6 s). |
@@ -211,7 +259,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 
 - `prototypes/taille-rouge.html` : la barre de qualité, avec image, son, caméras et ralenti.
 - `prototypes/sons/taille-rouge/LISEZMOI.md` : la fiche son.
-- `prototypes/cloche-felee.html`, `docs/arts/CLOCHE_FELEE.md` et `prototypes/sons/cloche-felee/LISEZMOI.md` : un deuxième exemple, lourd et vertical, qui montre comment un Art se distingue du premier.
+- `prototypes/cloche-felee.html`, `docs/arts/CLOCHE_FELEE.md` et `prototypes/sons/cloche-felee/LISEZMOI.md` : un deuxième exemple, lourd et vertical, qui montre comment un Art se distingue du premier. C'est aussi **la référence pour la matière** (section 3.6).
 - Dans le projet du jeu :
   - `docs/REPRISE_SESSION.md` ;
   - `docs/00_decisions/ADR-027-le-poids-des-combats.md` § 9 à 18 ;

@@ -6,7 +6,7 @@ Les temps sont comptés depuis le début de l'Art. Ils supposent une anticipatio
 
 | Fichier | Quand | Volume | Envoi réverb |
 |---|---|---|---|
-| `cloche_felee_appel` | 0 ms, le ciel s'ouvre | 0,80 | 0,35 |
+| `cloche_felee_appel` | 0 ms, le ciel s'ouvre et le bronze coule | 0,80 | 0,35 |
 | `cloche_felee_chute` | 420 ms, la cloche tombe | 0,80 | 0,30 |
 | `cloche_felee_sonnerie` | 700 ms, début de l'active | 1,00 | 0,50 |
 | `cloche_felee_echo_1` | 960 ms | 0,75 | 0,55 |

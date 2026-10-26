@@ -110,12 +110,11 @@
 </style>
 </head>
 <body>
-
 <main class="wrap">
   <header>
     <p class="eyebrow">MonJeu3d · Voie de l'Airain · Art de zone</p>
     <h1>Cloche <span>fêlée</span></h1>
-    <p class="lede">Une cloche de bronze spectrale, peinte à l'encre dans le ciel, tombe sur le combattant et sonne au moment où sa masse frappe le sol. <b>Le son devient visible</b> : des anneaux d'or balaient la zone de 3 m. Trois échos fêlent la cloche jusqu'à ce qu'elle éclate. Change d'angle pendant qu'elle tourne, et active le son, au casque de préférence.</p>
+    <p class="lede">Le ciel se met à tourner et s'ouvre sur un four de bronze en fusion. La cloche s'y condense en suie, le métal y coule, puis elle tombe sur le combattant et sonne au moment où sa masse frappe le sol. <b>Le son passe dans la pierre</b> : les dalles sautent, l'or court dans les joints, la poussière roule. Trois échos fêlent la cloche jusqu'à ce qu'elle éclate en morceaux de bronze brûlants. Change d'angle pendant qu'elle tourne, et active le son, au casque de préférence.</p>
   </header>
 
   <section class="stage" aria-label="Prototype animé">
@@ -170,12 +169,12 @@
   <section class="decoupage" aria-labelledby="t-decoupage">
     <h2 id="t-decoupage">Découpage</h2>
     <ol class="temps">
-      <li><span class="quand">0 – 420 ms · anticipation</span><h3>Appel</h3><p>Le ciel se fend en un anneau d'or et une colonne de suie descend. La cloche se peint à l'encre de haut en bas, puis le bronze coule dedans. Le cercle de la zone se trace au sol, et la masse chauffe.</p></li>
-      <li><span class="quand">420 – 700 ms · anticipation</span><h3>Chute</h3><p>La cloche tombe en accélérant, traînée d'étincelles. Son souffle chasse la poussière et fait sauter les cailloux. La masse s'abat.</p></li>
-      <li><span class="quand">700 ms · active · arrêt 120 ms</span><h3>Sonnerie</h3><p>La cloche s'abat au moment où la masse frappe le sol. Image négative puis image or, onde de choc, premier anneau d'or, fissures en étoile, poussière en cercle, bêtes repoussées.</p></li>
-      <li><span class="quand">+260, +560, +900 ms</span><h3>Échos</h3><p>La cloche vibre et gonfle. Chaque écho est plus large et plus grave ; la fêlure grimpe et coule de l'or.</p></li>
-      <li><span class="quand">+1150 ms · arrêt 80 ms</span><h3>Rupture</h3><p>La cloche éclate en éclats de bronze brûlants et en gouttes d'or, dans un dernier anneau. Les bêtes tombent à genou.</p></li>
-      <li><span class="quand">ensuite</span><h3>Retombée</h3><p>Éclats et gouttes refroidissent en scories noires, l'empreinte du bord de la cloche reste brûlée au sol. Le combattant pose la masse sur l'épaule.</p></li>
+      <li><span class="quand">0 – 420 ms · anticipation</span><h3>Appel</h3><p>Les nuées de suie tournent et se déchirent sur un four de bronze en fusion. La cloche s'y condense en suie, puis un jet de métal la remplit depuis la couronne : blanc au front, il fige en croûte derrière. Au sol, le cercle de la zone se trace d'un seul coup de pinceau.</p></li>
+      <li><span class="quand">420 – 700 ms · anticipation</span><h3>Chute</h3><p>Le jet se rompt et la cloche tombe en refroidissant ; son ombre grandit sur les dalles. La masse s'abat.</p></li>
+      <li><span class="quand">700 ms · active · arrêt 120 ms</span><h3>Sonnerie</h3><p>La cloche s'abat au moment où la masse frappe. Image négative puis image or. Le bronze s'embrase un instant, les dalles s'enfoncent sous le bord et se fendent, et la première onde fait sauter le dallage.</p></li>
+      <li><span class="quand">+260, +560, +900 ms</span><h3>Échos</h3><p>La cloche saute sur ses échos. Une bande de chaleur monte le long de la paroi et allume l'inscription ; la fêlure grimpe et suinte l'or. À chaque coup, l'onde court dans les joints et soulève la poussière.</p></li>
+      <li><span class="quand">+1150 ms · arrêt 80 ms</span><h3>Rupture</h3><p>La cloche éclate en morceaux de bronze aux cassures encore rouges, dans une gerbe de gouttes de métal et d'étincelles de forge. Les bêtes tombent à genou.</p></li>
+      <li><span class="quand">ensuite</span><h3>Retombée</h3><p>Les morceaux retombent, refroidissent, puis se défont en suie. Les gouttes figent sur la pierre. Le combattant pose la masse sur l'épaule.</p></li>
     </ol>
   </section>
 
@@ -183,9 +182,11 @@
     <h2 id="t-godot">Dans Godot</h2>
     <ul>
       <li>La chute et la sonnerie existent déjà : <code>ClocheSpectrale.tomber()</code> pendant l'anticipation et <code>sonner()</code> à l'ouverture, appelés par <code>MiseEnSceneArts</code>.</li>
-      <li>La cloche : un maillage tourné (profil de cloche) avec un shader qui la peint à l'encre, la remplit de bronze, la fait vibrer et fend sa fêlure d'or.</li>
-      <li>Les anneaux d'or, le cercle de zone, l'empreinte et le ciel fendu : des plans avec shader ; les fissures reprennent celles de la Taille Rouge.</li>
-      <li>Éclats de bronze, gouttes d'or, poussière et suie : <code>GPUParticles3D</code> ; onde de choc et images d'impact : le shader d'écran commun.</li>
+      <li>La cloche : un maillage prédécoupé en une quarantaine de fragments (cassures de Voronoi) et un seul matériau de bronze (patine, reliefs, coulée qui fige en croûte, fêlure). À la rupture, chaque fragment devient un <code>RigidBody3D</code> ou suit une trajectoire précalculée.</li>
+      <li>Le sol : le shader des dalles porte le cercle de zone, l'empreinte et les fissures ; un décalage de sommets fait sauter les dalles au passage de l'onde, et un plan de mortier émissif placé dessous fait courir l'or dans les joints.</li>
+      <li>Le ciel : deux plans de nuées avec un shader de tourbillon ; le jet de bronze est un cylindre émissif.</li>
+      <li>Éclats, gouttes, poussière, suie et étincelles de forge : <code>GPUParticles3D</code> ; onde de choc et images d'impact : le shader d'écran commun.</li>
+      <li>Si le joueur bouge avant la rupture, déclencher la rupture aussitôt : la cloche ne doit jamais l'enfermer.</li>
       <li>Durées supposées ici (700 / 180 / 520 ms) : à caler sur <code>arts.json</code>. Les échos et la rupture restent du visuel.</li>
     </ul>
   </section>
@@ -245,6 +246,25 @@ const noiseTex = (() => {
 const VS_UV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const PREMUL = { transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor };
 const ADDITIF = { transparent: true, depthWrite: false, depthTest: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor };
+const SOL_Y = 0.055; // dessus des dalles de la place
+// Fonctions GLSL communes : hachages, corps noir du metal en fusion (ambre sombre, or, blanc chaud), reseau de fissures, trait brise.
+const GLSL_COMMUN = `
+float h11(float p){ p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2 h22(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.103, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+vec3 corpsNoir(float T){ T = max(T, 0.0);
+  vec3 c = mix(vec3(0.0), vec3(0.42, 0.06, 0.004), smoothstep(0.0, 0.28, T));
+  c = mix(c, vec3(1.0, 0.33, 0.04), smoothstep(0.24, 0.55, T));
+  c = mix(c, vec3(1.0, 0.6, 0.17), smoothstep(0.5, 0.8, T));
+  c = mix(c, vec3(1.0, 0.86, 0.62), smoothstep(0.78, 1.1, T));
+  return c * (T * T * 6.0 + T * 1.5); }
+float voroBord(vec2 x, float P){ vec2 n = floor(x), f = fract(x), mg = vec2(0.0), mr = vec2(0.0); float md = 8.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec2 g = vec2(float(i), float(j)), c = n + g; c.x = mod(c.x, P); vec2 r = g + h22(c) - f; float d = dot(r, r); if (d < md) { md = d; mr = r; mg = g; } }
+  md = 8.0;
+  for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) { vec2 g = mg + vec2(float(i), float(j)), c = n + g; c.x = mod(c.x, P); vec2 r = g + h22(c) - f; if (dot(mr - r, mr - r) > 1e-5) md = min(md, dot(0.5 * (mr + r), normalize(r - mr))); }
+  return md; }
+float jag(float y, float seg, float s){ float i = floor(y / seg), f = fract(y / seg); return mix(h11(i + s), h11(i + 1.0 + s), f) - 0.5; }
+`;
 // ================================================================== rendu
 const canvas = document.getElementById('scene');
 const viewport = document.getElementById('viewport');
@@ -257,6 +277,7 @@ try {
 }
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.autoClear = false;
+renderer.shadowMap.enabled = !LOW; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const isGL2 = renderer.capabilities.isWebGL2;
 
 const scene = new THREE.Scene();
@@ -325,7 +346,7 @@ void main(){
     m = mix(m, vec3(0.008, 0.0, 0.004), line * uLines * 0.9);
   }
   float l = dot(m, vec3(0.2126, 0.7152, 0.0722));
-  vec3 neg = mix(vec3(0.96, 0.94, 0.9), vec3(0.02, 0.0, 0.01), step(0.3, l));
+  vec3 neg = mix(vec3(0.96, 0.94, 0.9), vec3(0.02, 0.0, 0.01), step(0.14, l));
   vec3 duo = l > 0.5 ? vec3(1.0, 0.96, 0.9) : (l > 0.045 ? vec3(0.015, 0.0, 0.005) : vec3(0.58, 0.31, 0.04));
   m = mix(m, neg, uInv); m = mix(m, duo, uDuo);
   m += (h21(vUv * uRes + fract(uTime) * 100.0) - 0.5) * 0.012;
@@ -370,7 +391,7 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), new THREE.Shade
   fragmentShader: `uniform vec3 uTop, uHorizon, uMoon; uniform float uDim; varying vec3 vDir;
   float h(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   void main(){ vec3 d = normalize(vDir); float y = clamp(d.y * 1.6 + 0.05, 0.0, 1.0); vec3 c = mix(uHorizon, uTop, pow(y, 0.6));
-    vec2 sp = vec2(atan(d.z, d.x) * 90.0, d.y * 140.0); c += vec3(step(0.996, h(floor(sp))) * smoothstep(0.12, 0.5, d.y) * 0.5);
+    vec2 sp = vec2(atan(d.z, d.x) * 90.0, d.y * 140.0), id = floor(sp), f = fract(sp) - 0.5; c += vec3(0.85, 0.9, 1.0) * step(0.994, h(id)) * smoothstep(0.24, 0.0, length(f)) * (0.35 + 0.65 * h(id + 7.0)) * smoothstep(0.12, 0.5, d.y) * 0.8;
     float md = dot(d, uMoon); c += vec3(0.9, 0.93, 1.0) * (smoothstep(0.9993, 0.9996, md) * 2.2 + pow(max(md, 0.0), 220.0) * 0.35);
     gl_FragColor = vec4(c * (1.0 - 0.8 * uDim), 1.0); }`
 }));
@@ -380,31 +401,139 @@ const hemi = new THREE.HemisphereLight(0x8f9cc0, 0x141820, 1.1);
 const moon = new THREE.DirectionalLight(0xa8b8e0, 1.0); moon.position.set(-4, 7, 5);
 const contre = new THREE.DirectionalLight(0x8ea4d8, 0.8); contre.position.set(7, 4, -7);
 scene.add(hemi, moon, contre);
+moon.castShadow = true; moon.shadow.mapSize.set(1024, 1024); Object.assign(moon.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 0.5, far: 30 }); moon.shadow.camera.updateProjectionMatrix(); moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.02;
 const LANTERNE = V3(-3.7, 1.85, -2.9);
 const lantern = new THREE.PointLight(0xffa14a, 9, 0, 2); lantern.position.copy(LANTERNE); scene.add(lantern);
 const impactLight = new THREE.PointLight(0xffa040, 0, 0, 2); scene.add(impactLight);
 const maceLight = new THREE.PointLight(0xff9a30, 0, 0, 2); scene.add(maceLight);
 const BASE = { hemi: hemi.intensity, moon: moon.intensity, contre: contre.intensity, lantern: lantern.intensity };
 
-function plazaTexture() {
-  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d'); const R = 6.2, px = S / (2 * R), cx = S / 2, cy = S / 2, r0 = mulberry32(7);
-  g.fillStyle = '#0f1218'; g.fillRect(0, 0, S, S);
-  g.fillStyle = '#4b5263'; g.beginPath(); g.arc(cx, cy, 0.42 * px, 0, Math.PI * 2); g.fill();
+// Reflets du metal : nuit, horizon brumeux, or au zenith (le ciel qui s'ouvre), braise sous l'horizon.
+const envMap = (() => {
+  const pm = new THREE.PMREMGenerator(renderer), s = new THREE.Scene();
+  s.add(new THREE.Mesh(new THREE.SphereGeometry(10, 48, 24), new THREE.ShaderMaterial({ side: THREE.BackSide,
+    vertexShader: `varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec3 vD; void main(){ vec3 d = normalize(vD);
+      vec3 c = mix(vec3(0.045, 0.05, 0.075), vec3(0.01, 0.012, 0.02), smoothstep(0.0, 0.7, d.y));
+      c += vec3(0.14, 0.16, 0.22) * exp(-abs(d.y) * 8.0);
+      c += vec3(1.5, 0.72, 0.2) * pow(max(d.y, 0.0), 8.0);
+      c += vec3(0.4, 0.14, 0.03) * pow(max(-d.y, 0.0), 2.0) * 0.5;
+      c += vec3(0.5, 0.55, 0.7) * pow(max(dot(d, normalize(vec3(-0.42, 0.42, -0.8))), 0.0), 80.0);
+      gl_FragColor = vec4(c, 1.0); }` })));
+  const t = pm.fromScene(s, 0.02).texture; pm.dispose(); return t;
+})();
+
+// Le dallage : de vraies dalles chanfreinees, posees un peu de travers sur un lit de mortier.
+// Le son de la cloche passe dans la pierre : les dalles sautent au passage de l'onde et l'or fondu court dans les joints.
+// Tout ce qui est peint au sol (cercle de zone, empreinte, fissures) est calcule dans le shader des dalles et bouge avec elles.
+const ONDES_MAX = 4;
+const uSol = { tNoise: { value: noiseTex }, uTime: { value: 0 }, uOndes: { value: Array.from({ length: ONDES_MAX }, () => new THREE.Vector4(-10, 0, 1, 0)) },
+  uImpact: { value: 0 }, uTremble: { value: 0 }, uTele: { value: 0 }, uTeleGlow: { value: 0 }, uImprint: { value: 0 }, uImprintHeat: { value: 0 },
+  uFiss: { value: 0 }, uFissHeat: { value: 0 }, uFade: { value: 1 }, uEmber: { value: EMBER }, uCore: { value: CORE } };
+function dallageGeo() {
+  const R = 6.2, J = 0.036, BEV = 0.009, r0 = mulberry32(7), morceaux = [];
+  const col = new THREE.Color(), pale = new THREE.Color(0.62, 0.66, 0.78);
+  function dalle(contour, cx, cz) {
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(contour.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: SOL_Y - 2 * BEV, bevelEnabled: true, bevelThickness: BEV, bevelSize: BEV * 0.9, bevelSegments: 1, curveSegments: 1 });
+    g.rotateX(-Math.PI / 2); g.translate(0, BEV, 0);
+    const p = g.attributes.position, tx = (r0() - 0.5) * 0.014, tz = (r0() - 0.5) * 0.014, dy = (r0() - 0.5) * 0.008;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y > 0.01) p.setY(i, y + dy + tx * (p.getX(i) - cx) + tz * (p.getZ(i) - cz)); }
+    g.deleteAttribute('uv'); g.deleteAttribute('normal'); g.computeVertexNormals();
+    col.setHSL(222 / 360, (8 + r0() * 7) / 100, (22 + r0() * 17) / 100); if (r0() < 0.22) col.lerp(pale, 0.16);
+    const n = p.count, c = new Float32Array(n * 3), ce = new Float32Array(n * 2), sd = new Float32Array(n), s = r0();
+    for (let i = 0; i < n; i++) { c.set([col.r, col.g, col.b], i * 3); ce.set([cx, cz], i * 2); sd[i] = s; }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.setAttribute('aCentre', new THREE.BufferAttribute(ce, 2)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
+    morceaux.push(g);
+  }
+  const arc = (r, a0, a1, n) => Array.from({ length: n + 1 }, (_, k) => { const a = lerp(a0, a1, k / n); return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const rc = 0.42 - J / 2 - BEV; dalle(arc(rc, 0, Math.PI * 2, 28).slice(0, 28), 0, 0);
   let r = 0.48;
   while (r < R - 0.05) {
     const w = 0.48 + r0() * 0.12, r2 = Math.min(R, r + w), mid = (r + r2) / 2;
-    const n = Math.max(6, Math.round(2 * Math.PI * mid / 0.74)), off = r0() * Math.PI * 2, gap = 0.03 / mid;
+    const n = Math.max(6, Math.round(2 * Math.PI * mid / 0.74)), off = r0() * Math.PI * 2;
     for (let i = 0; i < n; i++) {
-      const a0 = off + i * 2 * Math.PI / n, a1 = off + (i + 1) * 2 * Math.PI / n;
-      g.fillStyle = `hsl(222 ${8 + r0() * 7}% ${24 + r0() * 17}%)`;
-      g.beginPath(); g.arc(cx, cy, (r2 - 0.03) * px, a0 + gap, a1 - gap); g.arc(cx, cy, (r + 0.03) * px, a1 - gap, a0 + gap, true); g.closePath(); g.fill();
-      if (r0() < 0.22) { g.fillStyle = 'rgba(205,214,235,0.16)'; g.fill(); }
+      const a0 = off + i * 2 * Math.PI / n, a1 = off + (i + 1) * 2 * Math.PI / n, e = J / 2 + BEV;
+      const ra = r + e, rb = r2 - e, seg = Math.max(2, Math.ceil((a1 - a0) * rb / 0.1));
+      const ext = arc(rb, a0 + e / rb, a1 - e / rb, seg), inn = arc(ra, a1 - e / ra, a0 + e / ra, seg);
+      const am = (a0 + a1) / 2; dalle([...ext, ...inn], Math.cos(am) * mid, Math.sin(am) * mid);
     }
     r = r2;
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+  // fusion en une seule geometrie
+  const tot = morceaux.reduce((s, g) => s + g.attributes.position.count, 0), out = new THREE.BufferGeometry();
+  for (const [k, d] of [['position', 3], ['normal', 3], ['color', 3], ['aCentre', 2], ['aSeed', 1]]) {
+    const a = new Float32Array(tot * d); let o = 0;
+    for (const g of morceaux) { const src = g.index ? g.toNonIndexed().attributes[k].array : g.attributes[k].array; a.set(src, o); o += src.length; }
+    out.setAttribute(k, new THREE.BufferAttribute(a, d));
+  }
+  morceaux.forEach(g => g.dispose());
+  return out;
 }
+// Ce qui est peint sur les dalles.
+const GLSL_SOL = `
+float pinceau(vec2 P, float r, float an, float prog, out float tete, out float coeur) {
+  float t = fract(an / 6.2832 + 0.37);
+  float ro = 3.0 + (texture2D(tNoise, vec2(t * 3.0, 0.21)).r - 0.5) * 0.09 + sin(t * 18.85) * 0.012;
+  float w = 0.11 * (0.45 + 0.75 * smoothstep(0.0, 0.05, t)) * (1.0 - 0.5 * smoothstep(0.55, 1.0, t)) * (0.85 + 0.3 * texture2D(tNoise, vec2(t * 7.0, 0.63)).g);
+  float ac = (r - ro) / w;
+  float poils = texture2D(tNoise, vec2(t * 2.0, ac * 0.45 + 0.5)).g;
+  float bord = texture2D(tNoise, P * 1.7).a;
+  float sec = smoothstep(0.72, 1.0, t) * 0.55 + (1.0 - smoothstep(0.0, 0.03, t)) * 0.3;
+  float corps = smoothstep(1.0, 0.82, abs(ac) + (bord - 0.5) * 0.35) * smoothstep(sec * 0.75, sec * 0.75 + 0.12, poils);
+  float lavis = smoothstep(1.6, 1.0, abs(ac) + (bord - 0.5) * 0.6) * 0.22 * (1.0 - sec);
+  float vu = step(t, prog);
+  tete = exp(-max(prog - t, 0.0) * 40.0) * vu * corps;
+  coeur = smoothstep(0.5, 0.1, abs(ac)) * corps * vu * smoothstep(0.62, 0.85, texture2D(tNoise, vec2(t * 5.0 + 0.4, ac * 0.3 + 0.2)).g);
+  return max(corps, lavis) * vu;
+}
+float touches(float r, float an, float prog) {
+  float t = fract(an / 6.2832 + 0.37), id = floor(t * 18.0 + 0.5), tc = id / 18.0;
+  float lg = 0.22 + 0.4 * h11(id * 3.1), along = (2.94 - r) / lg;
+  float arc = (t - tc) * 6.2832 * r - (h11(id * 7.7) - 0.5) * 0.25 * along;
+  float wid = 0.03 * (1.0 - along * 0.85) * (0.6 + 0.8 * h11(id * 1.7));
+  float poils = texture2D(tNoise, vec2(along * 0.6 + id * 0.17, arc / max(wid, 1e-3) * 0.35)).g;
+  float m = smoothstep(wid, wid * 0.4, abs(arc)) * step(0.0, along) * step(along, 1.0) * smoothstep(0.25 * along, 0.25 * along + 0.15, poils);
+  return m * step(tc, prog - 0.02) * step(0.35, h11(id * 5.3));
+}
+float eclaboussures(vec2 P, float r, float prog) {
+  vec2 c = floor(P * 7.0); if (h21(c) < 0.93) return 0.0;
+  vec2 q = P * 7.0 - c - h22(c + 3.1); float rr = 0.06 + 0.16 * h21(c + 9.7);
+  float t = fract(atan(P.y, P.x) / 6.2832 + 0.37);
+  return smoothstep(rr, rr * 0.6, length(q)) * smoothstep(0.7, 0.1, abs(r - 3.0)) * step(t, prog);
+}
+float fissures(float r, float an, out float lave) {
+  float m = 0.0; lave = 0.0;
+  for (int k = 0; k < 9; k++) {
+    float fk = float(k), a0 = (fk + 0.5) / 9.0 * 6.2832 + (h11(fk * 3.7) - 0.5) * 0.5, L = 1.6 + 1.6 * h11(fk * 9.1);
+    float s = r - 1.72; if (s < -0.02 || s > L * uFiss) continue;
+    float da = an - a0; da -= 6.2832 * floor(da / 6.2832 + 0.5);
+    float x = da * r - (jag(s, 0.32, fk * 5.0) * 0.12 + jag(s, 0.09, fk * 11.0) * 0.04 + jag(s, 0.025, fk * 17.0) * 0.012), w = (0.03 * (1.0 - s / (L + 0.01)) + 0.006) * (0.6 + 0.8 * texture2D(tNoise, vec2(s * 0.8, fk * 0.37)).g);
+    m = max(m, smoothstep(w * 3.5, w, abs(x)) * 0.6 + smoothstep(w, w * 0.4, abs(x)) * 0.4);
+    lave = max(lave, smoothstep(w * 0.8, 0.0, abs(x)) * (1.0 - s / (L + 0.01)) * smoothstep(0.35, 0.7, texture2D(tNoise, vec2(s * 1.3, fk * 0.53)).r));
+  }
+  return m;
+}
+void marquesSol(vec2 P, float seed, inout vec3 alb, inout float encre, inout vec3 emis) {
+  float r = length(P), an = atan(P.y, P.x);
+  float n1 = texture2D(tNoise, P * 0.23).r, n2 = texture2D(tNoise, P * 0.9 + seed).g, n3 = texture2D(tNoise, P * 3.1).a;
+  alb *= 0.62 + 0.5 * n1 + 0.35 * (n3 - 0.5) + 0.15 * (n2 - 0.5);
+  float tete = 0.0, coeur = 0.0, e = 0.0;
+  if (uTele > 0.0) { float p = pinceau(P, r, an, uTele, tete, coeur); e = max(max(p, touches(r, an, uTele) * 0.9), eclaboussures(P, r, uTele) * 0.95); }
+  float nb = texture2D(tNoise, vec2(an * 1.5915, r * 0.5)).r;
+  float levre = smoothstep(0.16, 0.04, abs(r - 1.66 + (nb - 0.5) * 0.08)) * uImprint;
+  float suie = smoothstep(2.6, 1.5, r + (n1 - 0.5) * 0.9) * uImprint * 0.75;
+  float lave = 0.0, fi = 0.0;
+  if (uFiss > 0.0) fi = fissures(r, an, lave);
+  e = max(e, max(levre * 0.9, fi * 0.95)) * uFade; suie *= uFade;
+  alb = mix(alb, vec3(0.011, 0.01, 0.009), e * 0.94) * (1.0 - suie * 0.8);
+  encre = e * (1.0 - suie * 0.5);
+  float or1 = coeur * 0.9 * uTeleGlow + tete * 1.6;
+  emis += (uEmber * 1.6 + uCore * tete * 1.2) * or1 * uFade;
+  float braises = smoothstep(0.45, 0.85, texture2D(tNoise, vec2(an * 4.774, r * 1.3)).g) * (0.4 + 0.6 * nb);   // le bord brule par endroits, pas en anneau propre
+  emis += corpsNoir(0.95 * uImprintHeat) * levre * braises * 0.7 * uFade;
+  emis += corpsNoir(0.62 * min(uFissHeat, 1.2) * (0.65 + 0.4 * n2)) * lave * 0.7 * uFade;
+}
+`;
 function dirtTexture() {
   const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
   const g = c.getContext('2d'), r0 = mulberry32(11);
@@ -416,8 +545,49 @@ function dirtTexture() {
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshStandardMaterial({ map: dirtTexture(), roughness: 0.95 }));
 ground.rotation.x = -Math.PI / 2; scene.add(ground);
 const PLACE = V3(0, 0, 0);
-const plaza = new THREE.Mesh(new THREE.CircleGeometry(6.2, 96), new THREE.MeshStandardMaterial({ map: plazaTexture(), roughness: 0.82 }));
-plaza.rotation.x = -Math.PI / 2; plaza.position.set(PLACE.x, 0.004, PLACE.z); scene.add(plaza);
+ground.receiveShadow = true;
+const matDalles = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0 });
+matDalles.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, uSol);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', `#include <common>
+attribute vec2 aCentre; attribute float aSeed; uniform vec4 uOndes[${ONDES_MAX}]; uniform float uImpact, uTremble, uTime; varying vec3 vWp; varying float vSeedD;`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+{ float rc = length(aCentre), haut = step(0.01, position.y); vec2 rad = aCentre / max(rc, 1e-3); float dl = dot(position.xz - aCentre, rad);
+  float saut = 0.0, pente = 0.0;
+  for (int i = 0; i < ${ONDES_MAX}; i++) { vec4 o = uOndes[i]; float x = (rc - o.x) / o.z, b = exp(-x * x); saut += o.y * b; pente -= o.y * b * 2.0 * x / o.z; }
+  float k = 0.55 + 0.9 * aSeed, cr = exp(-pow((rc - 1.68) / 0.28, 2.0)) * uImpact;
+  transformed.y += haut * (saut * k + pente * dl * 0.45 * k - cr * (0.022 + 0.03 * aSeed) + dl * cr * 0.18 * (aSeed - 0.35) + sin(uTime * 61.0 + aSeed * 40.0) * 0.004 * uTremble * aSeed);
+  vSeedD = aSeed; vWp = (modelMatrix * vec4(transformed, 1.0)).xyz; }`);
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', `#include <common>
+uniform sampler2D tNoise; uniform float uTime, uTele, uTeleGlow, uImprint, uImprintHeat, uFiss, uFissHeat, uFade; uniform vec3 uEmber, uCore;
+varying vec3 vWp; varying float vSeedD;
+${GLSL_COMMUN}
+${GLSL_SOL}`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+float encreS = 0.0; vec3 emisS = vec3(0.0), albS = diffuseColor.rgb;
+marquesSol(vWp.xz, vSeedD, albS, encreS, emisS); diffuseColor.rgb = albS;`)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = mix(roughnessFactor, 0.85, encreS);`)
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += emisS;`);
+};
+matDalles.customProgramCacheKey = () => 'dalles-cloche';
+const dalles = new THREE.Mesh(dallageGeo(), matDalles); dalles.receiveShadow = true; dalles.frustumCulled = false; scene.add(dalles);
+// Le lit de mortier, visible seulement entre les dalles : c'est la que passe l'or des ondes.
+const mortier = new THREE.Mesh(new THREE.CircleGeometry(6.26, 120), new THREE.ShaderMaterial({ uniforms: uSol,
+  vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform sampler2D tNoise; uniform vec4 uOndes[${ONDES_MAX}]; uniform float uImprintHeat, uTeleGlow, uFade, uTime; varying vec3 vW;
+  ${GLSL_COMMUN}
+  void main(){ float r = length(vW.xz), g = 0.0;
+    for (int i = 0; i < ${ONDES_MAX}; i++) { vec4 o = uOndes[i]; float x = (r - o.x) / (o.z * 0.8); g += o.w * exp(-x * x); }
+    float an = atan(vW.z, vW.x);
+    g *= (0.45 + 0.9 * texture2D(tNoise, vec2(an * 2.228, r * 0.25 - uTime * 0.3)).r) * (0.55 + 0.9 * texture2D(tNoise, vW.xz * 0.6 + vec2(uTime * 0.05, 0.0)).r);
+    g += uImprintHeat * exp(-pow((r - 1.66) / 0.3, 2.0)) * 0.35 * smoothstep(0.3, 0.8, texture2D(tNoise, vec2(an * 1.5915, 0.4)).r);
+    g *= smoothstep(6.15, 5.6, r);
+    gl_FragColor = vec4(vec3(0.006, 0.006, 0.008) + corpsNoir(min(g * 0.7, 0.68) * uFade) * 0.9, 1.0); }` }));
+mortier.rotation.x = -Math.PI / 2; mortier.position.y = 0.004; scene.add(mortier);
 
 const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true, ...o });
 (function decor() {
@@ -445,11 +615,6 @@ const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughnes
   const lanterne = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.28), new THREE.MeshStandardMaterial({ color: 0xffc27a, emissive: 0xffa24d, emissiveIntensity: 2.2 })); lanterne.position.copy(LANTERNE);
   const toit = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.22, 6), flat(0x1b2030)); toit.position.set(LANTERNE.x, LANTERNE.y + 0.32, LANTERNE.z);
   scene.add(pilier, lanterne, toit);
-  const cristal = new THREE.MeshStandardMaterial({ color: 0xffb060, emissive: 0xff7a1c, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });
-  for (const [x, z] of [[-3.4, 1.8], [-2.9, -3.9], [6.2, -2.8], [6.4, 2.6], [-0.4, 4.0]]) for (let k = 0; k < 3; k++) {
-    const h = 0.25 + r0() * 0.45, m = new THREE.Mesh(new THREE.ConeGeometry(0.06 + r0() * 0.05, h, 5), cristal);
-    m.position.set(x + (r0() - .5) * 0.3, h / 2, z + (r0() - .5) * 0.3); m.rotation.set((r0() - .5) * 0.7, 0, (r0() - .5) * 0.7); scene.add(m);
-  }
 })();
 // Brume basse
 const brumes = [];
@@ -477,28 +642,66 @@ const snow = (() => {
 // Le combattant de l'Airain : armure de bronze, heaume ferme (aucun visage), masse, cape lourde.
 const joueur = new THREE.Group(); scene.add(joueur);
 const corpsJ = new THREE.Group(); joueur.add(corpsJ);
-const mArmure = flat(0x6b4b28, { metalness: 0.7, roughness: 0.45 }), mSombre = flat(0x2a2019, { metalness: 0.5, roughness: 0.6 }), mCape = flat(0x3e2913, { side: THREE.DoubleSide });
-const mOr = flat(0xc8923a, { metalness: 0.85, roughness: 0.3, emissive: new THREE.Color(1, 0.42, 0.08), emissiveIntensity: 0 });
+const lisse = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, ...o });
+const mArmure = lisse(0x6b4b28, { metalness: 0.75, roughness: 0.42 }), mSombre = lisse(0x2a2019, { metalness: 0.5, roughness: 0.6 }), mCape = flat(0x3e2913, { side: THREE.DoubleSide });
+const mOr = lisse(0xc8923a, { metalness: 0.85, roughness: 0.3, emissive: new THREE.Color(1, 0.42, 0.08), emissiveIntensity: 0 });
+// usure : le metal n'est jamais d'une seule couleur (taches, poli, rouille pour les Rouillards)
+function usure(mat, rouille = 0) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.tNoise = { value: noiseTex };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vPo;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPo = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tNoise; varying vec3 vPo;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float nA = texture2D(tNoise, vPo.xy * 3.1 + vPo.z * 1.7).r, nB = texture2D(tNoise, vPo.zy * 7.3 + vPo.x).g;
+diffuseColor.rgb *= 0.68 + 0.6 * nA;
+${rouille ? 'float rl = smoothstep(0.5, 0.78, nB * 0.7 + nA * 0.5); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.055, 0.02), rl * 0.75);' : 'float rl = 0.0;'}`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor + (nB - 0.5) * 0.35 + rl * 0.35, 0.05, 1.0);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor *= 1.0 - rl * 0.7;');
+  };
+  mat.customProgramCacheKey = () => 'usure-' + rouille + (mat.flatShading ? '-plat' : '');
+}
+for (const m of [mArmure, mSombre, mOr, mCape]) usure(m);
 (function () {
   const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = corpsJ) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); parent.add(m); return m; };
-  add(new THREE.CylinderGeometry(0.27, 0.3, 0.68, 8), mArmure, 0, 1.2, 0);
-  add(new THREE.CylinderGeometry(0.315, 0.315, 0.08, 8), mOr, 0, 0.9, 0);
-  for (const z of [-0.31, 0.31]) add(new THREE.SphereGeometry(0.17, 8, 6), mArmure, 0, 1.5, z);
-  add(new THREE.CylinderGeometry(0.17, 0.19, 0.34, 8), mArmure, 0, 1.73, 0);
-  add(new THREE.ConeGeometry(0.18, 0.17, 8), mArmure, 0, 1.98, 0);
+  // torse, plastron a arete, ceinture et boucle
+  add(new THREE.CylinderGeometry(0.27, 0.3, 0.68, 16), mArmure, 0, 1.2, 0);
+  add(new THREE.BoxGeometry(0.05, 0.5, 0.06), mArmure, 0.27, 1.24, 0, 0, 0, -0.08);
+  add(new THREE.CylinderGeometry(0.318, 0.318, 0.08, 16), mSombre, 0, 0.9, 0);
+  add(new THREE.BoxGeometry(0.04, 0.1, 0.12), mOr, 0.31, 0.9, 0);
+  // faudes : quatre lames qui pendent autour des hanches
+  for (let k = 0; k < 5; k++) { const a = -0.9 + k * 0.45; add(new THREE.BoxGeometry(0.03, 0.24, 0.2), mArmure, Math.cos(a) * 0.3, 0.74, Math.sin(a) * 0.3, 0, -a, Math.cos(a) * 0.12); }
+  // epaulieres en trois lames
+  for (const z of [-0.31, 0.31]) for (let k = 0; k < 3; k++) {
+    const s = 0.2 - k * 0.025, m = add(new THREE.SphereGeometry(s, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), k === 0 ? mArmure : mSombre, 0, 1.52 - k * 0.07, z * (1 + k * 0.08));
+    m.scale.set(1, 0.75, 1.1);
+  }
+  add(new THREE.TorusGeometry(0.15, 0.035, 8, 20), mSombre, 0, 1.56, 0, Math.PI / 2, 0, 0);   // gorgerin
+  // heaume ferme : bombe, nasal, fente, cimier d'or
+  add(new THREE.CylinderGeometry(0.17, 0.19, 0.34, 16), mArmure, 0, 1.73, 0);
+  add(new THREE.SphereGeometry(0.175, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mArmure, 0, 1.9, 0).scale.set(1, 0.9, 1);
   add(new THREE.BoxGeometry(0.02, 0.03, 0.22), new THREE.MeshBasicMaterial({ color: 0x000000 }), 0.188, 1.75, 0);
-  add(new THREE.BoxGeometry(0.03, 0.28, 0.04), mOr, 0.172, 1.74, 0);
-  for (const z of [-0.12, 0.12]) add(new THREE.CylinderGeometry(0.09, 0.075, 0.8, 7), mSombre, 0, 0.4, z, 0, 0, 0, joueur);
+  add(new THREE.BoxGeometry(0.03, 0.28, 0.04), mOr, 0.176, 1.74, 0);
+  add(new THREE.BoxGeometry(0.3, 0.07, 0.025), mOr, -0.02, 2.06, 0);
+  for (const z of [-0.12, 0.12]) {
+    add(new THREE.CylinderGeometry(0.09, 0.075, 0.8, 12), mSombre, 0, 0.4, z, 0, 0, 0, joueur);
+    add(new THREE.CylinderGeometry(0.085, 0.095, 0.36, 12), mArmure, 0.02, 0.24, z, 0, 0, 0, joueur);   // greve
+    add(new THREE.BoxGeometry(0.24, 0.07, 0.12), mArmure, 0.06, 0.035, z, 0, 0, 0, joueur);              // soleret
+  }
 })();
-const bras = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 1, 7), mArmure); scene.add(bras);
+for (const m of [mArmure, mSombre, mOr]) { m.envMap = envMap; m.envMapIntensity = 0.7; }
+const bras = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 1, 12), mArmure); scene.add(bras);
 const masse = new THREE.Group(); scene.add(masse);
-(function () {
-  const manche = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.95, 7), mSombre); manche.rotation.z = -Math.PI / 2; manche.position.x = 0.4; masse.add(manche);
-  const tete = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15, 0), mOr); tete.position.x = 0.9; masse.add(tete);
-  for (let k = 0; k < 6; k++) { const ail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.21), mOr); ail.position.x = 0.9; ail.rotation.x = k * Math.PI / 6; masse.add(ail); }
+(function () { // masse a ailettes : fut, sept ailettes forgees, pointe
+  const manche = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.95, 8), mSombre); manche.rotation.z = -Math.PI / 2; manche.position.x = 0.4; masse.add(manche);
+  for (const x of [0.12, 0.2, 0.28]) { const bague = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.025, 10), mOr); bague.rotation.z = -Math.PI / 2; bague.position.x = x; masse.add(bague); }
+  const fut = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.32, 12), mOr); fut.rotation.z = -Math.PI / 2; fut.position.x = 0.9; masse.add(fut);
+  const forme = new THREE.Shape([new THREE.Vector2(-0.14, 0.04), new THREE.Vector2(0.14, 0.04), new THREE.Vector2(0.1, 0.13), new THREE.Vector2(0.03, 0.165), new THREE.Vector2(-0.07, 0.15)]);
+  const aile = new THREE.ExtrudeGeometry(forme, { depth: 0.022, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 }); aile.translate(0, 0, -0.011);
+  for (let k = 0; k < 7; k++) { const m = new THREE.Mesh(aile, mOr); m.position.x = 0.9; m.rotation.x = k * Math.PI * 2 / 7; masse.add(m); }
+  const pointe = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.14, 8), mOr); pointe.rotation.z = -Math.PI / 2; pointe.position.x = 1.12; masse.add(pointe);
 })();
 // Cape : maillage recalcule a chaque image dans le repere du joueur
-const CAPE_C = 12, CAPE_R = 5;
+const CAPE_C = 20, CAPE_R = 9;
 const capeGeo = new THREE.BufferGeometry();
 capeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((CAPE_C + 1) * (CAPE_R + 1) * 3), 3).setUsage(THREE.DynamicDrawUsage));
 { const idx = []; for (let r = 0; r < CAPE_R; r++) for (let c = 0; c < CAPE_C; c++) { const a = r * (CAPE_C + 1) + c, b = a + 1, d = a + CAPE_C + 1, e = d + 1; idx.push(a, d, b, b, d, e); } capeGeo.setIndex(idx); }
@@ -522,6 +725,8 @@ function majCape(souffle, t) {
 // Trois Rouillards autour du combattant, dans la zone de 3 m.
 const mRouille = flat(0x5b3b2a, { metalness: 0.5, roughness: 0.6 }), mFer = flat(0x2c2a2e, { metalness: 0.6, roughness: 0.5 }), mToile = flat(0x5e5246);
 const matsEnnemi = [mRouille, mFer, mToile];
+for (const m of [mRouille, mFer]) { m.envMap = envMap; m.envMapIntensity = 0.5; }
+usure(mRouille, 1); usure(mFer, 1); usure(mToile);
 function rouillard(angleDeg) {
   const a = angleDeg * DEG, racine = new THREE.Group(), penche = new THREE.Group(), corps = new THREE.Group();
   racine.rotation.y = -a; corps.rotation.y = Math.PI; racine.add(penche); penche.add(corps); scene.add(racine);
@@ -542,6 +747,7 @@ function rouillard(angleDeg) {
 }
 const R_ENNEMI = 2.7;
 const ennemis = [50, 170, 290].map(rouillard);
+for (const o of [joueur, masse, bras, cape, ...ennemis.map(e => e.racine)]) o.traverse(m => { if (m.isMesh) m.castShadow = true; });
 
 // ================================================================== systemes de particules
 // Points : braises (rgb HDR, alpha 0 = additif) et cendre (rgb ~0, alpha = assombrit). Melange premultiplie.
@@ -580,7 +786,7 @@ const points = (() => {
       P.v[i3 + 1] -= P.grav[i] * dt;
       const k = Math.exp(-P.drag[i] * dt); P.v[i3] *= k; P.v[i3 + 1] *= k; P.v[i3 + 2] *= k;
       P.p[i3] += P.v[i3] * dt; P.p[i3 + 1] += P.v[i3 + 1] * dt; P.p[i3 + 2] += P.v[i3 + 2] * dt;
-      if (P.p[i3 + 1] < 0.01) { P.p[i3 + 1] = 0.01; P.v[i3 + 1] *= -0.2; }
+      if (P.p[i3 + 1] < SOL_Y + 0.01) { P.p[i3 + 1] = SOL_Y + 0.01; P.v[i3 + 1] *= -0.2; }
     }
   }
   function write() {
@@ -618,22 +824,26 @@ const streaks = (() => {
         gl_Position = c; vCol = iCol; vC = corner; }`,
     fragmentShader: `varying vec4 vCol; varying vec2 vC; void main(){ gl_FragColor = vCol * smoothstep(1.0, 0.2, abs(vC.y)) * mix(1.0, 0.15, vC.x); }` });
   const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 8; scene.add(obj);
-  const S = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), len: new Float32Array(N), w: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), ink: new Uint8Array(N) };
+  const S = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), len: new Float32Array(N), w: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), ink: new Uint8Array(N), burst: new Uint8Array(N), bAt: new Float32Array(N) };
   let n = 0;
   function spawn(o) {
     if (n >= N) return; const i = n++;
     S.p.set([o.p.x, o.p.y, o.p.z], i * 3); S.v.set([o.v.x, o.v.y, o.v.z], i * 3); S.c.set([o.c[0], o.c[1], o.c[2], o.a ?? 0], i * 4);
-    S.len[i] = o.len ?? 0.03; S.w[i] = o.w ?? 0.02; S.age[i] = 0; S.life[i] = o.life; S.grav[i] = o.grav ?? 0; S.drag[i] = o.drag ?? 0; S.ink[i] = o.ink ? 1 : 0;
+    S.len[i] = o.len ?? 0.03; S.w[i] = o.w ?? 0.02; S.age[i] = 0; S.life[i] = o.life; S.grav[i] = o.grav ?? 0; S.drag[i] = o.drag ?? 0; S.ink[i] = o.ink ? 1 : 0; S.burst[i] = o.burst ? 1 : 0; S.bAt[i] = o.life * (0.3 + 0.35 * rng());
   }
-  function kill(i) { const j = --n; if (i === j) return; S.p.copyWithin(i * 3, j * 3, j * 3 + 3); S.v.copyWithin(i * 3, j * 3, j * 3 + 3); S.c.copyWithin(i * 4, j * 4, j * 4 + 4); for (const k of ['len', 'w', 'age', 'life', 'grav', 'drag', 'ink']) S[k][i] = S[k][j]; }
+  function kill(i) { const j = --n; if (i === j) return; S.p.copyWithin(i * 3, j * 3, j * 3 + 3); S.v.copyWithin(i * 3, j * 3, j * 3 + 3); S.c.copyWithin(i * 4, j * 4, j * 4 + 4); for (const k of ['len', 'w', 'age', 'life', 'grav', 'drag', 'ink', 'burst', 'bAt']) S[k][i] = S[k][j]; }
   function update(dt) {
     for (let i = 0; i < n; i++) {
       S.age[i] += dt; if (S.age[i] >= S.life[i]) { kill(i); i--; continue; }
+      if (S.burst[i] && S.age[i] > S.bAt[i]) { // l'etincelle de forge eclate en petite etoile
+        S.burst[i] = 0; const j3 = i * 3, nb = 3 + Math.floor(rng() * 3);
+        for (let k = 0; k < nb; k++) spawn({ p: V3(S.p[j3], S.p[j3 + 1], S.p[j3 + 2]), v: V3(S.v[j3] * 0.3 + (rng() * 2 - 1) * 2.2, S.v[j3 + 1] * 0.3 + (rng() * 1.8 - 0.6) * 2.2, S.v[j3 + 2] * 0.3 + (rng() * 2 - 1) * 2.2), c: [S.c[i * 4] * 1.3, S.c[i * 4 + 1] * 1.3, S.c[i * 4 + 2] * 1.3], a: 0, len: 0.025, w: S.w[i] * 0.6, life: 0.08 + rng() * 0.14, grav: 3, drag: 3 });
+      }
       const i3 = i * 3; S.v[i3 + 1] -= S.grav[i] * dt;
       const k = Math.exp(-S.drag[i] * dt); S.v[i3] *= k; S.v[i3 + 1] *= k; S.v[i3 + 2] *= k;
       S.p[i3] += S.v[i3] * dt; S.p[i3 + 1] += S.v[i3 + 1] * dt; S.p[i3 + 2] += S.v[i3 + 2] * dt;
-      if (S.p[i3 + 1] < 0.015) {
-        if (S.ink[i]) splats.spawn({ x: S.p[i3], z: S.p[i3 + 2], size: 0.1 + S.w[i] * 4 + rand(0, 0.14), glow: S.c[i * 4] > 0.3 ? 1.0 : 0.2, stretch: 1 + rand(0, 0.9), rot: Math.atan2(S.v[i3 + 2], S.v[i3]) });
+      if (S.p[i3 + 1] < SOL_Y + 0.01) {
+        if (S.ink[i]) splats.spawn({ x: S.p[i3], z: S.p[i3 + 2], size: 0.05 + S.w[i] * 2 + rand(0, 0.06), glow: S.c[i * 4] > 0.3 ? 1.0 : 0.2, stretch: 1 + rand(0, 0.9), rot: Math.atan2(S.v[i3 + 2], S.v[i3]) });
         kill(i); i--; continue;
       }
     }
@@ -677,10 +887,11 @@ const sprites = (() => {
         float shape = smoothstep(1.0, 0.15, r + (n - 0.5) * 1.1);
         float thr = age * 0.85; float dens = smoothstep(thr, thr + 0.28, shape * (0.45 + 0.7 * n2));
         float a = dens * vCol.a * (1.0 - smoothstep(0.7, 1.0, age));
-        if (vM.z > 1.5) { gl_FragColor = vec4(vCol.rgb * a, a); return; } // poussiere
-        float lisiere = smoothstep(0.0, 0.2, dens) * (1.0 - smoothstep(0.2, 0.55, dens));
-        float chaud = vCol.r * (1.0 - smoothstep(0.0, 0.55, age));
-        gl_FragColor = vec4(vec3(0.012, 0.0, 0.006) * a + uEmber * lisiere * chaud * 1.5, a); }` });
+        if (vM.z > 1.5) { float ad = min(a * 1.15, 1.0); gl_FragColor = vec4(vCol.rgb * (0.5 + 0.8 * vUv.y) * (0.65 + 0.7 * n2) * ad, ad); return; } // poussiere en volume
+        float lisiere = smoothstep(0.0, 0.35, dens) * (1.0 - smoothstep(0.35, 0.95, dens));
+        float chaud = vCol.r * (1.0 - smoothstep(0.0, 0.7, age));
+        vec3 corps = mix(vec3(0.022, 0.018, 0.014), vec3(0.09, 0.045, 0.012), chaud * (1.0 - n2 * 0.6));
+        gl_FragColor = vec4(corps * a + uEmber * lisiere * chaud * 0.0 * a, a); }` });
   const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 3; scene.add(obj);
   const L = [];
   function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v ? o.v.clone() : V3(), s0: o.size, grow: o.grow ?? 1, rot: rand(0, 6.28), spin: rand(-1, 1) * (o.spin ?? 0.8), age: 0, life: o.life, col: o.col, a: o.a ?? 0.8, glow: o.glow ?? 0, drag: o.drag ?? 2, rise: o.rise ?? 0.3, seed: rng(), kind: o.kind ?? 0 }); }
@@ -717,7 +928,7 @@ const debris = (() => {
     for (let i = L.length - 1; i >= 0; i--) {
       const d = L[i]; d.age += dt; if (d.age > d.life) { L.splice(i, 1); continue; }
       d.v.y -= 9.8 * dt; d.p.addScaledVector(d.v, dt); d.ang += d.spin * dt;
-      if (d.p.y < d.s) { d.p.y = d.s; d.v.y *= -0.32; d.v.x *= 0.55; d.v.z *= 0.55; d.spin *= 0.6; }
+      if (d.p.y < SOL_Y + d.s) { d.p.y = SOL_Y + d.s; d.v.y *= -0.32; d.v.x *= 0.55; d.v.z *= 0.55; d.spin *= 0.6; }
     }
   }
   function write() {
@@ -734,6 +945,7 @@ const debris = (() => {
 
 // Taches d'encre au sol (fraiches et rougeoyantes, puis refroidies en encre).
 const FS_SPLAT = `uniform sampler2D tNoise; uniform float uSeed, uLife, uGlow, uRing; uniform vec3 uEmber; varying vec2 vUv;
+${GLSL_COMMUN}
 void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p); float ang = atan(p.y, p.x);
   float n = texture2D(tNoise, vec2(ang * 0.16 + uSeed, uSeed * 0.3)).r;
   float edge = 0.55 + (n - 0.5) * 0.6; float blob = smoothstep(edge, edge - 0.07, r);
@@ -741,7 +953,7 @@ void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p); float ang = atan(p
   float m = max(blob, sat);
   if (uRing > 0.0) m *= mix(1.0, smoothstep(0.15, 0.55, r / max(edge, 0.01)) * 0.75 + 0.25, uRing);
   float a = m * 0.86 * uLife;
-  gl_FragColor = vec4(vec3(0.012, 0.0, 0.004) * a + uEmber * 1.1 * uGlow * m * (1.6 - r) * uLife, a); }`;
+  gl_FragColor = vec4(vec3(0.03, 0.022, 0.015) * a + corpsNoir(uGlow * 0.85 * (1.15 - r) * (0.6 + 0.6 * n)) * m * uLife, a); }`;
 const splats = (() => {
   const N = nq(70), list = [], geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
   for (let i = 0; i < N; i++) {
@@ -752,7 +964,7 @@ const splats = (() => {
   function spawn(o) {
     const s = list[next]; next = (next + 1) % N;
     Object.assign(s, { age: 0, life: o.life ?? 5, glow0: o.glow ?? 0, grow: o.grow ?? 0, size: o.size, stretch: o.stretch ?? 1, cool: o.cool ?? 3 });
-    s.m.visible = true; s.m.position.set(o.x, 0.012 + rand(0, 0.004), o.z); s.m.rotation.y = -(o.rot ?? rand(0, 6.28));
+    s.m.visible = true; s.m.position.set(o.x, SOL_Y + 0.004 + rand(0, 0.003), o.z); s.m.rotation.y = -(o.rot ?? rand(0, 6.28));
     s.m.material.uniforms.uSeed.value = rand(0, 10); s.m.material.uniforms.uRing.value = o.ring ?? 0; s.m.scale.set(o.size * s.stretch, 1, o.size);
   }
   function update(dt) {
@@ -768,23 +980,7 @@ const splats = (() => {
 // ================================================================== pieces d'effet
 const fx = new THREE.Group(); scene.add(fx);
 const distFx = new THREE.Group(); distScene.add(distFx);
-const FS_CRACK = `uniform sampler2D tNoise; uniform float uReveal, uHeat, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
-void main(){ float x = vUv.x, y = vUv.y - 0.5;
-  float wob = texture2D(tNoise, vec2(x * 1.2, 0.3)).r - 0.5; float d = abs(y - wob * 0.35);
-  float crack = 1.0 - smoothstep(0.0, 0.02 + 0.035 * texture2D(tNoise, vec2(x * 3.0, 0.7)).g, d);
-  float br = texture2D(tNoise, vec2(x * 4.0, y * 2.0)).b; float branch = smoothstep(0.82, 0.95, br) * smoothstep(0.4, 0.1, abs(y));
-  float lines = max(crack, branch * 0.8);
-  float ends = smoothstep(0.0, 0.08, x) * smoothstep(1.0, 0.82, x) * step(x, uReveal);
-  float scorch = smoothstep(0.42, 0.0, d) * 0.75;
-  float a = max(scorch * 0.8, lines * 0.95) * ends * uFade;
-  vec3 col = (uEmber * 3.2 + uCore * crack * 1.6) * lines * uHeat * ends * uFade;
-  gl_FragColor = vec4(vec3(0.012, 0.0, 0.004) * a + col, a); }`;
-function makeCrack(p, dir, L) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.9), new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -4, vertexShader: VS_UV, fragmentShader: FS_CRACK, uniforms: { tNoise: { value: noiseTex }, uReveal: { value: 0 }, uHeat: { value: 1 }, uFade: { value: 1 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
-  m.geometry.rotateX(-Math.PI / 2); m.geometry.translate(L / 2, 0, 0);
-  m.position.set(p.x, 0.016, p.z); m.rotation.y = -Math.atan2(dir.z, dir.x); m.renderOrder = 2; fx.add(m);
-  return m;
-}
+
 // Etoile d'impact, anneaux et ondes (panneaux face camera).
 const FS_STAR = `uniform float uT; uniform vec3 uCore, uEmber; varying vec2 vUv;
 void main(){ vec2 p = (vUv - 0.5) * 2.0; float k = 1.0 - uT;
@@ -793,10 +989,6 @@ void main(){ vec2 p = (vUv - 0.5) * 2.0; float k = 1.0 - uT;
   vec2 q2 = mat2(0.5, 0.866, -0.866, 0.5) * p; float dg2 = exp(-abs(q2.y) * 110.0) * exp(-abs(q2.x) * 4.0) * 0.35;
   float core = exp(-dot(p, p) * 40.0);
   gl_FragColor = vec4((uCore * (h + vv + dg + dg2 + core * 2.5) * k) * 3.2, 0.0); }`;
-const FS_RING = `uniform float uT; uniform vec3 uCore, uEmber; varying vec2 vUv;
-void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p);
-  float ring = exp(-pow((r - uT * 0.92) * 26.0, 2.0)) * (1.0 - uT);
-  gl_FragColor = vec4((uEmber * 1.8 + uCore * 0.7 * (1.0 - uT)) * ring * 1.6, 0.0); }`;
 const FS_DSHOCK = `uniform float uT, uStrength; varying vec2 vUv;
 void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p);
   float ring = exp(-pow((r - uT * 0.9) * 8.0, 2.0)) * (1.0 - uT) * smoothstep(1.0, 0.85, r);
@@ -817,139 +1009,366 @@ function panneau(fs, p, s0, s1, life, opts = {}) {
 }
 function halo(p, size, life, k = 1.4) { sprites.spawn({ p, size, grow: 0.6, life, kind: 1, col: [EMBER.x * k, EMBER.y * k, EMBER.z * k, 0], drag: 0, rise: 0, spin: 0 }); }
 
-// La cloche spectrale : profil de cloche tourne, peinte a l'encre puis coulee en bronze, fendue d'or.
-const PROFIL = [[1.62, 0.0], [1.67, 0.07], [1.6, 0.17], [1.46, 0.34], [1.24, 0.66], [1.08, 1.05], [0.99, 1.5], [0.95, 1.95], [0.9, 2.3], [0.78, 2.6], [0.55, 2.82], [0.28, 2.93], [0.0, 2.96]];
-const FELURE_U = 0.96; // la felure regarde la camera de jeu
-const VS_CLOCHE = `uniform float uWobble, uPulse, uTime; varying vec2 vUv; varying vec3 vN, vW;
-void main(){ vUv = uv; vec3 p = position; float lv = uv.y;
-  float w = sin(uv.x * 6.2832 * 2.0 + uTime * 95.0) * uWobble * 0.045 * (1.0 - lv) + uPulse * 0.07 * (1.0 - lv * 0.6);
-  p.xz *= 1.0 + w;
-  vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz; vN = normalize(mat3(modelMatrix) * normal);
-  gl_Position = projectionMatrix * viewMatrix * wp; }`;
-const FS_CLOCHE = `uniform sampler2D tNoise; uniform float uReveal, uMetal, uHeat, uCrack, uCrackGlow, uFade, uU0;
-uniform vec3 uEmber, uCore, uBronze; varying vec2 vUv; varying vec3 vN, vW;
-void main(){
-  float u = vUv.x, v = vUv.y;
-  vec3 V = normalize(cameraPosition - vW), N = normalize(vN);
-  float fr = pow(1.0 - abs(dot(N, V)), 2.2);
-  float n = texture2D(tNoise, vec2(u * 3.0, v * 0.7)).r, bristle = texture2D(tNoise, vec2(u * 9.0, v * 0.5)).g;
-  float bord = 1.0 - uReveal + (n - 0.5) * 0.12;
-  float ink = smoothstep(bord, bord + 0.05, v);
-  float pinceau = ink * (1.0 - smoothstep(0.0, 0.08, v - bord));
-  float coule = 1.0 - uMetal * 1.15 + (bristle - 0.5) * 0.15;
-  float metal = smoothstep(coule, coule + 0.12, v);
-  float moulure = 0.0;
-  moulure += 1.0 - smoothstep(0.0, 0.007, abs(v - 0.06)); moulure += 1.0 - smoothstep(0.0, 0.005, abs(v - 0.14));
-  moulure += 1.0 - smoothstep(0.0, 0.005, abs(v - 0.72)); moulure += 1.0 - smoothstep(0.0, 0.007, abs(v - 0.8));
-  float du = u - uU0; du -= floor(du + 0.5);
-  float cx = (texture2D(tNoise, vec2(v * 1.8, 0.37)).r - 0.5) * 0.05 + (texture2D(tNoise, vec2(v * 6.0, 0.71)).g - 0.5) * 0.014;
-  float d = abs(du - cx) * 8.0;
-  float monte = step(v, uCrack * 0.92 + 0.01);
-  float br = texture2D(tNoise, vec2(u * 14.0, v * 3.0)).b;
-  float bran = smoothstep(0.88, 0.97, br) * smoothstep(0.4, 0.0, abs(du) * 8.0) * step(v, uCrack * 0.8);
-  float ligne = max((1.0 - smoothstep(0.008, 0.028, d)) * monte, bran * 0.7);
-  float lueur = exp(-d * 14.0) * monte * 0.45;
-  vec3 encre = vec3(0.012, 0.009, 0.006) + uEmber * pinceau * 2.0 + uEmber * pow(fr, 2.5) * 1.5;
-  vec3 bronze = uBronze * (0.55 + 1.5 * fr) + uEmber * pow(fr, 3.0) * 2.0 * uHeat + uEmber * min(moulure, 1.0) * 1.2 * (0.3 + uHeat);
-  vec3 c = mix(encre, bronze, metal);
-  float a = mix(0.9 * mix(0.75, 1.0, bristle), 0.4 + 0.52 * fr, metal) * ink;
-  vec3 feu = (uEmber * 2.0 + uCore * ligne * 2.0) * (ligne + lueur) * uCrackGlow * ink;
-  a = max(a, ligne * 0.9 * ink * step(0.01, uCrack));
-  gl_FragColor = vec4((c * a + feu) * uFade, a * uFade); }`;
-const clocheMat = new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, vertexShader: VS_CLOCHE, fragmentShader: FS_CLOCHE,
-  uniforms: { tNoise: { value: noiseTex }, uTime: { value: 0 }, uReveal: { value: 0 }, uMetal: { value: 0 }, uHeat: { value: 0 }, uCrack: { value: 0 }, uCrackGlow: { value: 0 }, uFade: { value: 1 },
-    uWobble: { value: 0 }, uPulse: { value: 0 }, uU0: { value: FELURE_U }, uEmber: { value: EMBER }, uCore: { value: CORE }, uBronze: { value: BRONZE } } });
+// ---------------------------------------------------------------- la cloche
+// Une vraie cloche de bronze : profil de bourdon, coque epaisse, moulures, cordons torsades, frise de maillons,
+// bandeau d'ecriture inventee, ecailles sur l'epaule, couronne a six anses. Elle est decoupee d'avance en fragments
+// (Voronoi sur la coque) qui tiennent ensemble jusqu'a la rupture. Un seul materiau pour tout : bronze patine, suie
+// dans les creux, relief poli par l'usure, metal en fusion qui fige en croute, felure qui suinte l'or.
+const HAUT_CLOCHE = 9.0, FELURE_U = 0.96, HC = 2.86;
+const CL = (() => {
+  const CTRL = [[1.63, 0.0], [1.665, 0.05], [1.645, 0.12], [1.56, 0.24], [1.43, 0.4], [1.27, 0.62], [1.14, 0.88], [1.06, 1.18], [1.0, 1.5], [0.965, 1.82], [0.94, 2.08], [0.915, 2.28], [0.875, 2.44], [0.8, 2.58], [0.68, 2.7], [0.5, 2.79], [0.27, 2.84], [0.0, 2.86]];
+  const courbe = new THREE.SplineCurve(CTRL.map(([r, y]) => new THREE.Vector2(r, y)));
+  const NS = 1600, b = courbe.getSpacedPoints(NS), L = courbe.getLength();
+  const MOUL = [[0.17, 0.018, 0.022], [0.235, 0.011, 0.012], [0.365, 0.01, 0.011], [0.515, 0.01, 0.011], [0.8, 0.02, 0.028], [2.1, 0.013, 0.015], [2.32, 0.013, 0.015], [2.46, 0.022, 0.03]];
+  const norm = (A, k) => { const a = A[Math.max(0, k - 1)], c = A[Math.min(NS, k + 1)], tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1; return [ty / l, -tx / l]; };
+  const B = b.map(p => [p.x, p.y]), O = [], I = [], NO = [], NIn = [];
+  for (let k = 0; k <= NS; k++) {
+    const [nx, ny] = norm(B, k), y = B[k][1];
+    let off = 0; for (const [ym, a, w] of MOUL) { const x = (y - ym) / w; off += a * Math.exp(-x * x * x * x); }
+    const ep = 0.065 + 0.085 * Math.exp(-y / 0.22) + 0.03 * smooth(2.3, 2.86, y);
+    O.push([B[k][0] + nx * off, y + ny * off]); I.push([Math.max(0, B[k][0] - nx * ep), y - ny * ep]); NIn.push([-nx, -ny]);
+  }
+  for (let k = 0; k <= NS; k++) NO.push(norm(O, k));
+  const at = (A, s) => { const f = clamp(s) * NS, k = Math.min(NS - 1, Math.floor(f)), u = f - k; return [lerp(A[k][0], A[k + 1][0], u), lerp(A[k][1], A[k + 1][1], u)]; };
+  const surf = (A, phi, s, out, unit) => { const [r, y] = at(A, s); out.set(r * Math.sin(phi), y, r * Math.cos(phi)); return unit ? out.normalize() : out; };
+  const sDeY = y => { let k = 0; while (k < NS && O[k][1] < y) k++; return k / NS; };
+
+  // grille de coins legerement deplaces : les cassures ne suivent pas une grille
+  const GI = LOW ? 64 : 96, GJ = LOW ? 32 : 48, SA = 1, SB = LOW ? 1 : 2, rg = mulberry32(31), TAU = Math.PI * 2;
+  const CP = [], CS = [];
+  for (let j = 0; j <= GJ; j++) for (let i = 0; i < GI; i++) { const fixe = j === 0 || j === GJ; CP.push((i + (fixe ? 0 : (rg() - 0.5) * 0.85)) / GI * TAU); CS.push((j + (fixe ? 0 : (rg() - 0.5) * 0.85)) / GJ); }
+  const coin = (i, j) => { const ii = ((i % GI) + GI) % GI, k = j * GI + ii; return [CP[k] + (i >= GI ? TAU : 0), CS[k]]; };
+  // graines des fragments : des paires de part et d'autre de la felure, puis un semis au hasard, puis le sommet
+  const phi0 = FELURE_U * TAU, graines = [];
+  for (const y of [0.12, 0.42, 0.75, 1.1, 1.5, 1.95]) { const s = sDeY(y), r = at(O, s)[0]; for (const sg of [-1, 1]) graines.push([phi0 + sg * 0.1 / r, s]); }
+  const dist = (a, c) => { let dp = a[0] - c[0]; dp -= TAU * Math.round(dp / TAU); const rm = at(O, (a[1] + c[1]) / 2)[0]; return Math.hypot(dp * Math.max(rm, 0.25), (a[1] - c[1]) * L); };
+  for (let essai = 0; graines.length < 40 && essai < 4000; essai++) { const g = [rg() * TAU, Math.pow(rg(), 0.8) * 0.93]; if (graines.every(h => dist(g, h) > 0.62)) graines.push(g); }
+  graines.push([0, 0.985]);
+  const proprio = new Int16Array(GI * GJ);
+  const bil = (c, u, v) => [lerp(lerp(c[0][0], c[1][0], u), lerp(c[2][0], c[3][0], u), v), lerp(lerp(c[0][1], c[1][1], u), lerp(c[2][1], c[3][1], u), v)];
+  const cellule = (i, j) => [coin(i, j), coin(i + 1, j), coin(i, j + 1), coin(i + 1, j + 1)];
+  for (let j = 0; j < GJ; j++) for (let i = 0; i < GI; i++) {
+    const m = bil(cellule(i, j), 0.5, 0.5); let best = 0, bd = 1e9;
+    graines.forEach((g, k) => { const d = dist(m, g) + (rg() - 0.5) * 0.11; if (d < bd) { bd = d; best = k; } });
+    proprio[j * GI + i] = best;
+  }
+  const F = graines.map(() => ({ P: [], N: [], LOC: [], PAR: [], K: [], IDX: [], v: 0 }));
+  const tA = V3(), tB = V3();
+  const sommet = (f, p, n, phi, s, kind) => { f.P.push(p.x, p.y, p.z); f.N.push(n.x, n.y, n.z); f.LOC.push(p.x, p.y, p.z); f.PAR.push(phi / TAU, s); f.K.push(kind); return f.v++; };
+  function surface(f, c, dehors) {
+    const base = f.v;
+    for (let bb = 0; bb <= SB; bb++) for (let a = 0; a <= SA; a++) { const [phi, s] = bil(c, a / SA, bb / SB); sommet(f, surf(dehors ? O : I, phi, s, tA), surf(dehors ? NO : NIn, phi, s, tB, true), phi, s, dehors ? 0 : 1); }
+    for (let bb = 0; bb < SB; bb++) for (let a = 0; a < SA; a++) {
+      const v00 = base + bb * (SA + 1) + a, v10 = v00 + 1, v01 = v00 + SA + 1, v11 = v01 + 1;
+      if (dehors) f.IDX.push(v00, v10, v11, v00, v11, v01); else f.IDX.push(v00, v11, v10, v00, v01, v11);
+    }
+  }
+  function mur(f, ca, cb, n, centre, kind) {
+    const pts = []; for (let k = 0; k <= n; k++) { const phi = lerp(ca[0], cb[0], k / n), s = lerp(ca[1], cb[1], k / n); pts.push([surf(O, phi, s, V3()), surf(I, phi, s, V3()), phi, s]); }
+    const cc = surf(O, centre[0], centre[1], V3()).add(surf(I, centre[0], centre[1], V3())).multiplyScalar(0.5);
+    for (let k = 0; k < n; k++) {
+      const [o0, i0, p0, s0] = pts[k], [o1, i1, p1, s1] = pts[k + 1];
+      const nn = V3().crossVectors(tA.subVectors(o1, o0), tB.subVectors(i0, o0)).normalize();
+      const mil = o0.clone().add(o1).add(i0).add(i1).multiplyScalar(0.25).sub(cc), inv = nn.dot(mil) < 0;
+      if (inv) nn.negate();
+      const base = f.v;
+      sommet(f, o0, nn, p0, s0, kind); sommet(f, o1, nn, p1, s1, kind); sommet(f, i1, nn, p1, s1, kind); sommet(f, i0, nn, p0, s0, kind);
+      if (inv) f.IDX.push(base, base + 2, base + 1, base, base + 3, base + 2); else f.IDX.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  }
+  const voisin = (i, j) => j < 0 || j >= GJ ? -1 : proprio[j * GI + ((i % GI) + GI) % GI];
+  for (let j = 0; j < GJ; j++) for (let i = 0; i < GI; i++) {
+    const k = proprio[j * GI + i], f = F[k], c = cellule(i, j), centre = bil(c, 0.5, 0.5);
+    surface(f, c, true); surface(f, c, false);
+    if (j === 0) mur(f, c[0], c[1], SA, centre, 0); else if (voisin(i, j - 1) !== k) mur(f, c[0], c[1], SA, centre, 2);
+    if (j + 1 < GJ && voisin(i, j + 1) !== k) mur(f, c[2], c[3], SA, centre, 2);
+    if (voisin(i - 1, j) !== k) mur(f, c[0], c[2], SB, centre, 2);
+    if (voisin(i + 1, j) !== k) mur(f, c[1], c[3], SB, centre, 2);
+  }
+  // la couronne : six anses en arc autour d'une anse centrale, sur un socle
+  const cour = { P: [], N: [], LOC: [], PAR: [], K: [], IDX: [], v: 0 };
+  const pieces = [new THREE.CylinderGeometry(0.36, 0.44, 0.1, 40).translate(0, HC + 0.03, 0)];
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, t = new THREE.TorusGeometry(0.13, 0.042, 10, 18, Math.PI); t.rotateY(a - Math.PI / 2); t.translate(Math.sin(a) * 0.25, HC + 0.07, Math.cos(a) * 0.25); pieces.push(t); }
+  pieces.push(new THREE.TorusGeometry(0.19, 0.055, 12, 22, Math.PI).translate(0, HC + 0.07, 0));
+  for (const g of pieces) {
+    const p = g.attributes.position, n = g.attributes.normal, base = cour.v;
+    for (let i = 0; i < p.count; i++) { tA.fromBufferAttribute(p, i); tB.fromBufferAttribute(n, i); cour.P.push(tA.x, tA.y, tA.z); cour.N.push(tB.x, tB.y, tB.z); cour.LOC.push(tA.x, tA.y, tA.z); cour.PAR.push(0.5 + 0.35 * (tA.x + tA.z), 1); cour.K.push(0); cour.v++; }
+    for (let i = 0; i < g.index.count; i++) cour.IDX.push(g.index.getX(i) + base);
+    g.dispose();
+  }
+  F.push(cour); graines.push([0, 1.2]);
+  const frags = [];
+  F.forEach((f, k) => {
+    if (!f.v) return;
+    const P = new Float32Array(f.P), c = V3();
+    for (let i = 0; i < f.v; i++) { c.x += P[i * 3]; c.y += P[i * 3 + 1]; c.z += P[i * 3 + 2]; }
+    c.divideScalar(f.v);
+    for (let i = 0; i < f.v; i++) { P[i * 3] -= c.x; P[i * 3 + 1] -= c.y; P[i * 3 + 2] -= c.z; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(f.N, 3));
+    g.setAttribute('aLoc', new THREE.Float32BufferAttribute(f.LOC, 3)); g.setAttribute('aPar', new THREE.Float32BufferAttribute(f.PAR, 2));
+    g.setAttribute('aKind', new THREE.Float32BufferAttribute(f.K, 1)); g.setAttribute('aSeed', new THREE.Float32BufferAttribute(new Array(f.v).fill(rg()), 1));
+    g.setIndex(f.IDX); g.computeBoundingSphere();
+    frags.push({ geo: g, centre: c, graine: graines[k], couronne: f === cour });
+  });
+  return { frags, ext: (u, s) => surf(O, u * TAU, s, V3()) };
+})();
+
+const uCl = { tNoise: { value: noiseTex }, uTime: { value: 0 }, uCond: { value: 0 }, uFill: { value: 0 }, uHeat: { value: 0 }, uCrack: { value: 0 }, uCrackGlow: { value: 0 },
+  uWobble: { value: 0 }, uPulse: { value: 0 }, uRes: { value: -1 }, uResAmp: { value: 0 }, uGlyph: { value: 0 }, uBris: { value: -1 }, uU0: { value: FELURE_U }, uDefait: { value: 0 }, uChoc: { value: 0 }, uEmber: { value: EMBER } };
+const GLSL_CLOCHE = `
+float cordon(float U, float Y, float yb, float n) { float d = abs(Y - yb) / 0.016; if (d > 1.0) return 0.0;
+  return sqrt(1.0 - d * d) * (0.55 + 0.45 * sin(6.2832 * (U * n + (Y - yb) / 0.045))); }
+float glyphes(float U, float Y) { if (Y < 2.135 || Y > 2.285) return 0.0;
+  float cu = U * 44.0, id = mod(floor(cu), 44.0); vec2 q = (vec2(fract(cu), (Y - 2.135) / 0.15) - 0.5) * vec2(1.3, 1.2) + 0.5;
+  float h = 0.0, nt = 2.0 + step(0.5, h21(vec2(id, 4.0)));
+  for (int k = 0; k < 4; k++) { float fk = float(k); if (fk > nt) break;
+    vec2 a = floor(h22(vec2(id, fk * 7.1)) * 2.999) * 0.5, b = floor(h22(vec2(id + 0.5, fk * 3.7 + 1.3)) * 2.999) * 0.5;
+    vec2 pa = q - a, ba = b - a; float t = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
+    h = max(h, smoothstep(0.12, 0.05, length(pa - ba * t))); }
+  return h; }
+float maillons(float U, float Y) { if (Y < 0.378 || Y > 0.502) return 0.0;
+  float x = U * 36.0, yy = (Y - 0.378) / 0.124 - 0.5;
+  vec2 q1 = vec2(fract(x) - 0.5, yy), q2 = vec2(fract(x + 0.5) - 0.5, yy);
+  float a = abs(length(q1 * vec2(1.0, 1.55)) - 0.33);
+  return max(smoothstep(0.075, 0.03, a), smoothstep(0.07, 0.035, length(vec2(max(abs(q2.x) - 0.16, 0.0), q2.y * 0.55))) * 0.85); }
+float ecailles(float U, float Y) { if (Y < 2.5 || Y > 2.75) return 0.0;
+  float row = (Y - 2.5) / 0.05, ri = floor(row), x = U * 40.0 + 0.5 * mod(ri, 2.0);
+  float d = length(vec2(fract(x) - 0.5, fract(row) - 0.85) * vec2(1.0, 1.25));
+  return smoothstep(0.62, 0.48, d) * (0.5 + 0.5 * smoothstep(0.62, 0.2, d)) * smoothstep(2.75, 2.72, Y) * smoothstep(2.5, 2.52, Y); }
+float lisse(float y, float seg, float s){ float i = floor(y / seg), f = fract(y / seg); return mix(h11(i + s), h11(i + 1.0 + s), f * f * (3.0 - 2.0 * f)) - 0.5; }
+float traceX(float y) { return lisse(y, 0.34, 3.0) * 0.09 + lisse(y, 0.11, 11.0) * 0.035 + jag(y, 0.03, 23.0) * 0.012 + jag(y, 0.011, 31.0) * 0.004; }
+`;
+const matCloche = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.4, envMap, envMapIntensity: 1 });
+matCloche.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, uCl);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', `#include <common>
+attribute vec3 aLoc; attribute vec2 aPar; attribute float aKind, aSeed; uniform float uWobble, uPulse, uTime;
+varying vec3 vLoc; varying vec2 vPar; varying float vKind, vSeed;`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+vLoc = aLoc; vPar = aPar; vKind = aKind; vSeed = aSeed;
+{ float ph = aPar.x * 6.2832, lv = clamp(aLoc.y / 2.86, 0.0, 1.0);
+  float w = cos(2.0 * ph) * sin(uTime * 88.0) * uWobble * 0.03 * (1.0 - lv) + uPulse * 0.04 * (1.0 - lv * 0.7);   // mode (2,0) : le bord s'ovalise
+  transformed.xz += normalize(aLoc.xz + vec2(1e-4)) * w * length(aLoc.xz); }`);
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', `#include <common>
+uniform sampler2D tNoise; uniform float uTime, uCond, uFill, uHeat, uCrack, uCrackGlow, uPulse, uRes, uResAmp, uGlyph, uBris, uU0, uDefait, uChoc; uniform vec3 uEmber;
+varying vec3 vLoc; varying vec2 vPar; varying float vKind, vSeed;
+${GLSL_COMMUN}
+${GLSL_CLOCHE}`)
+    .replace('#include <map_fragment>', `
+float U = fract(vPar.x), Y = vLoc.y, rr = length(vLoc.xz);
+vec3 albC = vec3(0.3, 0.17, 0.07), emisC = vec3(0.0); float metC = 1.0, rouC = 0.4, Hb = 0.0;
+float n1 = texture2D(tNoise, vec2(U * 3.0, Y * 0.31)).r, n2 = texture2D(tNoise, vec2(U * 9.0, Y * 1.07)).g, n3 = texture2D(tNoise, vec2(U * 23.0, Y * 2.9)).a;
+// apparition : la suie se condense du haut vers le bas ; a la fin, les restes se defont en suie
+float prof = clamp((2.98 - Y) / 2.98, 0.0, 1.0);
+float vis = uCond * 1.3 - prof * 0.95 - n1 * 0.32 - n2 * 0.08;
+if (vis < 0.0 || uDefait * 1.4 - n1 * 0.7 - n3 * 0.5 - vSeed * 0.25 > 0.0) discard;
+if (vKind > 1.5 && uBris < 0.0) discard;   // les cassures n'existent qu'apres la rupture (sinon elles affleurent en coutures)
+float coule = uFill * 1.22 - prof + pow(texture2D(tNoise, vec2(U * 14.0, 0.37)).r, 2.0) * 0.24 + (n3 - 0.5) * 0.05;
+float plein = step(0.0, coule);
+if (vKind < 0.5) {
+  float H = cordon(U, Y, 0.17, 30.0) + cordon(U, Y, 0.8, 42.0) * 0.8 + cordon(U, Y, 2.1, 36.0) * 0.7 + cordon(U, Y, 2.32, 36.0) * 0.7 + cordon(U, Y, 2.46, 30.0);
+  float motifs = max(max(glyphes(U, Y), maillons(U, Y)), ecailles(U, Y));
+  float cout = smoothstep(0.006, 0.002, min(abs(fract(U + 0.25) - 0.5), abs(fract(U + 0.75) - 0.5)) * 6.2832 * rr) * smoothstep(0.6, 0.9, Y) * smoothstep(2.08, 1.9, Y);
+  H += motifs + cout * 0.5;
+  float bande = step(2.13, Y) * step(Y, 2.29) + step(0.375, Y) * step(Y, 0.505) + step(2.5, Y) * step(Y, 2.75);
+  float creux = bande * (1.0 - motifs);
+  Hb = H * 0.006 - smoothstep(0.8, 0.92, n3) * 0.0012 + (n2 - 0.5) * 0.0025;
+  float coulures = texture2D(tNoise, vec2(U * 26.0, Y * 0.11)).a;
+  float suie = clamp(smoothstep(0.5, 0.9, n1 * 0.55 + coulures * 0.65) + creux * 0.8 + smoothstep(0.3, 0.0, Y) * 0.2, 0.0, 1.0);
+  float poli = clamp(smoothstep(0.3, 0.8, H) * (1.0 - creux) + n2 * 0.15, 0.0, 1.0);
+  albC = mix(mix(vec3(0.27, 0.15, 0.06), vec3(0.66, 0.42, 0.17), poli), vec3(0.03, 0.025, 0.02), suie * 0.88);
+  metC = mix(1.0, 0.2, suie);
+  rouC = clamp(mix(mix(0.42, 0.2, poli), 0.88, suie) + (n2 - 0.5) * 0.12, 0.08, 1.0);
+  // resonance : une bande de chaleur monte le long de la cloche a chaque coup et allume les reliefs
+  float onde = exp(-pow((Y - uRes * 3.1) / 0.28, 2.0)) * uResAmp;
+  float G = glyphes(U, Y), lit = (onde * 1.2 + uGlyph * 0.45 * (0.6 + 0.6 * uPulse)) * (G + (motifs - G) * 0.3) + onde * 0.35 * smoothstep(0.2, 0.6, H);   // le bandeau d'ecriture brille, la frise beaucoup moins
+  emisC += corpsNoir(0.42 + 0.22 * onde + 0.15 * uPulse) * lit * (0.35 + 0.5 * n2);
+  emisC += corpsNoir(0.95 * uChoc) * (0.25 + 0.75 * smoothstep(0.1, 0.6, H)) * (0.6 + 0.4 * n2) * (0.45 + 0.55 * smoothstep(2.9, 0.0, Y)) * 0.8;
+  // la felure : un trait brise qui monte de la levre, des branches, de l'or qui suinte et coule
+  float du = U - uU0; du -= floor(du + 0.5); float X = du * 6.2832 * rr, haut = uCrack * 2.6;
+  if (haut > 0.0 && abs(X) < 0.7) {
+    float fente = 0.0, sillon = 0.0, coulee = 0.0;
+    float w = (0.005 + 0.016 * uCrack) * clamp((haut - Y) / 0.3, 0.0, 1.0) * (0.55 + 0.9 * texture2D(tNoise, vec2(0.3, Y * 1.7)).g) * step(Y, haut);
+    float d = abs(X - traceX(Y));
+    fente = smoothstep(w, w * 0.25, d) * step(0.0005, w); sillon = smoothstep(w * 4.0 + 0.004, w, d) * step(0.0005, w);
+    for (int k = 0; k < 5; k++) { float fk = float(k), yk = 0.28 + 0.42 * fk, g = clamp((haut - yk) / 0.45, 0.0, 1.0);
+      if (g <= 0.0) break;
+      float th = (mod(fk, 2.0) * 2.0 - 1.0) * (0.45 + 0.4 * h11(fk * 3.3)), lk = (0.07 + 0.12 * h11(fk + 7.0)) * g;
+      vec2 dir = vec2(sin(th), cos(th)), pp = vec2(X, Y) - vec2(traceX(yk), yk);
+      float t = dot(pp, dir), per = dot(pp, vec2(dir.y, -dir.x)) - jag(t, 0.025, fk * 5.0) * 0.008;
+      if (t > 0.0 && t < lk) { float wb = (0.003 + 0.01 * uCrack) * (1.0 - t / lk); fente = max(fente, smoothstep(wb, wb * 0.25, abs(per))); sillon = max(sillon, smoothstep(wb * 4.0 + 0.003, wb, abs(per))); }
+      // l'or qui suinte sous la branche et coule le long de la paroi
+      float yd = yk + 0.05, Ld = clamp((haut - yd) / 0.5, 0.0, 1.0) * (0.25 + 0.35 * h11(fk + 2.0)), xd = traceX(yd) + (h11(fk + 9.0) - 0.5) * 0.03;
+      float c = smoothstep(0.009, 0.003, abs(X - xd - 0.004 * sin(Y * 40.0))) * step(yd - Ld, Y) * step(Y, yd);
+      coulee = max(coulee, c * (1.0 - (yd - Y) / max(Ld, 0.01) * 0.6));
+    }
+    float ch = min(uCrackGlow, 1.2) * (0.8 + 0.25 * uPulse), flux = texture2D(tNoise, vec2(X * 3.0 + 0.2, Y * 2.2 - uTime * 0.6)).r;
+    emisC += corpsNoir((0.42 + 0.18 * flux) * ch) * fente * 0.9 + corpsNoir(0.36 * ch) * sillon * 0.3 * (0.4 + n2) + corpsNoir(0.55 * ch * coulee) * step(0.01, coulee) * 0.8;
+    Hb -= sillon * 0.006;
+    albC = mix(albC, vec3(0.02, 0.016, 0.012), sillon * 0.7); rouC = mix(rouC, 0.85, sillon * 0.7);
+  }
+} else if (vKind < 1.5) {
+  albC = vec3(0.09, 0.055, 0.03) * (0.6 + 0.6 * n1); metC = 0.7; rouC = 0.7;
+} else {
+  albC = vec3(0.5, 0.36, 0.25) * (0.75 + 0.4 * n3); metC = 1.0; rouC = 0.55;          // cassure : grain clair du bronze casse
+  float T = uBris >= 0.0 ? 0.85 * exp(-uBris * (1.1 + 1.6 * vSeed)) : 0.0;
+  emisC += corpsNoir(T * (0.45 + 0.75 * n3)) * 0.7;
+  albC *= 1.0 - smoothstep(0.2, 0.6, T) * 0.8;
+}
+if (vKind < 1.5) {
+  // metal coule : blanc au front, puis il fige en croute dont les fissures restent chaudes
+  float T = plein * mix(1.3, uHeat, smoothstep(0.0, 0.42, coule));
+  if (T > 0.04) {
+    vec2 cw = vec2(U * 34.0, Y * 3.3) + (vec2(n1, n2) - 0.5) * 1.3;
+    float vb = voroBord(cw, 34.0), cr = (1.0 - smoothstep(0.0, 0.03 + 0.08 * n3, vb)) * (0.35 + 0.65 * smoothstep(0.3, 0.75, n2));
+    T *= mix(0.3 + 0.7 * cr, 1.0, smoothstep(0.75, 1.1, T));
+    emisC += corpsNoir(T) * (vKind < 0.5 ? 1.0 : 0.4);
+    float ox = smoothstep(0.25, 0.6, T); albC *= 1.0 - ox * 0.85; metC = mix(metC, 0.3, ox); rouC = mix(rouC, 0.75, ox);
+  }
+  // pas encore coule : de la suie piquetee de braises, avec une lisiere d'or
+  float sc = 1.0 - plein;
+  albC = mix(albC, vec3(0.018, 0.015, 0.013), sc); metC = mix(metC, 0.0, sc); rouC = mix(rouC, 0.95, sc);
+  emisC += uEmber * (smoothstep(0.86, 0.96, n3) * 2.0 + (1.0 - smoothstep(0.0, 0.1, vis)) * 3.0 + exp(-abs(coule) * 40.0) * 2.5) * sc;
+}
+diffuseColor.rgb = albC;`)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = rouC;`)
+    .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+metalnessFactor = metC;`)
+    .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ vec3 sp = -vViewPosition; vec2 dH = vec2(dFdx(Hb), dFdy(Hb)); vec3 sx = dFdx(sp), sy = dFdy(sp), R1 = cross(sy, normal), R2 = cross(normal, sx);
+  float det = dot(sx, R1); normal = normalize(abs(det) * normal - sign(det) * (dH.x * R1 + dH.y * R2)); }`)
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += emisC;`);
+};
+matCloche.customProgramCacheKey = () => 'cloche-bronze';
 const cloche = new THREE.Group(); scene.add(cloche);
-const clocheMesh = new THREE.Mesh(new THREE.LatheGeometry(PROFIL.map(([r, y]) => new THREE.Vector2(r, y)), 72, 0, Math.PI * 2), clocheMat);
-clocheMesh.renderOrder = 4; cloche.add(clocheMesh);
-const anseMat = new THREE.MeshStandardMaterial({ color: 0x8a5a24, metalness: 0.9, roughness: 0.3, emissive: new THREE.Color(1, 0.45, 0.1), emissiveIntensity: 0, transparent: true, opacity: 0 });
-const anse = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.075, 8, 22), anseMat); anse.position.y = 3.15; cloche.add(anse);
+const morceaux = CL.frags.map(f => { const m = new THREE.Mesh(f.geo, matCloche); m.castShadow = true; cloche.add(m); return { m, centre: f.centre, graine: f.graine, couronne: f.couronne, r: f.geo.boundingSphere.radius, v: V3(), w: V3(1, 0, 0), vang: 0, vole: false, pose: false }; });
 const clocheLumiere = new THREE.PointLight(0xffa040, 0, 0, 2); clocheLumiere.position.y = 1.2; cloche.add(clocheLumiere);
-// un point sur la surface de la cloche (v de 0 a 1 le long du profil, u autour)
-function surfaceCloche(u, v) {
-  const k = v * (PROFIL.length - 1), i = Math.min(PROFIL.length - 2, Math.floor(k)), f = k - i;
-  const r = lerp(PROFIL[i][0], PROFIL[i + 1][0], f), y = lerp(PROFIL[i][1], PROFIL[i + 1][1], f), phi = u * Math.PI * 2;
-  return cloche.localToWorld(V3(r * Math.sin(phi), y, r * Math.cos(phi)));
+function surfaceCloche(u, v) { return cloche.localToWorld(CL.ext(u, v)); } // un point de la paroi (v de la levre au sommet)
+
+// Le ciel : deux couches de nuees de suie qui tournent, dechirees au centre sur un four d'or en fusion.
+const VS_W = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const FS_NUEES = `uniform sampler2D tNoise; uniform float uOpen, uTime, uFade, uLayer; uniform vec3 uEmber, uCore; varying vec3 vW;
+${GLSL_COMMUN}
+float fbm2(vec2 q){ return texture2D(tNoise, q).r * 0.55 + texture2D(tNoise, q * 2.3 + 0.17).g * 0.3 + texture2D(tNoise, q * 5.1 + 0.41).a * 0.15; }
+void main(){
+  vec2 p = vW.xz; float r = length(p);
+  float tour = uTime * (0.22 + 0.1 * uLayer) + 2.4 / (0.8 + r * 0.32), c = cos(tour), s = sin(tour); vec2 q = mat2(c, -s, s, c) * p;
+  vec2 w = vec2(texture2D(tNoise, q * 0.02 + 0.3).r, texture2D(tNoise, q * 0.02 + 0.7).a) - 0.5;
+  float d = fbm2(q * 0.035 + w * 0.5 + uLayer * 0.37);
+  float R = uOpen * (3.6 + uLayer * 0.9), bn = texture2D(tNoise, vec2(atan(q.y, q.x) * 0.3183, 0.3 + uLayer * 0.3)).r;
+  float trou = smoothstep(R - 0.4, R + 1.2, r + (bn - 0.5) * 2.4 + (d - 0.5) * 2.5);
+  float dens = smoothstep(0.28, 0.72, d) * trou * smoothstep(36.0, 20.0, r) * (uLayer > 0.5 ? 0.6 : 1.0);
+  float dc = fbm2((q - q / max(r, 1e-3) * 0.9) * 0.035 + w * 0.5 + uLayer * 0.37);
+  float relief = clamp(0.55 + (d - dc) * 3.0, 0.0, 1.0);
+  float feu = exp(-max(r - R, 0.0) / (2.2 + uLayer)) * uOpen;
+  vec3 col = vec3(0.016, 0.014, 0.018) * dens * (1.0 + relief) + (uEmber * 1.6 * relief + uCore * pow(relief, 4.0) * feu * 1.5) * feu * dens;
+  // le four : du bronze en fusion qui brasse, sombre, parcouru de veines vives
+  float four = (1.0 - trou) * (1.0 - step(0.5, uLayer)) * uOpen, m = fbm2(q * 0.06 - uTime * 0.05);
+  float veines = texture2D(tNoise, q * 0.045 + w * 0.8 + vec2(uTime * 0.03, 0.0)).b, veines2 = texture2D(tNoise, q * 0.11 - w + vec2(0.0, uTime * 0.05)).b;
+  col += corpsNoir(0.28 + 0.62 * pow(max(veines, veines2 * 0.85), 2.0) + 0.18 * m) * four * 0.4;
+  float a = clamp(dens * 0.92 + four, 0.0, 1.0);
+  gl_FragColor = vec4(col * uFade, a * uFade); }`;
+const nuees = (LOW ? [0] : [0, 1]).map(k => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, fog: false, vertexShader: VS_W, fragmentShader: FS_NUEES,
+    uniforms: { tNoise: { value: noiseTex }, uOpen: { value: 0 }, uTime: { value: 0 }, uFade: { value: 0 }, uLayer: { value: k }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
+  m.rotation.x = Math.PI / 2; m.position.y = k ? 13.6 : 15.2; m.renderOrder = 1 + k; scene.add(m); return m;
+});
+const lumiereCiel = new THREE.DirectionalLight(0xffb060, 0); lumiereCiel.position.set(1.2, 22, 1.6); scene.add(lumiereCiel); // la lumiere qui tombe du ciel ouvert
+lumiereCiel.castShadow = true; lumiereCiel.shadow.mapSize.set(1024, 1024); Object.assign(lumiereCiel.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 30 }); lumiereCiel.shadow.camera.updateProjectionMatrix(); lumiereCiel.shadow.bias = -0.0008; lumiereCiel.shadow.normalBias = 0.02;
+// La coulee : le bronze en fusion qui tombe du four dans la cloche de suie.
+const coulee = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 20, 24, true).translate(0, 0.5, 0), new THREE.ShaderMaterial({ ...PREMUL,
+  uniforms: { tNoise: { value: noiseTex }, uTime: { value: 0 }, uA: { value: 0 } },
+  vertexShader: `uniform sampler2D tNoise; uniform float uTime; varying vec2 vUv; varying vec3 vN, vW;
+  void main(){ vUv = uv; vec3 p = position; p.xz *= 0.7 + 0.6 * texture2D(tNoise, vec2(0.3, uv.y * 0.8 + uTime * 3.0)).r;
+    vec4 w = modelMatrix * vec4(p, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform sampler2D tNoise; uniform float uTime, uA; varying vec2 vUv; varying vec3 vN, vW;
+  ${GLSL_COMMUN}
+  void main(){ float f1 = texture2D(tNoise, vec2(vUv.x * 2.0, vUv.y * 1.6 + uTime * 4.0)).r, f2 = texture2D(tNoise, vec2(vUv.x * 5.0, vUv.y * 4.0 + uTime * 7.0)).g;
+    float face = abs(dot(normalize(vN), normalize(cameraPosition - vW)));
+    float a = uA * smoothstep(0.05, 0.35, face);
+    gl_FragColor = vec4(corpsNoir(0.62 + 0.55 * face * f1 + 0.25 * f2 - 0.3 * (1.0 - face)) * a, a); }` }));
+coulee.visible = false; coulee.renderOrder = 5; scene.add(coulee);
+// La lumiere qui fuit sous le bord de la cloche quand elle saute sur ses echos.
+const fuite = new THREE.Mesh(new THREE.RingGeometry(1.6, 3.6, 120, 1), new THREE.ShaderMaterial({ ...PREMUL, vertexShader: VS_W,
+  uniforms: { tNoise: { value: noiseTex }, uA: { value: 0 }, uTime: { value: 0 }, uEmber: { value: EMBER }, uCore: { value: CORE } },
+  fragmentShader: `uniform sampler2D tNoise; uniform float uA, uTime; uniform vec3 uEmber, uCore; varying vec3 vW;
+  void main(){ float r = length(vW.xz), an = atan(vW.z, vW.x);
+    float rais = smoothstep(0.35, 0.8, texture2D(tNoise, vec2(an * 0.6366, 0.3 + uTime * 0.1)).r) * (0.5 + 0.8 * texture2D(tNoise, vec2(an * 1.9099, r * 0.8)).g);
+    float f = exp(-(r - 1.66) / (0.06 + 0.16 * uA)) * smoothstep(1.62, 1.7, r) * rais;
+    gl_FragColor = vec4((uEmber * 1.6 + uCore * f * 0.4) * f * uA * 0.3, 0.0); }` }));
+fuite.rotation.x = -Math.PI / 2; fuite.position.y = SOL_Y + 0.006; fuite.renderOrder = 3; scene.add(fuite);
+
+// Les ondes : dans le sol (dalles qui sautent, or dans les joints) et dans l'air (mur de poussiere qui roule).
+const ondesSol = [];
+function ondeSol(r1, life, amp, chaleur, larg = 0.4) { ondesSol.push({ age: 0, life, r1, amp, larg, chaleur }); }
+function majOndes(dt) {
+  for (let i = ondesSol.length - 1; i >= 0; i--) { const o = ondesSol[i]; o.age += dt; if (o.age > o.life) ondesSol.splice(i, 1); }
+  const L = uSol.uOndes.value;
+  for (let k = 0; k < ONDES_MAX; k++) {
+    const o = ondesSol[ondesSol.length - 1 - k];
+    if (!o) { L[k].set(-10, 0, 1, 0); continue; }
+    const u = o.age / o.life, fin = 1 - smooth(0.45, 1, u);
+    L[k].set(lerp(1.62, o.r1, 1 - Math.pow(1 - u, 1.8)), o.amp * fin * Math.min(1, o.age / 0.03), o.larg * (1 + u), o.chaleur * fin);
+  }
+}
+const FS_SOUFFLE = `uniform sampler2D tNoise; uniform float uT, uForce, uSeed; uniform vec3 uEmber; varying vec2 vUv;
+void main(){ float u = vUv.x, y = vUv.y;
+  float n = texture2D(tNoise, vec2(u * 7.0 + uSeed, y * 0.55 - uT * 0.9)).r, n2 = texture2D(tNoise, vec2(u * 19.0 - uSeed, y * 1.4 - uT * 1.6)).g;
+  float seuil = mix(0.42, 0.95, y) + uT * 0.3;
+  float dens = smoothstep(seuil, seuil + 0.16, n * 0.7 + n2 * 0.55);
+  float a = dens * uForce * (1.0 - uT) * smoothstep(0.0, 0.08, y) * smoothstep(1.0, 0.3, y) * 0.38;
+  vec3 c = vec3(0.075, 0.055, 0.035) * a + uEmber * smoothstep(0.3, 0.0, y) * (1.0 - uT) * (1.0 - uT) * 0.4 * smoothstep(0.55, 0.9, n2) * a;
+  gl_FragColor = vec4(c, a); }`;
+const souffles = [];
+function souffle(rmax, life, force, h = 0.9) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.0, 1, 72, 1, true).translate(0, 0.5, 0), new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, vertexShader: VS_UV, fragmentShader: FS_SOUFFLE,
+    uniforms: { tNoise: { value: noiseTex }, uT: { value: 0 }, uForce: { value: force }, uSeed: { value: rand(0, 10) }, uEmber: { value: EMBER } } }));
+  m.position.y = SOL_Y; m.renderOrder = 4; m.scale.set(1.7, h * 0.5, 1.7); fx.add(m); souffles.push({ m, age: 0, life, rmax, h });
+}
+function majSouffles(dt) {
+  for (let i = souffles.length - 1; i >= 0; i--) {
+    const o = souffles[i]; o.age += dt; const u = clamp(o.age / o.life), R = lerp(1.7, o.rmax, easeOutCubic(u));
+    o.m.material.uniforms.uT.value = u; o.m.scale.set(R, o.h * (0.5 + 0.8 * u), R);
+    if (o.age > o.life) { fx.remove(o.m); o.m.material.dispose(); o.m.geometry.dispose(); souffles.splice(i, 1); }
+  }
 }
 
-// Le ciel qui se fend au-dessus du combattant.
-const FS_CIEL = `uniform sampler2D tNoise; uniform float uOpen, uTime, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
-void main(){ vec2 p = (vUv - 0.5) * 10.0; float r = length(p), a = atan(p.y, p.x);
-  float R = uOpen * 3.3, n = texture2D(tNoise, vec2(a * 0.3, r * 0.2 - uTime * 0.2)).r;
-  float levre = exp(-pow((r - R - (n - 0.5) * 0.7) * 3.2, 2.0)) * step(0.01, uOpen);
-  float trou = smoothstep(R + 0.2, R - 0.5, r + (n - 0.5) * 0.7);
-  float tour = texture2D(tNoise, vec2(a * 0.5 + uTime * 0.3 + r * 0.15, r * 0.3)).g;
-  float nuage = smoothstep(R + 3.2, R, r) * (1.0 - trou) * smoothstep(0.4, 0.7, n) * uOpen;
-  vec3 col = uEmber * levre * 3.0 + uCore * levre * levre * 1.4 + (uEmber * (0.7 + 1.5 * smoothstep(0.4, 0.9, tour)) + uCore * smoothstep(0.75, 0.95, tour) * 0.8) * trou;
-  float al = trou * 0.45 + nuage * 0.65;
-  gl_FragColor = vec4((vec3(0.012, 0.009, 0.006) * al + col) * uFade, al * uFade); }`;
-const ciel = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShaderMaterial({ ...PREMUL, vertexShader: VS_UV, fragmentShader: FS_CIEL, fog: false,
-  uniforms: { tNoise: { value: noiseTex }, uOpen: { value: 0 }, uTime: { value: 0 }, uFade: { value: 0 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
-ciel.rotation.x = Math.PI / 2; ciel.position.y = 13; ciel.renderOrder = 2; scene.add(ciel);
-const lumiereCiel = new THREE.DirectionalLight(0xffb060, 0); lumiereCiel.position.set(0.6, 20, 0.8); scene.add(lumiereCiel); // la lumiere qui tombe du ciel fendu
-const HAUT_CLOCHE = 9.0;
-
-// Le sol : cercle de la zone trace a l'encre d'or, empreinte brulee du bord de la cloche.
-const FS_SOL = `uniform sampler2D tNoise; uniform float uTele, uTeleGlow, uImprint, uImprintHeat, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
-void main(){ vec2 p = (vUv - 0.5) * 8.0; float r = length(p), an = atan(p.y, p.x) / 6.2832 + 0.5;
-  float n = texture2D(tNoise, vec2(an * 6.0, r * 0.4)).r, b = texture2D(tNoise, vec2(an * 18.0, r * 2.0)).g;
-  float trace = step(an, uTele), tete = exp(-max(uTele - an, 0.0) * 50.0) * trace * step(uTele, 0.999) * (1.0 - smoothstep(0.1, 0.35, abs(r - 3.0)));
-  float anneau = (1.0 - smoothstep(0.05, 0.15, abs(r - 3.0 + (n - 0.5) * 0.14))) * trace * mix(0.55, 1.0, b);
-  float rayons = smoothstep(0.92, 0.99, texture2D(tNoise, vec2(an * 24.0, 0.3)).b) * smoothstep(3.0, 1.8, r) * smoothstep(1.7, 2.0, r) * trace * 0.6;
-  float levre = (1.0 - smoothstep(0.08, 0.32, abs(r - 1.64 + (n - 0.5) * 0.12))) * uImprint;
-  float suie = smoothstep(1.95, 1.2, r) * uImprint * 0.5 * smoothstep(0.3, 0.6, n);
-  float a = max(max(anneau, rayons) * 0.85, max(levre * 0.92, suie));
-  vec3 glow = uEmber * ((anneau + rayons) * uTeleGlow * 1.1 + tete * 2.5 + levre * uImprintHeat * 3.0) + uCore * (tete * 1.5 + levre * uImprintHeat * uImprintHeat);
-  gl_FragColor = vec4((vec3(0.012, 0.009, 0.006) * a + glow) * uFade, a * uFade); }`;
-const sol = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -3, vertexShader: VS_UV, fragmentShader: FS_SOL,
-  uniforms: { tNoise: { value: noiseTex }, uTele: { value: 0 }, uTeleGlow: { value: 0 }, uImprint: { value: 0 }, uImprintHeat: { value: 0 }, uFade: { value: 1 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
-sol.rotation.x = -Math.PI / 2; sol.position.y = 0.015; sol.renderOrder = 2; scene.add(sol);
-
-// Les ondes : le son de la cloche rendu visible, anneaux d'or a plat qui balaient la zone.
-const FS_ONDE = `uniform sampler2D tNoise; uniform float uT, uForce; uniform vec3 uEmber, uCore; varying vec2 vUv;
-void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p), a = atan(p.y, p.x);
-  float R = 0.12 + 0.86 * (1.0 - pow(1.0 - uT, 2.2)), n = texture2D(tNoise, vec2(a * 0.8, uT * 2.0)).r;
-  float w = 0.012 + 0.03 * uT, front = exp(-pow((r - R) / w, 2.0));
-  float sillage = smoothstep(R, R - 0.22, r) * smoothstep(R - 0.45, R - 0.22, r) * 0.55;
-  float vie = (1.0 - uT) * uForce, brosse = mix(0.5, 1.0, smoothstep(0.3, 0.7, n));
-  vec3 col = (uEmber * 2.2 + uCore * front * 1.3) * front * brosse * vie;
-  float al = (sillage * 0.6 + front * 0.25) * brosse * vie;
-  gl_FragColor = vec4(vec3(0.012, 0.009, 0.006) * al + col, al); }`;
-const ondes = [];
-function onde(y, rmax, life, force, delai = 0) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, vertexShader: VS_UV, fragmentShader: FS_ONDE,
-    uniforms: { tNoise: { value: noiseTex }, uT: { value: 0 }, uForce: { value: 0 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
-  m.rotation.x = -Math.PI / 2; m.position.set(0, y, 0); m.scale.setScalar(rmax); m.renderOrder = 3; fx.add(m);
-  ondes.push({ m, age: -delai, life, force });
-}
-
-// Eclats de bronze : bronze froid, plus une lueur additive qui refroidit.
+// Eclats de bronze : petits morceaux irreguliers, qui brillent du corps noir puis refroidissent.
 const eclatsBronze = (() => {
-  const N = nq(90), geo = new THREE.TetrahedronGeometry(1, 0);
-  const froid = new THREE.InstancedMesh(geo, flat(0x4a3216, { metalness: 0.75, roughness: 0.45 }), N);
-  const lueur = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }), N);
-  lueur.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
-  for (const m of [froid, lueur]) { m.count = 0; m.frustumCulled = false; scene.add(m); }
+  const N = nq(120), geo = new THREE.IcosahedronGeometry(1, 0), rr = mulberry32(5), cle = new Map();
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const k = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!cle.has(k)) cle.set(k, 0.6 + rr() * 0.7); const s = cle.get(k); p.setXYZ(i, p.getX(i) * s, p.getY(i) * s * 0.35, p.getZ(i) * s * 0.85); }
+  geo.computeVertexNormals();
+  const aHeat = new THREE.InstancedBufferAttribute(new Float32Array(N), 1).setUsage(THREE.DynamicDrawUsage); geo.setAttribute('aHeat', aHeat);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x9a6a34, metalness: 0.9, roughness: 0.36, envMap, envMapIntensity: 0.9, flatShading: true });
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aHeat; varying float vHeat;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvHeat = aHeat;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vHeat;\n' + GLSL_COMMUN)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += corpsNoir(vHeat);\ndiffuseColor.rgb *= 1.0 - smoothstep(0.2, 0.6, vHeat) * 0.85;');
+  };
+  mat.customProgramCacheKey = () => 'eclats-bronze';
+  const mesh = new THREE.InstancedMesh(geo, mat, N); mesh.count = 0; mesh.frustumCulled = false; scene.add(mesh);
   const L = [], M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3();
   function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v.clone(), ax: V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(), ang: rand(0, 6), spin: rand(6, 16), s: o.s, age: 0, life: o.life ?? 4.5, chaleur: o.chaleur ?? 1 }); }
   function update(dt) {
     for (let i = L.length - 1; i >= 0; i--) {
       const d = L[i]; d.age += dt; if (d.age > d.life) { L.splice(i, 1); continue; }
       d.v.y -= 9.8 * dt; d.p.addScaledVector(d.v, dt); d.ang += d.spin * dt;
-      if (d.p.y < d.s * 0.3) { d.p.y = d.s * 0.3; d.v.y *= -0.28; d.v.x *= 0.5; d.v.z *= 0.5; d.spin *= 0.5; }
+      if (d.p.y < SOL_Y + d.s * 0.3) { d.p.y = SOL_Y + d.s * 0.3; d.v.y *= -0.28; d.v.x *= 0.5; d.v.z *= 0.5; d.spin *= 0.5; }
     }
   }
   function write() {
     let i = 0;
     for (const d of L) {
-      q.setFromAxisAngle(d.ax, d.ang); const k = 1 - smooth(0.85, 1, d.age / d.life);
-      sc.set(d.s * k, d.s * 0.28 * k, d.s * 0.75 * k); M.compose(d.p, q, sc); froid.setMatrixAt(i, M);
-      sc.multiplyScalar(1.06); M.compose(d.p, q, sc); lueur.setMatrixAt(i, M);
-      const h = 1.6 * d.chaleur * Math.exp(-d.age * 2.6); lueur.instanceColor.setXYZ(i, EMBER.x * h, EMBER.y * h, EMBER.z * h);
-      i++;
+      q.setFromAxisAngle(d.ax, d.ang); sc.setScalar(d.s * (1 - smooth(0.85, 1, d.age / d.life))); M.compose(d.p, q, sc); mesh.setMatrixAt(i, M);
+      aHeat.array[i] = 1.1 * d.chaleur * Math.exp(-d.age * 1.6); i++;
     }
-    froid.count = i; lueur.count = i;
-    froid.instanceMatrix.needsUpdate = true; lueur.instanceMatrix.needsUpdate = true; lueur.instanceColor.needsUpdate = true;
+    mesh.count = i; mesh.instanceMatrix.needsUpdate = true; aHeat.needsUpdate = true;
   }
   return { spawn, update, write, clear() { L.length = 0; } };
 })();
@@ -1218,6 +1637,11 @@ function creerBruitages(SR, graine) {
     const c = env(filtre(blanc(N(0.006)), 'hp', 1500), t => Math.exp(-t / 0.001)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.6;
     mix(d, x, t0, g, pan);
   }
+  function couleeSon(d, t0, dur, g) { // le bronze coule du ciel : grondement visqueux, gresillement
+    const n = N(dur);
+    for (const pan of [-0.5, 0.5]) { const x = filtre(brun(n), 'lp', 320, 0.8), am = lent(n, 7); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.04) * (t > dur - 0.06 ? Math.max(0, (dur - t) / 0.06) : 1) * (0.7 + 0.3 * am[i]); } mix(d, x, t0, g * 2.4, pan); }
+    mix(d, crepite(n, () => 240, 0.12), t0, g * 0.45, 0.2);
+  }
   function grillade(d, t0, dur, g) { // le metal en fusion qui gresille et refroidit
     const n = N(dur);
     mix(d, env(filtre(blanc(n), 'hp', 3200), t => Math.min(1, t / 0.03) * Math.exp(-t / (dur * 0.3))), t0, g * 0.2, -0.3);
@@ -1226,7 +1650,7 @@ function creerBruitages(SR, graine) {
 
   // ---------------------------------------------------------------- les bruitages de la Cloche felee
   return {
-    appel() { const d = vide(1.0); cielSon(d, 0, 0.72, 0.8); montee(d, 0, 0.7, 0.7, { f0: 37, f1: 74 }); clocheInverse(d, 0.06, 0.62, 0.8); aspire(d, 0.45, 0.25, 0.5); return fondu(normer(densifier(normer(d, 0.9), 1.4), 0.85), 0.05); },
+    appel() { const d = vide(1.0); cielSon(d, 0, 0.72, 0.8); montee(d, 0, 0.7, 0.7, { f0: 37, f1: 74 }); clocheInverse(d, 0.06, 0.62, 0.8); couleeSon(d, 0.17, 0.27, 0.5); aspire(d, 0.45, 0.25, 0.5); return fondu(normer(densifier(normer(d, 0.9), 1.4), 0.85), 0.05); },
     chute() { const d = vide(0.35); chuteSon(d, 0, 0.28, 1); return fondu(normer(d, 0.8), 0.004); },
     sonnerie() {
       const d = vide(4.2);
@@ -1375,7 +1799,7 @@ const tmpM = new THREE.Matrix4();
 function poseJoueur() {
   const t = run.tau;
   const accroupi = 0.08 * smooth(0, 300, t) * (1 - smooth(560, 640, t)) + 0.28 * smooth(650, T.act, t) * (1 - smooth(T.rupture + 300, T.cloture + 200, t));
-  joueur.position.set(0, -accroupi * 0.6, 0);
+  joueur.position.set(0, SOL_Y - accroupi * 0.6, 0);
   const pench = 0.16 * smooth(0, 380, t) * (1 - smooth(600, 680, t)) - 0.3 * smooth(640, T.act, t) * (1 - smooth(T.rupture, T.cloture + 300, t));
   corpsJ.rotation.set(0, -0.25 * smooth(0, 400, t) * (1 - smooth(640, 720, t)), pench);
   joueur.updateMatrixWorld(true);
@@ -1398,7 +1822,7 @@ function poseEnnemis() {
     }
     const genou = smooth(T.rupture + 80, T.rupture + 300, t) * (1 - smooth(T.bout - 500, T.bout - 60, t));
     const tremble = run.tremble * Math.sin(t * 0.9 + i * 2) * 0.03;
-    e.racine.position.copy(e.dir).multiplyScalar(R_ENNEMI + kb + tremble); e.racine.position.y = -0.34 * genou;
+    e.racine.position.copy(e.dir).multiplyScalar(R_ENNEMI + kb + tremble); e.racine.position.y = SOL_Y - 0.34 * genou;
     e.penche.rotation.z = -lean + 0.4 * genou;
   });
   for (const m of matsEnnemi) { m.emissive.setRGB(1, 0.5, 0.12); m.emissiveIntensity = run.flash * 0.12; }
@@ -1410,7 +1834,7 @@ function sparks(p, dir, n, speed = 9, spread = 0.6, heat = 1) {
   for (let i = 0; i < nq(n); i++) {
     const v = dir.clone().normalize().add(V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).multiplyScalar(spread)).normalize().multiplyScalar(speed * rand(0.4, 1.3));
     const k = rand(2.5, 5) * heat, hot = rand() < 0.3;
-    streaks.spawn({ p, v, c: hot ? [CORE.x * k, CORE.y * k, CORE.z * k] : [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, len: 0.05, w: rand(0.012, 0.028), life: rand(0.25, 0.6), grav: 7, drag: 2.5 });
+    streaks.spawn({ p, v, c: hot ? [CORE.x * k, CORE.y * k, CORE.z * k] : [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, len: 0.05, w: rand(0.012, 0.028), life: rand(0.25, 0.6), grav: 7, drag: 2.5, burst: rand() < 0.35 });
   }
 }
 function gouttesOr(p, dir, n, speed = 3.5, spread = 0.8) { // or fondu qui retombe et laisse une flaque qui refroidit
@@ -1425,37 +1849,67 @@ function embers(p, n, o = {}) {
     points.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.05)), v, c: [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, size: rand(0.02, 0.05), life: rand(0.6, 1.6) * (o.life ?? 1), grav: -0.4, drag: 1.2, turb: 3, kind: 0 });
   }
 }
-function suie(p, n, o = {}) { // fumee de suie a lisiere d'or
+function suie(p, n, o = {}) { // fumee de suie a lisiere d'or (lisiere discrete : sinon on croirait des eclairs)
+  o = { ...o, glow: (o.glow ?? 0.7) * 0.35 };
   for (let i = 0; i < nq(n); i++) sprites.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-0.5, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.2)), v: (o.v ?? V3()).clone().add(V3(rand(-1, 1), rand(-0.2, 1), rand(-1, 1)).multiplyScalar(o.speed ?? 0.8)), size: rand(0.6, 1.1) * (o.size ?? 0.6), grow: o.grow ?? 1.3, life: rand(0.6, 1.0) * (o.life ?? 1), a: o.a ?? 0.75, glow: o.glow ?? 0.7, drag: 2.2, rise: o.rise ?? 0.35 });
 }
-const POUSSIERE = [0.13, 0.095, 0.06];
+const POUSSIERE = [0.08, 0.06, 0.042];
 function anneauPoussiere(r0, n, vitesse, o = {}) { // la poussiere chassee en cercle
   for (let i = 0; i < nq(n); i++) {
     const a = i / nq(n) * Math.PI * 2 + rand(-0.1, 0.1), d = V3(Math.cos(a), 0, Math.sin(a));
-    sprites.spawn({ p: d.clone().multiplyScalar(r0).add(V3(0, rand(0.1, 0.35), 0)), v: d.multiplyScalar(vitesse * rand(0.7, 1.2)).add(V3(0, rand(0.2, 0.8), 0)), size: rand(0.45, 0.8) * (o.size ?? 1), grow: 1.6, life: rand(0.8, 1.3) * (o.life ?? 1), kind: 2, col: POUSSIERE, a: o.a ?? 0.55, drag: 2.6, rise: 0.15 });
+    sprites.spawn({ p: d.clone().multiplyScalar(r0).add(V3(o.centre ? o.centre.x : 0, SOL_Y + rand(0.1, 0.35), o.centre ? o.centre.z : 0)), v: d.multiplyScalar(vitesse * rand(0.7, 1.2)).add(V3(0, rand(0.2, 0.8), 0)), size: rand(0.45, 0.8) * (o.size ?? 1), grow: 1.6, life: rand(0.8, 1.3) * (o.life ?? 1), kind: 2, col: POUSSIERE, a: o.a ?? 0.55, drag: 2.6, rise: 0.15 });
   }
 }
 function cailloux(n, r0, force) { // les cailloux sautent sous la vibration
-  for (let i = 0; i < nq(n); i++) { const a = rand(0, 6.28), r = rand(r0 * 0.6, r0 * 1.6), p = V3(Math.cos(a) * r, 0.03, Math.sin(a) * r); debris.spawn({ p, v: V3(Math.cos(a) * rand(0, 1) * force, rand(1.2, 3) * force, Math.sin(a) * rand(0, 1) * force), s: rand(0.02, 0.05), hot: false, life: 1.6 }); }
+  for (let i = 0; i < nq(n); i++) { const a = rand(0, 6.28), r = rand(r0 * 0.6, r0 * 1.6), p = V3(Math.cos(a) * r, SOL_Y + 0.03, Math.sin(a) * r); debris.spawn({ p, v: V3(Math.cos(a) * rand(0, 1) * force, rand(1.2, 3) * force, Math.sin(a) * rand(0, 1) * force), s: rand(0.02, 0.05), hot: false, life: 1.6 }); }
 }
-function fissuresEtoile(n, r0, L) {
-  const liste = [];
-  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rand(-0.2, 0.2), d = V3(Math.cos(a), 0, Math.sin(a)); liste.push(makeCrack(d.clone().multiplyScalar(r0), d, L * rand(0.75, 1.15))); }
-  return liste;
+function briser() { // la cloche eclate : chaque fragment part, plus vite du cote de la felure
+  const phi0 = FELURE_U * Math.PI * 2;
+  for (const f of morceaux) {
+    const c = f.centre, out = V3(c.x, 0, c.z); out.divideScalar(out.length() || 1);
+    let da = f.graine[0] - phi0; da -= Math.PI * 2 * Math.round(da / (Math.PI * 2));
+    const pres = Math.exp(-Math.pow(da / 0.9, 2));
+    if (f.couronne) f.v.set(rand(-0.8, 0.8), rand(3.0, 3.6), rand(-0.8, 0.8));
+    else f.v.copy(out).multiplyScalar(rand(1.8, 3.6) + 3.0 * pres).add(V3(0, rand(0.6, 2.2) + c.y * 0.35, 0));
+    f.w.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(); f.vang = rand(3, 9) * (1 + pres); f.vole = true;
+  }
+}
+const qTmp = new THREE.Quaternion();
+function majMorceaux(dt) {
+  if (uCl.uBris.value < 0) return;
+  uCl.uBris.value += dt;
+  for (const f of morceaux) {
+    if (!f.vole) continue;
+    const m = f.m;
+    f.v.y -= 9.8 * dt; m.position.addScaledVector(f.v, dt);
+    if (f.vang > 0.01) { qTmp.setFromAxisAngle(f.w, f.vang * dt); m.quaternion.premultiply(qTmp); }
+    const bas = SOL_Y + f.r * 0.2;
+    if (m.position.y < bas) {
+      m.position.y = bas;
+      if (f.v.y < -2.2) { // un fragment lourd retombe : poussiere, cailloux, etincelles
+        anneauPoussiere(0.05, 4, 1.2, { a: 0.35, size: 0.5, centre: m.position });
+        sparks(m.position.clone().setY(SOL_Y + 0.05), V3(0, 1, 0), 4, 3, 0.9);
+      }
+      f.v.y = Math.abs(f.v.y) * 0.22; f.v.x *= 0.45; f.v.z *= 0.45; f.vang *= 0.45;
+      if (f.v.y < 0.5) { f.v.y = 0; if (Math.hypot(f.v.x, f.v.z) < 0.3) { f.vole = false; } }
+    }
+  }
 }
 
 function start() {
   Son.couper();
   rng = mulberry32(808);
   for (const grp of [fx, distFx]) for (const c of [...grp.children]) { grp.remove(c); c.traverse(o => { if (o.material && o.material.dispose) o.material.dispose(); if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
-  panneaux.length = 0; ondes.length = 0;
+  panneaux.length = 0; souffles.length = 0; ondesSol.length = 0; majOndes(0);
   points.clear(); streaks.clear(); splats.clear(); sprites.clear(); debris.clear(); eclatsBronze.clear();
-  run = { tau: -IDLE, sim: 0, hitstop: 0, stopLabel: 0, trauma: 0, inv: 0, duo: 0, lines: 0, rad: 0, ca: 0, fovPunch: 0, dim: 0, desat: 0, flash: 0, tremble: 0, souffle: 0, pulse: 0, light: null, flags: {}, hits: [], centre: new THREE.Vector2(0.5, 0.5), done: false, wait: 0, fade: 0, lastSeed: -999, lineSeed: 0, fissures: [] };
-  const u = clocheMat.uniforms;
-  u.uReveal.value = 0; u.uMetal.value = 0; u.uHeat.value = 0; u.uCrack.value = 0; u.uCrackGlow.value = 0; u.uFade.value = 1; u.uWobble.value = 0; u.uPulse.value = 0;
-  cloche.position.set(0, HAUT_CLOCHE, 0); cloche.rotation.y = 0; cloche.visible = true; anseMat.opacity = 0;
-  const s = sol.material.uniforms; s.uTele.value = 0; s.uTeleGlow.value = 0; s.uImprint.value = 0; s.uImprintHeat.value = 0; s.uFade.value = 1;
-  ciel.material.uniforms.uOpen.value = 0; ciel.material.uniforms.uFade.value = 0;
+  run = { tau: -IDLE, sim: 0, hitstop: 0, stopLabel: 0, trauma: 0, inv: 0, duo: 0, lines: 0, rad: 0, ca: 0, fovPunch: 0, dim: 0, desat: 0, flash: 0, tremble: 0, souffle: 0, pulse: 0, fuite: 0, resT: -1e9, fissT: 0, light: null, flags: {}, hits: [], centre: new THREE.Vector2(0.5, 0.5), done: false, wait: 0, fade: 0, lastSeed: -999, lineSeed: 0 };
+  const u = uCl;
+  u.uCond.value = 0; u.uFill.value = 0; u.uHeat.value = 0; u.uCrack.value = 0; u.uCrackGlow.value = 0; u.uWobble.value = 0; u.uPulse.value = 0; u.uRes.value = -1; u.uResAmp.value = 0; u.uGlyph.value = 0; u.uBris.value = -1; u.uDefait.value = 0; u.uChoc.value = 0;
+  cloche.position.set(0, HAUT_CLOCHE, 0); cloche.rotation.set(0, 0, 0); cloche.visible = true;
+  for (const f of morceaux) { f.m.position.copy(f.centre); f.m.quaternion.identity(); f.v.set(0, 0, 0); f.vang = 0; f.vole = false; }
+  const s = uSol; s.uTele.value = 0; s.uTeleGlow.value = 0; s.uImprint.value = 0; s.uImprintHeat.value = 0; s.uImpact.value = 0; s.uTremble.value = 0; s.uFiss.value = 0; s.uFissHeat.value = 0; s.uFade.value = 1;
+  for (const n of nuees) { n.material.uniforms.uOpen.value = 0; n.material.uniforms.uFade.value = 0; }
+  coulee.visible = false; fuite.material.uniforms.uA.value = 0;
   poseJoueur(); poseEnnemis();
   drawTimeline();
 }
@@ -1476,68 +1930,83 @@ function step(dtMs) {
   poseJoueur(); poseEnnemis();
   majCape(run.souffle, run.sim / 1000);
   points.update(s); streaks.update(s); splats.update(s); sprites.update(s); debris.update(s); eclatsBronze.update(s); snow.update(s, run.sim / 1000);
+  majOndes(s); majSouffles(s); majMorceaux(s);
   for (let i = panneaux.length - 1; i >= 0; i--) { const p = panneaux[i]; p.age += s; const u = clamp(p.age / p.life); p.mat.uniforms.uT.value = u; p.m.scale.setScalar(lerp(p.s0, p.s1, easeOutCubic(u))); if (p.follow) p.m.position.copy(p.follow()); if (p.age > p.life) { p.m.parent.remove(p.m); p.mat.dispose(); p.m.geometry.dispose(); panneaux.splice(i, 1); } }
-  for (let i = ondes.length - 1; i >= 0; i--) { const o = ondes[i]; o.age += s; const u = o.m.material.uniforms; u.uT.value = clamp(o.age / o.life); u.uForce.value = o.age < 0 ? 0 : o.force; if (o.age > o.life) { fx.remove(o.m); o.m.material.dispose(); o.m.geometry.dispose(); ondes.splice(i, 1); } }
   const tt = run.sim / 1000;
   for (const grp of [fx, distFx]) for (const o of grp.children) if (o.material && o.material.uniforms && o.material.uniforms.uTime) o.material.uniforms.uTime.value = tt;
-  clocheMat.uniforms.uTime.value = tt; ciel.material.uniforms.uTime.value = tt;
+  uCl.uTime.value = tt; uSol.uTime.value = tt;
+  for (const m of [...nuees, coulee, fuite]) m.material.uniforms.uTime.value = tt;
   for (const b of brumes) b.material.uniforms.uTime.value += s;
   if (run.light) { run.light.age += s; impactLight.position.copy(run.light.p); impactLight.intensity = run.light.peak * Math.exp(-run.light.age * 4); } else impactLight.intensity = 0;
   if (run.tau > T.bout) run.done = true;
 }
 
 function scenario(t, dt) {
-  const F = run.flags, u = clocheMat.uniforms, so = sol.material.uniforms, ci = ciel.material.uniforms;
-  // ---------------------------------------------------------------- appel
+  const F = run.flags, u = uCl, so = uSol;
+  // ---------------------------------------------------------------- appel : le ciel tourne et s'ouvre ; la cloche se condense en suie, puis le bronze y coule
   if (t >= 0 && !F.appel) { F.appel = 1; Son.ambiance('fige'); Son.jouer('appel', 0.8, 0.35); }
-  ci.uOpen.value = easeOutCubic(clamp(t / 360)); ci.uFade.value = smooth(0, 120, t) * (1 - smooth(T.act + 200, T.act + 700, t));
-  lumiereCiel.intensity = 2.4 * ci.uOpen.value * ci.uFade.value;
-  u.uReveal.value = easeInOut(clamp((t - 70) / 300)); u.uMetal.value = easeInOut(clamp((t - 240) / 300));
-  u.uHeat.value = 0.5 * smooth(240, 500, t) + 0.8 * Math.exp(-Math.max(0, t - T.impact) / 300) * (t >= T.impact ? 1 : 0) + 0.4 * run.pulse;
-  anseMat.opacity = smooth(260, 520, t) * u.uFade.value; anseMat.emissiveIntensity = u.uHeat.value * 1.5;
-  so.uTele.value = easeInOut(clamp((t - 60) / 330)); so.uTeleGlow.value = smooth(60, 300, t) * (0.6 + 0.4 * Math.sin(t * 0.02)) * (1 - smooth(T.impact, T.impact + 400, t)) + 0.6 * run.pulse;
+  const ouvert = easeOutCubic(clamp((t - 30) / 380)) * (1 - smooth(T.act + 300, T.act + 1400, t));
+  const voile = smooth(0, 180, t) * (1 - smooth(T.act + 600, T.rupture + 900, t));
+  for (const n of nuees) { n.material.uniforms.uOpen.value = ouvert; n.material.uniforms.uFade.value = voile; }
+  lumiereCiel.intensity = 3.0 * ouvert * voile;
+  u.uCond.value = 1.3 * easeInOut(clamp((t - 50) / 260));
+  u.uFill.value = clamp((t - 200) / 230, 0, 2.5); // au-dela de 1, tout le metal est derriere le front : il fige
+  u.uHeat.value = t < T.act ? lerp(0.85, 0.32, smooth(T.chute, T.act, t)) : 0.32 * Math.exp(-(t - T.act) / 160);
+  for (const f of morceaux) f.m.castShadow = u.uCond.value > 0.9 && u.uDefait.value < 0.4;
+  // le jet de bronze : du four jusqu'a la couronne, puis il se rompt quand la cloche tombe
+  const jet = smooth(150, 190, t) * (1 - smooth(T.chute - 10, T.chute + 110, t));
+  coulee.visible = jet > 0.01;
+  if (coulee.visible) {
+    const haut = 15.2, bas = lerp(haut, cloche.position.y + HC + 0.12, easeOutCubic(clamp((t - 150) / 70))) - Math.max(0, t - T.chute) * 0.004;
+    const rj = 0.11 * (0.55 + 0.45 * jet); coulee.position.set(0, bas, 0); coulee.scale.set(rj, Math.max(0.01, haut - bas), rj);
+    coulee.material.uniforms.uA.value = jet;
+    if (t > 210 && t < T.chute && rng() < dt * 0.25) { const p = V3(rand(-0.08, 0.08), cloche.position.y + HC + 0.12, rand(-0.08, 0.08)); streaks.spawn({ p, v: V3(rand(-2.5, 2.5), rand(0.5, 3), rand(-2.5, 2.5)), c: [CORE.x * 4, CORE.y * 4, CORE.z * 4], a: 0, len: 0.05, w: rand(0.01, 0.022), life: rand(0.25, 0.5), grav: 8, drag: 1.5, burst: rng() < 0.4 }); }
+  }
+  so.uTele.value = easeInOut(clamp((t - 60) / 340));
+  so.uTeleGlow.value = smooth(60, 300, t) * (0.75 + 0.25 * Math.sin(t * 0.021)) * (1 - smooth(T.impact, T.impact + 450, t)) + 0.5 * run.pulse;
+  so.uTremble.value = smooth(80, 600, t) * (1 - smooth(T.act, T.act + 100, t));
   mOr.emissiveIntensity = 2.5 * smooth(80, 600, t) * (1 - smooth(T.rupture, T.cloture + 400, t));
   run.souffle = 0.5 * smooth(0, 400, t) * (1 - smooth(T.act, T.act + 300, t)) + 0.7 * Math.exp(-Math.max(0, t - T.impact) / 250) * (t >= T.impact ? 1 : 0) + 0.6 * Math.exp(-Math.max(0, t - T.rupture) / 250) * (t >= T.rupture ? 1 : 0);
   if (t > 0 && t < T.act) {
-    if (rng() < dt * 0.05) suie(V3(rand(-0.6, 0.6), lerp(12, Math.max(cloche.position.y + 3.5, 4), rand(0, 1)), rand(-0.6, 0.6)), 1, { v: V3(0, -4, 0), size: 0.9, glow: 0.8, rise: -1, a: 0.6 });
-    if (rng() < dt * 0.08) { const p = V3(rand(-1.4, 1.4), 12.5, rand(-1.4, 1.4)); streaks.spawn({ p, v: V3(rand(-0.4, 0.4), rand(-9, -5), rand(-0.4, 0.4)), c: [EMBER.x * 4, EMBER.y * 4, EMBER.z * 4], a: 0, len: 0.06, w: rand(0.015, 0.03), life: 1.6, grav: 4, drag: 0.4 }); }
+    if (rng() < dt * 0.05) suie(V3(rand(-0.8, 0.8), lerp(14.5, Math.max(cloche.position.y + 3.5, 4), rand(0, 1)), rand(-0.8, 0.8)), 1, { v: V3(0, -4, 0), size: 1.0, glow: 0.8, rise: -1, a: 0.6 });
+    if (rng() < dt * 0.025) { const p = V3(rand(-3, 3), 14.5, rand(-3, 3)); streaks.spawn({ p, v: V3(rand(-0.6, 0.6), rand(-9, -5), rand(-0.6, 0.6)), c: [EMBER.x * 4, EMBER.y * 4, EMBER.z * 4], a: 0, len: 0.03, w: rand(0.015, 0.03), life: 2.0, grav: 4, drag: 0.4, burst: rng() < 0.3 }); }
     if (rng() < dt * 0.012 * smooth(100, 600, t)) cailloux(1, 2.2, 0.5);
     run.tremble = smooth(100, 650, t);
   } else run.tremble = Math.max(0, run.tremble - dt / 600);
   // ---------------------------------------------------------------- chute
-  if (t >= T.chute && !F.chute) { F.chute = 1; Son.jouer('chute', 0.8, 0.3); }
+  if (t >= T.chute && !F.chute) { F.chute = 1; Son.jouer('chute', 0.8, 0.3); gouttesOr(V3(0, cloche.position.y + HC + 0.5, 0), V3(0, -1, 0), 8, 1.2, 0.5); }
   const kc = clamp((t - T.chute) / (T.act - T.chute));
-  cloche.position.y = t < T.chute ? HAUT_CLOCHE : t < T.act ? HAUT_CLOCHE * (1 - kc * kc) : 0;
-  if (t >= T.chute && t < T.act && rng() < dt * 0.25) { const p = surfaceCloche(rand(0, 1), rand(0, 0.3)); streaks.spawn({ p, v: V3(rand(-0.5, 0.5), rand(3, 7), rand(-0.5, 0.5)), c: [EMBER.x * 3, EMBER.y * 3, EMBER.z * 3], a: 0, len: 0.08, w: rand(0.012, 0.025), life: 0.5, grav: -2, drag: 1 }); }
-  if (t >= 620 && !F.souffle) { F.souffle = 1; anneauPoussiere(1.6, 14, 3.5, { a: 0.4 }); cailloux(10, 2.0, 0.8); }
+  let saut = 0; T.echos.forEach((te, k) => { const d = t - te; if (d >= 0 && d < 160) saut = Math.max(saut, Math.sin(Math.PI * d / 160) * (0.025 + 0.012 * k)); });
+  if (u.uBris.value < 0) cloche.position.y = t < T.chute ? HAUT_CLOCHE : t < T.act ? lerp(HAUT_CLOCHE, SOL_Y, kc * kc) : SOL_Y + saut;
+  if (t >= T.chute && t < T.act) {
+    if (rng() < dt * 0.25) { const p = surfaceCloche(rand(0, 1), rand(0, 0.1)); streaks.spawn({ p, v: V3(rand(-0.5, 0.5), rand(4, 8), rand(-0.5, 0.5)), c: [EMBER.x * 3, EMBER.y * 3, EMBER.z * 3], a: 0, len: 0.08, w: rand(0.012, 0.025), life: 0.5, grav: -2, drag: 1 }); }
+    if (rng() < dt * 0.1) suie(cloche.position.clone().add(V3(rand(-1.2, 1.2), HC * rand(0.4, 1.1), rand(-1.2, 1.2))), 1, { v: V3(0, 5, 0), size: 0.9, glow: 0.9, a: 0.5, rise: 0.4 });
+  }
+  if (t >= 620 && !F.souffle) { F.souffle = 1; anneauPoussiere(1.6, 16, 3.5, { a: 0.4 }); cailloux(10, 2.0, 0.8); }
   // ---------------------------------------------------------------- sonnerie
   if (!F.impact && t >= T.impact) {
     F.impact = 1;
-    const coeur = V3(0, 1.2, 0), tete = masse.localToWorld(V3(0.9, 0, 0));
+    const coeur = V3(0, 1.2, 0);
     centreEcran(coeur);
     hitstop(120); shake(0.95); run.fovPunch = 6; run.flash = 1;
     if (!reduceMotion) { run.inv = 34; run.duo = 40; run.lines = 0.8; run.rad = 0.15; run.ca = 0.01; }
     Son.ambiance('normal'); Son.jouer('sonnerie', 1, 0.5);
-    panneau(FS_STAR, tete.clone().add(V3(0, 0.15, 0)), 1.6, 2.4, 0.14, { top: true });
     panneau(FS_DSHOCK, coeur, 0.6, 11, 0.6, { strength: 0.045 });
-    onde(0.12, 6.5, 0.95, 1.1); onde(1.25, 5.2, 0.7, 0.8);
-    halo(coeur, 2.0, 0.3, 1.4);
-    run.light = { p: V3(0, 1.0, 0), peak: 32, age: 0 };
-    anneauPoussiere(1.7, 22, 5.5, { a: 0.55 }); cailloux(18, 2.2, 1.2);
-    run.fissures = fissuresEtoile(9, 1.55, 2.6); run.fissT = t;
-    for (let i = 0; i < 6; i++) sparks(surfaceCloche(rand(0, 1), 0.02), V3(rand(-1, 1), 0.3, rand(-1, 1)), 8, 7);
-    sparks(tete, V3(0, 1, 0), 18, 8, 0.9);
-    suie(V3(0, 0.3, 0), 6, { speed: 1.2, size: 0.6, glow: 0.8, jitter: 1.2 });
+    ondeSol(7.6, 1.0, 0.05, 1.25, 0.38); souffle(6.8, 1.1, 1.0, 0.7);
+    run.fuite = 1; run.resT = t; run.fissT = t;
+    run.light = { p: V3(0, 0.5, 0), peak: 30, age: 0 };
+    anneauPoussiere(1.85, 16, 5.5, { a: 0.7, size: 0.75 }); cailloux(22, 2.0, 1.2);
+    for (let i = 0; i < 12; i++) sparks(surfaceCloche(rand(0, 1), 0.0).setY(SOL_Y + 0.05), V3(rand(-1, 1), 0.25, rand(-1, 1)), 7, 7);
+    suie(V3(0, 0.3, 0), 8, { speed: 1.4, size: 0.7, glow: 0.8, jitter: 1.8 });
     u.uCrack.value = 0.22; u.uWobble.value = 1;
-    so.uImprint.value = 1; so.uImprintHeat.value = 1;
+    so.uImprint.value = 1;
     for (const e of ennemis) { e.hit = t; }
     run.hits.push({ t, s: 1 });
     run.haze = panneau(FS_DHAZE, V3(0, 1.6, 0), 4.0, 4.0, 2.6, { strength: 0.01 });
   }
-  if (run.fissures.length) {
-    const dtc = t - run.fissT;
-    for (const c of run.fissures) { const cu = c.material.uniforms; cu.uReveal.value = easeOutCubic(clamp(dtc / 160)); cu.uHeat.value = Math.exp(-Math.max(0, dtc - 300) / 900) + 0.5 * run.pulse; cu.uFade.value = 1 - smooth(T.bout - 500, T.bout - 80, t); }
-  }
+  so.uImpact.value = t >= T.impact ? easeOutCubic(clamp((t - T.impact) / 60)) : 0;
+  so.uFiss.value = t >= T.impact ? easeOutCubic(clamp((t - run.fissT) / 170)) : 0;
+  so.uFissHeat.value = t >= T.impact ? Math.exp(-Math.max(0, t - T.impact - 300) / 900) + 0.5 * run.pulse : 0;
   // ---------------------------------------------------------------- echos
   run.pulse = 0;
   T.echos.forEach((te, k) => {
@@ -1546,55 +2015,62 @@ function scenario(t, dt) {
     if (!F[cle] && t >= te) {
       F[cle] = 1; const n = k + 1;
       Son.jouer('echo', 0.75 + 0.1 * k, 0.55, k, 0.5);
-      onde(0.12, 6.5 + n * 0.9, 1.0 + 0.15 * n, 0.85); onde(1.4, 4.5 + n * 0.5, 0.75, 0.55);
+      ondeSol(7.6 + n * 0.6, 1.0 + 0.12 * n, 0.03 + 0.008 * n, 0.9 + 0.15 * n, 0.32 + 0.04 * n); souffle(6.2 + n * 0.5, 1.0, 0.55 + 0.12 * n, 0.5 + 0.1 * n);
       panneau(FS_DSHOCK, V3(0, 1.2, 0), 0.6, 8 + n, 0.55, { strength: 0.025 + 0.005 * n });
-      anneauPoussiere(1.7, 10 + 3 * n, 3.5 + n * 0.6, { a: 0.4 });
-      shake(0.25 + 0.1 * n); run.flash = 0.35 + 0.15 * n;
+      anneauPoussiere(1.85, 6 + 3 * n, 3.5 + n * 0.6, { a: 0.55, size: 0.7 });
+      shake(0.25 + 0.1 * n); run.flash = 0.35 + 0.15 * n; run.fuite = Math.max(run.fuite, 0.6 + 0.2 * n); run.resT = t;
       u.uWobble.value = Math.min(1.4, u.uWobble.value + 0.6);
-      const p = surfaceCloche(FELURE_U, 0.03); gouttesOr(p, V3(0, -0.4, 0.5), 4 + 2 * n, 1.2, 0.6); sparks(p, V3(0, 0.4, 1), 6 + 3 * n, 5);
-      run.light = { p: V3(0, 1.0, 0), peak: 10 + 4 * n, age: 0 };
+      const p = surfaceCloche(FELURE_U, 0.04); gouttesOr(p, V3(0, -0.4, 0.5), 4 + 2 * n, 1.2, 0.6); sparks(p, V3(0, 0.4, 1), 6 + 3 * n, 5);
+      for (let i = 0; i < 2 + n; i++) suie(surfaceCloche(rand(0, 1), rand(0.25, 0.9)), 1, { v: V3(0, 1.4, 0), size: 0.6, glow: 0.9, a: 0.5 });
+      run.light = { p: V3(0, 0.5, 0), peak: 10 + 4 * n, age: 0 };
       run.hits.push({ t, s: 0.18 });
     }
   });
+  const dres = t - run.resT; u.uRes.value = dres / 230; u.uResAmp.value = dres >= 0 && dres < 320 ? 1 - dres / 320 : 0;
+  u.uGlyph.value = t < T.impact ? 0 : 0.35 + 0.22 * T.echos.filter(te => t >= te).length;
   const crackCible = t < T.impact ? 0 : 0.22 + 0.23 * T.echos.filter(te => t >= te).length;
   u.uCrack.value += (crackCible - u.uCrack.value) * Math.min(1, dt / 80);
-  u.uCrackGlow.value = t < T.impact ? 0 : 0.8 + 0.6 * run.pulse + 0.4 * smooth(T.echos[2], T.rupture, t);
-  u.uPulse.value = run.pulse;
+  u.uCrackGlow.value = t < T.impact || t >= T.rupture ? 0 : 0.8 + 0.6 * run.pulse + 0.4 * smooth(T.echos[2], T.rupture, t);
+  u.uPulse.value = run.pulse; u.uChoc.value = t >= T.impact ? Math.exp(-(t - T.impact) / 45) : 0;
   u.uWobble.value *= Math.exp(-dt / 700);
+  run.fuite *= Math.exp(-dt / 160); fuite.material.uniforms.uA.value = t >= T.impact && t < T.rupture ? run.fuite : 0;
   clocheLumiere.intensity = t >= T.impact && t < T.rupture ? 2.5 + 8 * run.pulse + 5 * Math.exp(-(t - T.impact) / 200) : 0;
-  if (t > T.impact && t < T.rupture && rng() < dt * 0.02 * (0.4 + u.uCrack.value)) { const p = surfaceCloche(FELURE_U + rand(-0.01, 0.01), rand(0.0, u.uCrack.value * 0.9)); gouttesOr(p, V3(0, -1, 0.3), 1, 0.4, 0.3); }
+  if (t > T.impact && t < T.rupture && rng() < dt * 0.02 * (0.4 + u.uCrack.value)) gouttesOr(surfaceCloche(FELURE_U + rand(-0.01, 0.01), rand(0.05, u.uCrack.value * 0.9)), V3(0, -1, 0.3), 1, 0.4, 0.3);
+  if (t > T.impact && t < T.rupture && rng() < dt * 0.03) suie(surfaceCloche(rand(0, 1), rand(0.3, 1)), 1, { v: V3(0, 1.2, 0), size: 0.45, glow: 0.9, a: 0.35, rise: 0.5 });
   so.uImprintHeat.value = t < T.impact ? 0 : Math.exp(-(t - T.impact) / 900) * 0.8 + 0.4 * run.pulse + (t >= T.rupture ? Math.exp(-(t - T.rupture) / 600) * 0.8 : 0);
   // ---------------------------------------------------------------- rupture
   if (!F.rupture && t >= T.rupture) {
     F.rupture = 1;
-    const coeur = V3(0, 1.4, 0);
+    const coeur = V3(0, 1.3, 0);
     centreEcran(coeur);
     hitstop(80); shake(1.0); run.fovPunch = 5; run.flash = 1.2;
     if (!reduceMotion) { run.duo = 45; run.lines = 0.7; run.rad = 0.12; run.ca = 0.01; }
     Son.jouer('rupture', 1, 0.5, undefined, 0.35);
-    cloche.visible = false;
+    briser(); u.uBris.value = 0;
     panneau(FS_STAR, coeur, 2.2, 3.4, 0.16, { top: true });
     panneau(FS_DSHOCK, coeur, 0.6, 12, 0.6, { strength: 0.05 });
-    onde(0.12, 8.0, 1.1, 1.2); onde(1.6, 6.0, 0.8, 0.9);
+    ondeSol(8.6, 1.25, 0.065, 1.4, 0.45); souffle(7.5, 1.3, 1.2, 0.9);
     halo(coeur, 2.4, 0.35, 1.6);
     run.light = { p: coeur.clone(), peak: 40, age: 0 };
-    for (let i = 0; i < 64; i++) {
-      const uu = rand(0, 1), vv = rand(0.02, 0.95), p = surfaceCloche(uu, vv), out = p.clone().setY(0).normalize();
-      eclatsBronze.spawn({ p, v: out.multiplyScalar(rand(2.5, 7)).add(V3(0, rand(1.5, 5.5), 0)), s: rand(0.07, 0.2), chaleur: rand(0.4, 1.2) });
-    }
-    for (let i = 0; i < 6; i++) gouttesOr(surfaceCloche(rand(0, 1), rand(0.1, 0.9)), V3(rand(-1, 1), 0.6, rand(-1, 1)), 6, 4.5, 0.7);
-    suie(coeur, 10, { speed: 2.2, size: 0.75, glow: 0.8, jitter: 1.0, life: 0.8 });
-    embers(coeur, 70, { speed: 2.6, heat: 1.1, jitter: 1.2 });
-    anneauPoussiere(1.7, 26, 6.5, { a: 0.6, size: 1.2 });
+    for (let i = 0; i < 80; i++) { const p = surfaceCloche(rand(0, 1), rand(0.02, 0.95)), out = p.clone().setY(0).normalize(); eclatsBronze.spawn({ p, v: out.multiplyScalar(rand(2.5, 8)).add(V3(0, rand(1.5, 6), 0)), s: rand(0.025, 0.075), chaleur: rand(0.4, 1.15) }); }
+    for (let i = 0; i < 10; i++) gouttesOr(surfaceCloche(rand(0, 1), rand(0.1, 0.9)), V3(rand(-1, 1), 0.6, rand(-1, 1)), 6, 5, 0.7);
+    for (let i = 0; i < 8; i++) sparks(surfaceCloche(rand(0, 1), rand(0.1, 0.9)), V3(rand(-1, 1), 0.5, rand(-1, 1)), 12, 10, 0.7);
+    suie(coeur, 14, { speed: 2.4, size: 0.85, glow: 0.85, jitter: 1.2, life: 1.0 });
+    embers(coeur, 90, { speed: 2.8, heat: 1.1, jitter: 1.4 });
+    anneauPoussiere(1.7, 30, 6.5, { a: 0.6, size: 1.2 });
     run.hits.push({ t, s: 1.3 });
   }
-  if (t > T.rupture && t < T.rupture + 1500 && rng() < dt * 0.03) embers(V3(rand(-2.5, 2.5), 0.1, rand(-2.5, 2.5)), 1, { speed: 0.5 });
+  if (t > T.rupture && t < T.rupture + 1500 && rng() < dt * 0.03) embers(V3(rand(-2.5, 2.5), SOL_Y + 0.05, rand(-2.5, 2.5)), 1, { speed: 0.5 });
+  if (t > T.rupture + 200 && rng() < dt * 0.02) { const f = morceaux[Math.floor(rng() * morceaux.length)]; if (uCl.uBris.value < 2.5) embers(f.m.position.clone(), 1, { speed: 0.4, heat: 0.8 }); }
   run.flash *= Math.exp(-dt / 160);
-  // ---------------------------------------------------------------- cloture
-  if (!F.cloture && t >= T.cloture + 300) { F.cloture = 1; Son.jouer('cloture', 0.7, 0.3); suie(V3(0.3, 0.1, 0.3), 3, { size: 0.4, glow: 0, a: 0.4, speed: 0.4 }); anneauPoussiere(0.4, 8, 1.2, { a: 0.35, size: 0.6 }); }
+  // ---------------------------------------------------------------- cloture, puis les restes se defont en suie
+  if (!F.cloture && t >= T.cloture + 300) { F.cloture = 1; Son.jouer('cloture', 0.7, 0.3); suie(V3(0.3, SOL_Y + 0.1, 0.3), 3, { size: 0.4, glow: 0, a: 0.4, speed: 0.4 }); anneauPoussiere(0.4, 8, 1.2, { a: 0.35, size: 0.6 }); }
+  u.uDefait.value = smooth(T.bout - 950, T.bout - 120, t);
+  if (u.uDefait.value > 0.02 && u.uDefait.value < 0.9 && rng() < dt * 0.06) { const f = morceaux[Math.floor(rng() * morceaux.length)]; suie(f.m.position.clone(), 1, { v: V3(0, 0.8, 0), size: 0.5, glow: 0.6, a: 0.45, rise: 0.4 }); }
   // ---------------------------------------------------------------- monde
   run.dim = 0.62 * smooth(0, 300, t) * (1 - smooth(T.rupture + 300, T.rupture + 1300, t));
   run.desat = 0.45 * smooth(0, 300, t) * (1 - smooth(T.impact, T.impact + 400, t)) + 0.2 * smooth(T.impact + 400, T.echos[0], t) * (1 - smooth(T.rupture, T.rupture + 800, t));
+  matCloche.envMapIntensity = 0.55 + 0.9 * ouvert * voile;
   so.uFade.value = 1 - smooth(T.bout - 450, T.bout - 60, t);
 }
 
@@ -1620,17 +2096,18 @@ function camPose(v) {
 const orbitePos = (a, R, h) => V3(Math.cos(a * DEG) * R, h, Math.sin(a * DEG) * R);
 function poseCine() {
   const t = run.tau;
-  const appel = { p: V3(-5.5, 1.1, 6.4).lerp(V3(-5.1, 1.2, 6.0), smooth(0, T.chute, t)), l: V3(0, 4.6, 0), fov: 62, roll: 3 * DEG };
+  // appel : contre-plongee large, le combattant petit sous le ciel qui tourne et s'ouvre
+  const appel = { p: V3(-8.6, 0.9, 10.4).lerp(V3(-8.0, 1.0, 9.7), smooth(0, T.chute, t)), l: V3(0, 6.4, 0), fov: 64, roll: 3 * DEG };
   if (t < T.chute) return appel;
   if (t < T.act) {
     const k = easeInOut(clamp((t - T.chute) / (T.act - T.chute)));
-    return { p: appel.p.clone().lerp(V3(-4.4, 1.5, 5.3), k), l: V3(0, Math.max(1.4, cloche.position.y * 0.55 + 1.3), 0), fov: lerp(62, 48, k), roll: lerp(3, 0, k) * DEG };
+    return { p: appel.p.clone().lerp(V3(-5.0, 1.4, 6.1), k), l: V3(0, Math.max(1.3, cloche.position.y * 0.6 + 1.3), 0), fov: lerp(64, 50, k), roll: lerp(3, 0, k) * DEG };
   }
   const ko = clamp((t - T.act) / (T.rupture - T.act));
-  const orb = { p: orbitePos(lerp(130, 72, easeInOut(ko)), lerp(6.9, 7.4, ko), lerp(1.6, 3.6, easeInOut(ko))), l: V3(0, 1.4, 0), fov: 48, roll: 0 };
+  const orb = { p: orbitePos(lerp(130, 72, easeInOut(ko)), lerp(6.9, 7.4, ko), lerp(1.5, 3.4, easeInOut(ko))), l: V3(0, 1.4, 0), fov: 48, roll: 0 };
   if (t < T.rupture) return orb;
   const kr = easeOutCubic(clamp((t - T.rupture) / 140));
-  const pousse = { p: orbitePos(72, lerp(7.4, 5.4, kr), lerp(3.6, 2.6, kr)), l: V3(0, 1.3, 0), fov: 50, roll: 0 };
+  const pousse = { p: orbitePos(72, lerp(7.4, 5.6, kr), lerp(3.4, 2.6, kr)), l: V3(0, 1.3, 0), fov: 50, roll: 0 };
   const fin = { p: V3(1.6, 6.8, 8.2), l: V3(0, 0.5, 0), fov: 48, roll: 0 };
   return lerpPose(pousse, fin, easeInOut(clamp((t - T.rupture - 500) / 1300)));
 }
@@ -1766,7 +2243,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Pour les captures de controle : rejoue jusqu'a l'instant tau (ms depuis le debut de l'Art), eventuellement pendant un arret sur coup.
-window.__clocheFelee = { seek(mode, ms, pendantArret) { changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 4000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
+window.__clocheFelee = { seek(mode, ms, pendantArret, orb) { if (orb) { Object.assign(orbite, orb); if (orb.cy !== undefined) orbite.cible.y = orb.cy; } orbite.dernier = 1e15; changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 4000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
 </script>
 </body>
 </html>
