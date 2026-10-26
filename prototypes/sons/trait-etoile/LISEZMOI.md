@@ -12,7 +12,8 @@ Les temps sont comptés depuis le début de l'Art, sans les arrêts sur coup (40
 | `trait_etoile_percee_1` à `_3` | quand la pointe atteint chaque bête (≈ 640, 686, 732 ms) | 0,80, 0,90, 1,00 | 0,50 |
 | `trait_etoile_plante` | 770 ms, la lance se plante | 0,85 | 0,40 |
 | `trait_etoile_fige` | 830 ms, le monde se fige | 0,70 | 0,60 |
-| `trait_etoile_relie` | 1 000 ms, les vaincus s'allument | 0,75 | 0,60 |
+| `trait_etoile_relie` | 1 000 ms, les vaincus s'allument | 0,40 | 0,60 |
+| `trait_etoile_avant_1` à `_3` | 1 300, 1 450 et 1 480 ms : l'appel d'air finit pile sur chaque extinction | 0,70, 0,70, 0,90 | 0,40 |
 | `trait_etoile_eteint_1` à `_3` | 1 480, 1 630 et 1 800 ms | 0,85, 0,95, 1,20 | 0,55 |
 | `trait_etoile_cloture` | 2 350 ms, la main se referme | 0,70 | 0,35 |
 | `ambiance_vent_boucle` | en boucle, sans couture | 0,22 | 0 |

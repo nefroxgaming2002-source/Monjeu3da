@@ -74,13 +74,13 @@ Les grosses cloches font la vedette, sans aucun aigu tenu. Les partiels de cloch
 - **Sonnerie** :
   - explosion : claquement, coup saturé, grave, corps qui gronde ;
   - grande cloche fêlée ;
-  - armure et cailloux.
-- **Échos** : la cloche revibre, de plus en plus grave et fêlée, avec un coup sourd et des petits bronzes.
+  - armure et gravats sourds.
+- **Échos** : la cloche revibre, de plus en plus grave et fêlée, avec un coup sourd et un ou deux morceaux de bronze qui retombent, sourds.
 - **Rupture** :
   - craquement ;
-  - quarante éclats de bronze ;
+  - une douzaine de morceaux de bronze qui retombent lourdement, sans tintement ;
   - râle de la cloche qui se brise ;
-  - métal en fusion qui grésille, et gouttes.
+  - métal en fusion qui grésille.
 - **Clôture** : la masse posée.
 
 ## Budget mobile

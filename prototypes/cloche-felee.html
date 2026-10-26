@@ -1632,10 +1632,16 @@ function creerBruitages(SR, graine) {
     const n = N(dur);
     for (const pan of [-0.7, 0.7]) mix(d, env(filtre(rose(n), 'lp', t => 1600 * Math.exp(-t / 0.2) + 250, 0.7), t => Math.min(1, t / 0.01) * Math.exp(-t / (dur * 0.35))), t0, g * 1.6, pan);
   }
-  function bronze(d, t0, g, pan) { // eclat de bronze qui rebondit : court, sans resonance
-    const f = RR(380, 1500), x = modal(N(0.12), [{ f, a: 1, d: RR(0.02, 0.06) }, { f: f * RR(1.6, 2.4), a: 0.5, d: RR(0.01, 0.03) }], 3);
-    const c = env(filtre(blanc(N(0.006)), 'hp', 1500), t => Math.exp(-t / 0.001)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.6;
-    mix(d, x, t0, g, pan);
+  function bronze(d, t0, g, pan) { // un morceau de bronze lourd qui retombe : un choc sourd, aucun tintement
+    const n = N(0.2), f = RR(85, 160), tau = RR(0.035, 0.07);
+    const x = env(sinus(n, t => f * (1 + 0.8 * Math.exp(-t / 0.008))), t => Math.min(1, t / 0.0015) * Math.exp(-t / tau));
+    const c = env(filtre(brun(n), 'lp', t => 1100 * Math.exp(-t / 0.012) + 160, 0.7), t => Math.min(1, t / 0.001) * Math.exp(-t / 0.03));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 0.7 + c[i] * 3;
+    mix(d, sat(x, 2.5), t0, g, pan);
+  }
+  function gravats(d, t0, g, pan) { // des gravats qui roulent : un froissement de pierre grave, pas d'eclat
+    const n = N(0.16), x = env(filtre(rose(n), 'bp', t => RR(260, 520) * (1 - 0.4 * t / 0.16), 0.9), t => Math.min(1, t / 0.003) * Math.exp(-t / RR(0.025, 0.05)));
+    mix(d, sat(x, 2.5), t0, g * 1.8, pan);
   }
   function couleeSon(d, t0, dur, g) { // le bronze coule du ciel : grondement visqueux, gresillement
     const n = N(dur);
@@ -1658,7 +1664,7 @@ function creerBruitages(SR, graine) {
       cloche(d, 0, 1.3, { f: 104, dur: 4.0, felure: 0.45, dec: 0.55 });
       armure(d, 0.001, 0.35, { f1: 140, dec: 0.4, pan: 0.2 }); craque(d, 0.002, 0.5, -0.1);
       poussiere(d, 0.01, 1.0, 0.6);
-      for (let i = 0; i < 16; i++) caillou(d, RR(0.08, 1.0), RR(0.05, 0.16), RR(-0.9, 0.9));
+      for (let i = 0; i < 7; i++) gravats(d, RR(0.1, 0.9), RR(0.08, 0.18), RR(-0.9, 0.9));
       return fondu(normer(densifier(normer(d, 0.95), 2.0), 0.97), 0.5);
     },
     echo(k) {
@@ -1666,7 +1672,7 @@ function creerBruitages(SR, graine) {
       cloche(d, 0, 1, { f: 104 * (1 - 0.06 * k), dur: 2.0, felure: 0.55 + 0.18 * k, dec: 0.3 + 0.03 * k });
       coup(d, 0, 0.6, { f0: 95, f1: 34, tau: 0.16, drive: 3 });
       poussiere(d, 0.01, 0.8, 0.25 + 0.1 * k);
-      for (let i = 0; i < 3 + 2 * k; i++) bronze(d, RR(0.05, 0.6), RR(0.05, 0.12), RR(-0.8, 0.8));
+      for (let i = 0; i < 1 + k; i++) bronze(d, RR(0.08, 0.5), RR(0.08, 0.14), RR(-0.8, 0.8));
       return fondu(normer(densifier(normer(d, 0.9), 1.6), 0.6 + 0.12 * k), 0.4);
     },
     rupture() {
@@ -1674,10 +1680,9 @@ function creerBruitages(SR, graine) {
       explosion(d, 0, 1, { tau: 0.5, dur: 3.0, crep: 200 });
       mix(d, sat(env(filtre(blanc(N(0.08)), 'bp', 900, 0.7), t => Math.exp(-t / 0.02)), 6), 0, 0.9, 0);
       cloche(d, 0.01, 0.9, { f: 98, dur: 3.6, felure: 1.1, bend: -0.16, dec: 0.6, frappe: 0.5 });
-      for (let i = 0; i < 40; i++) bronze(d, 0.03 + Math.pow(R(), 1.6) * 1.5, RR(0.06, 0.2), RR(-0.95, 0.95));
+      for (let i = 0; i < 12; i++) bronze(d, 0.15 + Math.pow(R(), 1.4) * 1.3, RR(0.1, 0.22), RR(-0.95, 0.95));
       grillade(d, 0.05, 3.0, 0.6);
       rugit(d, 0.02, 1.2, 0.35, { tau: 0.3, crep: 120 });
-      for (let i = 0; i < 12; i++) eclabousse(d, RR(0.3, 1.2), RR(0.1, 0.25), RR(-0.9, 0.9));
       return fondu(normer(densifier(normer(d, 0.97), 2.2), 0.98), 0.5);
     },
     cloture() { const d = vide(0.9); coup(d, 0, 0.6, { f0: 90, f1: 40, tau: 0.1, drive: 2 }); poussiere(d, 0, 0.5, 0.35); armure(d, 0.01, 0.15, { f1: 230, dec: 0.25 }); return fondu(normer(d, 0.7), 0.1); },

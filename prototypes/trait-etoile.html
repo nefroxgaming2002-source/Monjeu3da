@@ -1435,44 +1435,37 @@ function creerBruitages(SR, graine) {
     coup(d, t0, g * 0.9, { f0: 140, f1: 34, chute: 0.05, tau: 0.25, drive: 3, dur: 0.9 });
     for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(N(0.5)), 'lp', t => 150 + 4200 * Math.exp(-t / 0.08), 0.8), t => Math.min(1, t / 0.006) * Math.exp(-t / 0.14)), t0, g * 1.6, pan);
   }
-  // ---------------------------------------------------------------- l'Astrologue : verre, givre, air froid, grave lointain
-  function tink(d, t0, g, f, pan) { // eclat de verre : partiels inharmoniques tres courts (aucun aigu ne tient)
-    const parts = [1, 2.32, 4.25, 6.63, 9.38].map((r, k) => ({ f: f * r * RR(0.98, 1.02), a: [1, 0.6, 0.42, 0.28, 0.16][k], d: RR(0.04, 0.11) / (1 + k * 0.7) })).filter(p => p.f < 12000);
-    const x = modal(N(0.22), parts, 2), c = env(filtre(blanc(N(0.006)), 'hp', 3000), t => Math.exp(-t / 0.0008));
-    for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.4;
-    mix(d, x, t0, g, pan);
+  // ---------------------------------------------------------------- l'Astrologue : air qui gronde, montees, impacts graves, glace qui craque
+  // Aucun tintement : la matiere (verre, givre) passe par des craquements graves et du bruit filtre, jamais par des petits eclats aigus.
+  function inverse(d, t0, dur, g, gen) { // un son joue a l'envers, qui gonfle jusqu'a l'instant t0 + dur
+    const tmp = vide(dur + 0.05); gen(tmp);
+    const n = N(dur); for (const [c, pan] of [[tmp.L, -0.3], [tmp.R, 0.3]]) { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = c[n - 1 - i] * Math.pow(i / n, 1.3); mix(d, x, t0, g, pan); }
   }
-  function plumeSon(d, t0, dur, g, p0, p1) { // la plume de lumiere : un souffle clair qui file d'une etoile a l'autre
-    const n = N(dur), x = env(filtre(rose(n), 'bp', t => 650 + 1300 * (t / dur), 2.2), t => Math.pow(Math.sin(Math.PI * Math.min(1, t / dur)), 1.5));
-    mix(d, x, t0, g * 2.2, t => p0 + (p1 - p0) * Math.min(1, t / dur));
-  }
-  function givreSon(d, t0, dur, g, pan = 0) { // la glace qui prend : craquements secs et petits grincements
+  function airFroid(d, t0, dur, g) { // le souffle de la nuit : bande de bruit qui monte lentement et tourne d'une oreille a l'autre
     const n = N(dur);
-    mix(d, crepite(n, t => 380 * Math.exp(-t / (dur * 0.5)), 0.25), t0, g * 0.8, pan);
-    for (let k = 0; k < Math.round(dur * 14); k++) { const L = RR(0.02, 0.06), f0 = RR(500, 1100); mix(d, env(sinus(N(L), s => f0 * (1 - 0.3 * s / L)), s => Math.sin(Math.PI * s / L) * Math.exp(-s / (L * 0.4))), t0 + RR(0, dur * 0.8), g * 0.18, RR(-0.7, 0.7)); }
-    mix(d, env(filtre(blanc(n), 'bp', 2600, 0.7), t => Math.exp(-t / (dur * 0.25))), t0, g * 0.15, pan);
+    for (const pan of [-0.6, 0.6]) { const x = filtre(rose(n), 'bp', t => 300 + 700 * Math.pow(t / dur, 1.4) + 120 * Math.sin(t * 7 + pan), 0.9), am = lent(n, 3); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.pow(Math.min(1, t / dur), 1.5) * (t > dur - 0.05 ? Math.max(0, (dur - t) / 0.05) : 1) * (0.7 + 0.3 * am[i]); } mix(d, x, t0, g * 2.2, pan); }
   }
-  function airFroid(d, t0, dur, g) { // le souffle glace de la nuit qui se lit
-    const n = N(dur);
-    for (const pan of [-0.6, 0.6]) { const x = filtre(rose(n), 'bp', t => 420 + 260 * Math.sin(t * 3.1 + pan), 0.8), am = lent(n, 2); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.2) * (t > dur - 0.2 ? Math.max(0, (dur - t) / 0.2) : 1) * (0.6 + 0.4 * am[i]); } mix(d, x, t0, g * 1.8, pan); }
+  function pulsation(d, t0, g, pan = 0) { // une etoile s'allume : un battement sourd, pas un tintement
+    coup(d, t0, g, { f0: 110, f1: 48, chute: 0.03, tau: 0.07, drive: 2, dur: 0.25 });
+    mix(d, env(filtre(rose(N(0.12)), 'lp', t => 900 * Math.exp(-t / 0.03) + 150, 0.8), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.035)), t0, g * 1.4, pan);
   }
-  function zip(d, t0, g) { // la lance part : claquement d'air, sifflement qui descend, coup
-    claque(d, t0, g * 0.8);
-    mix(d, env(filtre(rose(N(0.35)), 'bp', t => 3800 * Math.exp(-t / 0.08) + 300, 2.0), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.09)), t0, g * 3.0, t => -0.4 + 1.6 * Math.min(1, t / 0.2));
-    coup(d, t0, g * 0.7, { f0: 140, f1: 45, tau: 0.12, drive: 3 });
+  function craqueGlace(d, t0, g, pan = 0, o = {}) { // la glace qui casse : un craquement grave et sec, sature, et des craquelures sourdes
+    const n = N(0.2);
+    mix(d, sat(env(filtre(blanc(n), 'bp', o.f ?? 1100, 0.8), t => Math.min(1, t / 0.0015) * Math.exp(-t / (o.tau ?? 0.03))), 5), t0, g, pan);
+    mix(d, sat(env(filtre(brun(n), 'lp', 600), t => Math.exp(-t / 0.05)), 3), t0, g * 0.9, pan);
+    mix(d, crepite(N(o.dur ?? 0.35), t => 260 * Math.exp(-t / ((o.dur ?? 0.35) * 0.4)), 0.85), t0 + 0.01, g * 0.5, pan);
   }
-  function verreImpact(d, t0, g, pan = 0) { // la lance traverse : craquement de glace, coup sourd, eclats, givre
-    coup(d, t0, g * 0.9, { f0: 120, f1: 40, chute: 0.03, tau: 0.16, drive: 3.5, dur: 0.6 });
-    grave(d, t0, g * 0.5, { f0: 60, f1: 30, tau: 0.35, dur: 1.0 });
-    mix(d, sat(env(filtre(blanc(N(0.08)), 'bp', 1800, 0.9), t => Math.exp(-t / 0.018)), 4), t0, g * 0.8, pan);
-    for (let k = 0; k < 6; k++) tink(d, t0 + RR(0.0, 0.05), g * RR(0.15, 0.35), RR(1600, 3400), pan + RR(-0.3, 0.3));
-    givreSon(d, t0 + 0.02, 0.45, g * 0.6, pan);
+  function dechire(d, t0, g) { // la lance part : l'air se dechire, sifflement qui file et descend d'une oreille a l'autre
+    claque(d, t0, g * 0.9);
+    for (const [pan, k] of [[-0.3, 1], [0.3, 1.04]]) mix(d, env(filtre(rose(N(0.5)), 'bp', t => (2600 * Math.exp(-t / 0.09) + 260) * k, 3.0), t => Math.min(1, t / 0.003) * Math.exp(-t / 0.12)), t0, g * 3.4, t => pan - 0.6 + 1.8 * Math.min(1, t / 0.25));
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(N(0.9)), 'lp', t => 3000 * Math.exp(-t / 0.12) + 200, 0.8), t => Math.min(1, t / 0.006) * Math.exp(-t / 0.22)), t0, g * 1.8, pan);
   }
-  function verreBrise(d, t0, g, pan = 0, gros = 1) { // la glace eclate : pluie d'eclats, souffle, grave
-    mix(d, sat(env(filtre(blanc(N(0.12)), 'hp', 1200), t => Math.min(1, t / 0.002) * Math.exp(-t / 0.035)), 2.5), t0, g * 0.8, pan);
-    for (let k = 0; k < Math.round(18 * gros); k++) tink(d, t0 + Math.pow(R(), 2.2) * 0.3 * gros, g * RR(0.08, 0.25), RR(1300, 4200), RR(-0.9, 0.9));
-    coup(d, t0, g * 0.6 * gros, { f0: 100, f1: 34, tau: 0.2, drive: 2.5, dur: 0.8 });
-    for (const p2 of [-0.5, 0.5]) mix(d, env(filtre(rose(N(0.6)), 'lp', t => 4000 * Math.exp(-t / 0.08) + 300, 0.8), t => Math.exp(-t / 0.12)), t0, g * 1.2, p2);
+  function choc(d, t0, g, pan = 0, gros = 1) { // l'impact : claquement, coup sature, grave de cinema, corps qui gronde, glace qui casse
+    claque(d, t0, g * 0.6);
+    coup(d, t0, g * 0.95, { f0: 170, f1: 44, chute: 0.025, tau: 0.13 * gros, drive: 5, dur: 0.6 });
+    grave(d, t0 + 0.004, g * 0.75, { f0: 64, f1: 26, tau: 0.45 * gros, dur: 1.2 * gros });
+    for (const p2 of [-0.6, 0.6]) mix(d, sat(env(filtre(rose(N(0.8 * gros)), 'lp', t => 2200 * Math.exp(-t / 0.07) + 220, 0.8), t => Math.min(1, t / 0.003) * Math.exp(-t / (0.16 * gros))), 2), t0, g * 1.5, p2);
+    craqueGlace(d, t0 + 0.006, g * 0.7, pan, { f: 900 + 300 * R(), tau: 0.035 * gros, dur: 0.3 * gros });
   }
   function nuitGrave(d, t0, dur, g) { // le grave lointain : deux sinus graves qui battent
     const n = N(dur);
@@ -1482,48 +1475,50 @@ function creerBruitages(SR, graine) {
     const n = N(dur);
     for (const pan of [-0.7, 0.7]) mix(d, env(filtre(rose(n), 'lp', t => 1600 * Math.exp(-t / 0.2) + 250, 0.7), t => Math.min(1, t / 0.01) * Math.exp(-t / (dur * 0.35))), t0, g * 1.6, pan);
   }
-  function verreInverse(d, t0, dur, g) { // des eclats joues a l'envers, qui montent jusqu'au jet
-    const tmp = vide(dur + 0.05); for (let k = 0; k < 14; k++) tink(tmp, RR(0, dur * 0.7), RR(0.2, 0.5), RR(1200, 3000), RR(-0.8, 0.8));
-    const n = N(dur); for (const [c, pan] of [[tmp.L, -0.3], [tmp.R, 0.3]]) { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = c[n - 1 - i] * Math.pow(i / n, 1.4); mix(d, x, t0, g, pan); }
-  }
 
   // ---------------------------------------------------------------- les bruitages du Trait d'Etoile
   return {
-    trace() { // la nuit se lit : grave qui monte, air froid, une etoile tinte quand la plume l'atteint
+    trace() { // la nuit se lit : le grave et la puissance montent, l'air tourne, chaque etoile bat comme un coeur
       const d = vide(0.9);
-      nuitGrave(d, 0, 0.85, 0.35); montee(d, 0, 0.6, 0.35, { f0: 41, f1: 62 }); airFroid(d, 0, 0.85, 0.5);
-      const fs = [1760, 2090, 1870, 2350, 1980, 2640, 2210, 2480, 1660, 2790, 1520];
-      for (let k = 0; k < 11; k++) { const t = 0.04 + k * 0.032; tink(d, t, 0.45 - k * 0.012, fs[k] * RR(0.97, 1.03), -0.7 + 1.4 * k / 10); if (k > 0) plumeSon(d, t - 0.032, 0.034, 0.12, -0.7 + 1.4 * (k - 1) / 10, -0.7 + 1.4 * k / 10); }
-      return fondu(normer(densifier(normer(d, 0.9), 1.3), 0.8), 0.1);
+      nuitGrave(d, 0, 0.85, 0.4); montee(d, 0.05, 0.75, 0.42, { f0: 41, f1: 82, courbe: 1.6 }); airFroid(d, 0, 0.85, 0.75);
+      for (let k = 0; k < 7; k++) pulsation(d, 0.04 + k * 0.05, 0.35 + 0.05 * k, -0.6 + 0.2 * k);
+      return fondu(normer(densifier(normer(d, 0.9), 1.5), 0.82), 0.08);
     },
-    forge() { // la constellation se replie, la glace prend dans la main, inspiration a l'envers
+    forge() { // la lance se forme : inspiration a l'envers, glace qui prend, grave qui serre
       const d = vide(0.3);
-      givreSon(d, 0, 0.24, 0.8, 0.3); verreInverse(d, 0, 0.22, 0.7); aspire(d, 0.05, 0.17, 0.6);
+      inverse(d, 0, 0.22, 0.9, t => choc(t, 0, 0.8, 0, 0.6)); aspire(d, 0.03, 0.19, 0.7);
+      mix(d, crepite(N(0.25), t => 120 + 500 * t, 0.85), 0, 0.5, 0.3);
       return fondu(normer(d, 0.85), 0.01);
     },
-    jet() {
-      const d = vide(1.2);
-      zip(d, 0, 1); grave(d, 0.005, 0.6, { f0: 70, f1: 28, tau: 0.4, dur: 1.1 });
-      for (const pan of [-0.5, 0.5]) mix(d, env(filtre(rose(N(0.6)), 'lp', t => 2500 * Math.exp(-t / 0.15) + 250, 0.8), t => Math.min(1, t / 0.005) * Math.exp(-t / 0.2)), 0, 1.4, pan);
-      return fondu(normer(densifier(normer(d, 0.95), 1.8), 0.95), 0.3);
+    jet() { // le lacher : l'air se dechire, un grave tombe, un souffle enorme file vers les betes
+      const d = vide(1.3);
+      dechire(d, 0, 1); coup(d, 0, 0.8, { f0: 150, f1: 40, tau: 0.14, drive: 4 }); grave(d, 0.005, 0.7, { f0: 72, f1: 26, tau: 0.5, dur: 1.2 });
+      return fondu(normer(densifier(normer(d, 0.95), 2.0), 0.95), 0.3);
     },
-    percee(k) { const d = vide(1.2); verreImpact(d, 0, 1, [-0.4, 0, 0.4][k - 1]); return fondu(normer(densifier(normer(d, 0.95), 1.8 + 0.2 * k), 0.75 + 0.1 * k), 0.3); },
-    plante() { const d = vide(1.0); coup(d, 0, 0.8, { f0: 95, f1: 36, tau: 0.14, drive: 3 }); givreSon(d, 0.01, 0.35, 0.7, 0.4); poussiere(d, 0.01, 0.5, 0.4); return fondu(normer(d, 0.8), 0.2); },
-    fige() { const d = vide(0.9); nuitGrave(d, 0, 0.85, 0.6); return fondu(normer(d, 0.5), 0.2); },
-    relie() { // les vaincus s'allument et la plume les relie
-      const d = vide(0.7);
-      for (let k = 0; k < 4; k++) tink(d, k * 0.085, 0.4, [1480, 1760, 1980, 2210][k], -0.6 + 0.4 * k);
-      for (let k = 0; k < 3; k++) plumeSon(d, 0.04 + k * 0.1, 0.1, 0.2, -0.6 + 0.4 * k, -0.2 + 0.4 * k);
-      nuitGrave(d, 0, 0.65, 0.25);
-      return fondu(normer(d, 0.7), 0.15);
+    percee(k) { const d = vide(1.3); choc(d, 0, 1, [-0.4, 0, 0.4][k - 1], 0.9 + 0.1 * k); return fondu(normer(densifier(normer(d, 0.95), 2.0 + 0.2 * k), 0.78 + 0.08 * k), 0.3); },
+    plante() { const d = vide(1.1); coup(d, 0, 0.9, { f0: 95, f1: 32, tau: 0.16, drive: 3.5 }); grave(d, 0.004, 0.6, { f0: 55, f1: 24, tau: 0.4, dur: 1.0 }); craqueGlace(d, 0.01, 0.6, 0.4, { f: 800, dur: 0.4 }); poussiere(d, 0.01, 0.5, 0.4); return fondu(normer(d, 0.82), 0.2); },
+    fige() { // le temps s'arrete : tout s'etouffe, il ne reste qu'un grave qui bat
+      const d = vide(0.9); gel(d, 0, 0.5); nuitGrave(d, 0, 0.85, 0.6); return fondu(normer(d, 0.55), 0.2);
     },
-    eteint(k) { // une etoile s'eteint, ses cristaux eclatent ; la derniere emporte la lance et referme la nuit
-      const dern = k === 3, d = vide(dern ? 2.8 : 1.4);
-      verreBrise(d, 0, 1, [-0.4, 0, 0.4][k - 1], dern ? 1.7 : 1);
-      if (dern) { explosion(d, 0, 1.0, { tau: 0.5, dur: 2.6, crep: 40 }); grave(d, 0.01, 1.0, { f0: 58, f1: 24, tau: 0.9, dur: 2.5 }); }
-      return fondu(normer(densifier(normer(d, 0.95), dern ? 2.6 : 1.6), dern ? 0.99 : 0.7 + 0.05 * k), 0.4);
+    relie() { // les vaincus s'allument et la plume les relie : quatre battements, trois traits d'air qui filent
+      const d = vide(0.8);
+      for (let k = 0; k < 4; k++) pulsation(d, k * 0.085, 0.5, -0.6 + 0.4 * k);
+      for (let k = 0; k < 3; k++) { const n = N(0.13), x = env(filtre(rose(n), 'bp', t => 500 + 1400 * (t / 0.13), 2.0), t => Math.pow(Math.sin(Math.PI * Math.min(1, t / 0.13)), 1.5)); mix(d, x, 0.04 + k * 0.1, 0.5, t => -0.6 + 0.4 * k + 0.4 * Math.min(1, t / 0.13)); }
+      nuitGrave(d, 0, 0.75, 0.3);
+      return fondu(normer(d, 0.72), 0.15);
     },
-    cloture() { const d = vide(0.8); souffle(d, 0, 0.35, 0.25, { f0: 200, f1: 900, f2: 300, siffle: 0.1, dechire: 0.05, de: 0.3, vers: -0.3 }); tink(d, 0.12, 0.15, 2350, -0.2); return fondu(normer(d, 0.5), 0.1); },
+    avant(k) { // l'appel d'air avant chaque extinction : un impact joue a l'envers (plus long avant la derniere)
+      const L = k === 3 ? 0.32 : 0.18, d = vide(L);
+      inverse(d, 0, L, 1, t => { choc(t, 0, 1, 0, k === 3 ? 1.6 : 1); }); aspire(d, 0, L, 0.6);
+      return normer(d, 0.6);
+    },
+    eteint(k) { // une etoile s'eteint, ses cristaux cedent ; la derniere emporte la lance et referme la nuit
+      const dern = k === 3, d = vide(dern ? 3.0 : 1.5);
+      choc(d, 0, 1, [-0.4, 0, 0.4][k - 1], dern ? 1.6 : 1);
+      if (dern) { explosion(d, 0, 1.0, { tau: 0.55, dur: 2.8, crep: 30 }); grave(d, 0.01, 1.0, { f0: 58, f1: 22, tau: 1.0, dur: 2.8 }); for (const pan of [-0.7, 0.7]) mix(d, env(filtre(rose(N(2.0)), 'lp', t => 1800 * Math.exp(-t / 0.4) + 150, 0.7), t => Math.min(1, t / 0.08) * Math.exp(-t / 0.7)), 0.05, 1.0, pan); }
+      return fondu(normer(densifier(normer(d, 0.95), dern ? 2.6 : 1.8), dern ? 0.99 : 0.72 + 0.06 * k), 0.4);
+    },
+    cloture() { const d = vide(0.8); souffle(d, 0, 0.35, 0.3, { f0: 180, f1: 700, f2: 260, siffle: 0.05, dechire: 0.03, de: 0.3, vers: -0.3 }); coup(d, 0.2, 0.25, { f0: 80, f1: 40, tau: 0.08, drive: 1.5 }); return fondu(normer(d, 0.5), 0.1); },
     ambiance() { // vent dans les ruines et lanterne, en boucle sans couture
       const T = 8, X = 1, n = N(T + X), d = vide(T + X);
       for (const pan of [-0.7, 0.7]) {
@@ -1547,7 +1542,7 @@ function creerBruitages(SR, graine) {
   };
 }
 function toutesLesRecettes(syn) {
-  return { reverb: syn.reverb(), trace: syn.trace(), forge: syn.forge(), jet: syn.jet(), percee: [syn.percee(1), syn.percee(2), syn.percee(3)], plante: syn.plante(), fige: syn.fige(), relie: syn.relie(), eteint: [syn.eteint(1), syn.eteint(2), syn.eteint(3)], cloture: syn.cloture(), ambiance: syn.ambiance() };
+  return { reverb: syn.reverb(), trace: syn.trace(), forge: syn.forge(), jet: syn.jet(), percee: [syn.percee(1), syn.percee(2), syn.percee(3)], plante: syn.plante(), fige: syn.fige(), relie: syn.relie(), avant: [syn.avant(1), syn.avant(2), syn.avant(3)], eteint: [syn.eteint(1), syn.eteint(2), syn.eteint(3)], cloture: syn.cloture(), ambiance: syn.ambiance() };
 }
 /* </synthese> */
 // La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
@@ -1855,7 +1850,7 @@ function scenario(t, dt) {
   run.fige = smooth(T.fige, T.fige + 60, t) * (1 - smooth(T.relie + 40, T.relie + 220, t));
   // ---------------------------------------------------------------- la constellation des vaincus
   const vaincus = [...ennemis.map((e, i) => V3(e.racine.position.x, chemin(S_COUPS[i]).y + 0.45, e.pos0.z)), ARRIVEE.clone().add(V3(-0.55, 0.75, 0))];
-  if (t >= T.relie && !F.relie) { F.relie = 1; Son.jouer('relie', 0.75, 0.6); }
+  if (t >= T.relie && !F.relie) { F.relie = 1; Son.jouer('relie', 0.4, 0.6); }
   vaincus.forEach((p, i) => {
     const ta = T.relie + 85 * i, te = i < 3 ? T.eteint[i] : T.eteint[2], u = astresV[i].material.uniforms;
     astresV[i].position.copy(p);
@@ -1867,6 +1862,10 @@ function scenario(t, dt) {
     u.uProg.value = clamp((t - T.relie - 40 - 100 * k) / 100); u.uA.value = smooth(T.relie, T.relie + 40, t) * (1 - smooth(T.eteint[k] - 10, T.eteint[k] + 140, t));
   });
   // ---------------------------------------------------------------- les extinctions : chaque etoile s'eteint, ses cristaux eclatent, la dechirure se recoud
+  T.eteint.forEach((te, i) => { // l'appel d'air, joue a l'envers, arrive pile sur l'extinction
+    const av = i === 2 ? 320 : 180;
+    if (!F['av' + i] && t >= te - av) { F['av' + i] = 1; Son.jouer('avant', i === 2 ? 0.9 : 0.7, 0.4, i); }
+  });
   T.eteint.forEach((te, i) => {
     if (F['et' + i] || t < te) return;
     F['et' + i] = 1;

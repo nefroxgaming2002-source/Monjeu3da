@@ -57,6 +57,7 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Éclats chauds trop gros et à plat ; dissolution en blocs qui fait des tirets | Petits éclats qui refroidissent vite ; dissolution par bruit continu. |
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
 | Tout désaturer et assombrir pendant le gel au point de ne plus rien lire | Assombrir modérément ; choisir un plan de caméra qui montre le sol et la lame. |
+| Pluie de petits éclats aigus de verre, de bronze ou de pierre (« bruits de pièces inutiles ») | Aucun tintement. La matière passe par des craquements graves, du bruit filtré et quelques chocs sourds. Le style vient des montées, des appels d'air inversés, des déchirements d'air et des impacts graves. |
 | Bips synthétiques (« son bizarre ») ; résonance aiguë qui traîne à la fin (« son aigu inutile ») | Son en **couches**, beaucoup de grave, **aucun son aigu tenu**, et un **silence** avant le climax. |
 | Effets qui s'empilent jusqu'à l'illisible | **Une seule forme principale par temps** ; le reste l'accompagne. |
 | Images d'impact trop longues ou trop fréquentes | Deux images au plus (négatif puis couleur de voie), seulement sur les vrais pics, coupées si l'option « réduction des flashs » est active. |
@@ -106,6 +107,8 @@ Au minimum, chaque temps fort combine :
 
 Le son se pense **par couches**, comme l'image. Rien de tonal et aigu ne doit être tenu.
 
+Le modèle est le son d'une attaque spéciale d'anime ou d'une bande-annonce : une montée qui serre, un appel d'air joué à l'envers qui arrive **pile** sur le coup, l'air qui se déchire d'une oreille à l'autre, puis un impact énorme et grave. **Aucun tintement, aucun cliquetis** : une pluie de petits éclats aigus (verre, bronze, cailloux) sonne comme des pièces de monnaie. La matière se dit par des craquements graves et saturés, du bruit filtré et des chocs sourds, en petit nombre.
+
 - **Charge** : montée de puissance (accord grave qui grimpe, s'ouvre et vibre de plus en plus vite), plus la matière de l'Art (feu, métal, spores, verre…), plus un souffle inversé jusqu'au départ.
 - **Gel** : le son du monde est aspiré vers le grave, et le vent se coupe.
 - **Départ** : souffle ou « zan » court, plus la matière.
@@ -114,9 +117,9 @@ Le son se pense **par couches**, comme l'image. Rien de tonal et aigu ne doit ê
   - coup saturé ;
   - grave de 60 à 22 Hz ;
   - corps d'explosion qui gronde plusieurs secondes ;
-  - matière de l'Art ;
-  - débris et gouttes.
-- **Contrepoint** : silence (on baisse tout, réverbération comprise), un battement sourd, puis le climax plus fort que l'impact.
+  - matière de l'Art, en craquements graves ;
+  - quelques débris lourds et sourds (jamais une pluie d'éclats aigus).
+- **Contrepoint** : silence (on baisse tout, réverbération comprise), un battement sourd, puis le climax plus fort que l'impact. Chaque coup du contrepoint est précédé d'un appel d'air inversé (0,2 à 0,3 s) qui finit exactement sur lui.
 - **Clôture** : un son court et propre, sans longue résonance.
 - **Bus** :
   - réverbération longue et sombre (environ 3,4 s) ;
@@ -162,7 +165,7 @@ Ce qui fait « dessin animé », c'est le **propre** et l'**uni** : une forme li
 | Voie | Matière | Verbes | Pistes de son |
 |---|---|---|---|
 | **Sang** | encre rouge, feu, cendre | trancher, saigner, embraser | feu qui rugit, lame, giclées |
-| **Astro** | lumière froide, étoiles, verre, nuit | tracer, relier, figer | cristal, souffle d'air glacé, silence, grave lointain |
+| **Astro** | lumière froide, étoiles, verre, nuit | tracer, relier, figer | glace qui craque, air glacé qui se déchire, silence, grave lointain |
 | **Airain** | bronze, or fondu, poussière, cloche | frapper, sonner, fondre | cloches graves et fêlées, métal qui se tord, sol qui se fend |
 | **Miasme** | spores, fils, brume violette, chair végétale | éclore, tisser, infecter | souffles organiques, craquements humides, essaims |
 

@@ -18,7 +18,7 @@
   - le froid au lieu du feu et du métal en fusion ;
   - une lumière précise et rare au lieu d'une flamme ;
   - un monde qui se fige au lieu d'un monde qui tremble ;
-  - un son de verre et de grave lointain au lieu du feu ou des cloches.
+  - un son d'air glacé qui se déchire, de glace qui craque et de grave lointain, au lieu du feu ou des cloches.
 
 ## Les temps
 
@@ -51,23 +51,22 @@ Les durées sont supposées, à caler sur `arts.json`.
 
 ## Son
 
-Du verre, du givre, de l'air froid et un grave lointain, sans aucun aigu tenu. Les éclats de verre sont des partiels qui s'éteignent en moins de 0,12 s.
+Un son de bande-annonce : des montées, des appels d'air inversés, l'air qui se déchire et des impacts graves. Aucun tintement de verre : le verre et le givre passent par des craquements graves et saturés. Aucun aigu tenu.
 
 - **Tracé** :
-  - grave qui monte ;
-  - air froid ;
-  - un éclat de verre par étoile allumée, avec un souffle clair entre deux étoiles.
-- **Forge** :
-  - glace qui prend (craquements, grincements) ;
-  - éclats joués à l'envers ;
-  - inspiration.
-- **Jet** : claquement d'air, sifflement qui descend, coup sourd.
-- **Percées** : coup, grave, craquement de glace, éclats, givre.
-- **Plantée** : coup et givre.
-- **Figée** : tout se retire, il ne reste que deux sinus graves qui battent.
-- **Vaincus** : quatre éclats et le souffle de la plume.
-- **Extinctions** : pluie d'éclats, souffle et grave. La dernière, avec le corps d'une explosion, est le sommet (au niveau des percées).
-- **Clôture** : un froissement de robe et un éclat léger.
+  - grave lointain qui bat ;
+  - montée de puissance ;
+  - air froid qui monte et tourne d'une oreille à l'autre ;
+  - un battement sourd par étoile allumée.
+- **Forge** : un impact joué à l'envers qui gonfle jusqu'au jet, une inspiration, la glace qui prend.
+- **Jet** : claquement, l'air qui se déchire et file d'une oreille à l'autre, coup saturé, grave qui tombe.
+- **Percées** : claquement, coup saturé, grave de cinéma, corps qui gronde, glace qui casse.
+- **Plantée** : coup sourd, grave, craquement de glace, poussière.
+- **Figée** : tout s'étouffe ; il ne reste que deux sinus graves qui battent.
+- **Vaincus** : quatre battements sourds et trois traits d'air, très bas.
+- **Avant chaque extinction** : un appel d'air (un impact joué à l'envers) qui finit pile sur elle, plus long avant la dernière.
+- **Extinctions** : le même impact que les percées. La dernière ajoute le corps d'une explosion, un grave long et un grand souffle : c'est le sommet.
+- **Clôture** : un froissement de robe et un coup léger.
 
 ## Budget mobile
 
