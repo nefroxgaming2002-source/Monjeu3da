@@ -1,0 +1,2321 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dard Tissé</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one column. The stage first (viewer, phase strip, controls), then the beat sheet of the Art, then the Godot notes. Single dark look, violet accents for the Miasme. */
+  :root {
+    --nuit: #0a0c11;
+    --ardoise: #14161d;
+    --trait: #2a2a30;
+    --cendre: #9a958c;
+    --os: #ede6d8;
+    --or: #b897f2;
+    --braise: #dccbff;
+    --or-sombre: #3a2556;
+    --f-titre: "IM Fell English SC", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --f-texte: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+    --f-mesure: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--nuit); color: var(--os); }
+  [hidden] { display: none !important; }
+  body { font-family: var(--f-texte); font-size: 16px; line-height: 1.5; }
+  .wrap {
+    max-width: 1180px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 26px 48px;
+    display: grid; gap: 22px;
+  }
+  header { display: grid; gap: 6px; }
+  .eyebrow { margin: 0; font-family: var(--f-mesure); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--cendre); }
+  h1 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: clamp(36px, 6.4vw, 60px); line-height: 1; text-wrap: balance; }
+  h1 span { color: var(--or); }
+  .lede { margin: 4px 0 0; max-width: 68ch; color: var(--cendre); }
+  .lede b { color: var(--os); font-weight: 500; }
+
+  .stage { display: grid; gap: 12px; }
+  .viewport { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; background: #05060a; border: 1px solid var(--trait); overflow: hidden; }
+  .viewport canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .viewport.libre { cursor: grab; touch-action: none; }
+  .viewport.libre:active { cursor: grabbing; }
+  .viewport:focus-visible { outline: 2px solid var(--braise); outline-offset: 2px; }
+  .etiquettes { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; pointer-events: none; }
+  .etiquettes span { padding: 8px 10px; font-family: var(--f-titre); font-size: clamp(11px, 1.5vw, 15px); letter-spacing: .04em; color: rgba(237, 230, 216, .88); text-shadow: 0 1px 3px #000; }
+  .consigne { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 4px 10px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--f-mesure); font-size: 12px; color: var(--os); background: rgba(10, 12, 17, .65); border: 1px solid var(--trait); pointer-events: none; }
+  .hud { position: absolute; left: 12px; bottom: 10px; right: 12px; display: flex; gap: 4px 10px; align-items: baseline; flex-wrap: wrap;
+    font-family: var(--f-titre); font-size: clamp(11px, 1.5vw, 15px); color: rgba(237, 230, 216, .88); text-shadow: 0 1px 3px #000; pointer-events: none; }
+  .hud .art { letter-spacing: .06em; }
+  .hud .mesure { font-family: var(--f-mesure); font-size: .8em; color: rgba(237, 230, 216, .7); }
+  .hud .etat { font-family: var(--f-mesure); font-size: .8em; color: var(--braise); }
+  .erreur { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--cendre); }
+
+  .timeline { display: grid; gap: 6px; }
+  .bar { position: relative; height: 14px; background: var(--ardoise); border: 1px solid var(--trait); }
+  .seg { position: absolute; top: 0; bottom: 0; }
+  .seg.anti { background: color-mix(in srgb, var(--or) 28%, transparent); }
+  .seg.actif { background: color-mix(in srgb, var(--or) 80%, transparent); }
+  .seg.recup { background: color-mix(in srgb, var(--or-sombre) 95%, transparent); }
+  .tick { position: absolute; top: -4px; width: 2px; height: 20px; background: var(--braise); transform: translateX(-1px); }
+  .tete { position: absolute; top: -6px; width: 2px; height: 24px; background: var(--os); transform: translateX(-1px); box-shadow: 0 0 6px rgba(255,255,255,.5); }
+  .legende { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--f-mesure); font-size: 12px; color: var(--cendre); font-variant-numeric: tabular-nums; }
+  .legende i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+  .legende .k-anti { background: color-mix(in srgb, var(--or) 28%, transparent); }
+  .legende .k-actif { background: color-mix(in srgb, var(--or) 80%, transparent); }
+  .legende .k-recup { background: var(--or-sombre); }
+  .legende .k-tick { background: var(--braise); width: 3px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  .groupe { display: flex; flex-wrap: wrap; border: 1px solid var(--trait); }
+  .groupe input { position: absolute; opacity: 0; pointer-events: none; }
+  .groupe label { padding: 8px 14px; cursor: pointer; font-size: 15px; color: var(--cendre); border-right: 1px solid var(--trait); user-select: none; }
+  .groupe label:last-of-type { border-right: 0; }
+  .groupe input:checked + label { background: var(--os); color: var(--nuit); }
+  .groupe input:focus-visible + label { outline: 2px solid var(--braise); outline-offset: -2px; }
+  .bouton { padding: 8px 16px; font: inherit; font-size: 15px; color: var(--cendre); background: transparent; border: 1px solid var(--trait); cursor: pointer; }
+  .bouton[aria-pressed="true"] { background: var(--os); color: var(--nuit); }
+  .bouton:focus-visible, .rejouer:focus-visible { outline: 2px solid var(--braise); outline-offset: 2px; }
+  .rejouer { padding: 8px 18px; font: inherit; font-weight: 700; color: #170a26; background: var(--or); border: 1px solid var(--or); cursor: pointer; }
+  .rejouer:hover { background: #c9adf6; }
+  .boucle { display: flex; align-items: center; gap: 8px; color: var(--cendre); cursor: pointer; }
+  .boucle input { accent-color: var(--or); width: 16px; height: 16px; }
+  .astuce { font-family: var(--f-mesure); font-size: 12px; color: var(--cendre); }
+
+  .decoupage { display: grid; gap: 14px; }
+  .decoupage h2, .godot h2 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: 28px; }
+  .temps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--trait); }
+  .temps li { padding: 16px 18px 16px 0; display: grid; gap: 6px; align-content: start; min-width: 0; border-bottom: 1px solid var(--trait); }
+  .temps li:not(:nth-child(3n + 1)) { padding-left: 18px; border-left: 1px solid var(--trait); }
+  .temps .quand { font-family: var(--f-mesure); font-size: 12px; letter-spacing: .06em; color: var(--or); font-variant-numeric: tabular-nums; }
+  .temps h3 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: 22px; line-height: 1.1; }
+  .temps p { margin: 0; color: #d3cdc1; }
+  .godot { display: grid; gap: 10px; max-width: 80ch; }
+  .godot ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: #d3cdc1; }
+  .godot code { font-family: var(--f-mesure); font-size: .88em; color: var(--os); }
+  footer { color: var(--cendre); font-size: 14px; max-width: 72ch; }
+  @media (max-width: 860px) {
+    .temps { grid-template-columns: minmax(0, 1fr); }
+    .temps li, .temps li:not(:nth-child(3n + 1)) { padding: 14px 0; border-left: 0; }
+    .groupe label { padding: 8px 10px; font-size: 14px; }
+    .astuce { display: none; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">MonJeu3d · Voie du Miasme · Art de zone à distance</p>
+    <h1>Dard <span>Tissé</span></h1>
+    <p class="lede">La Tisseuse tresse un dard de chair entre ses mains, le plante dans les dalles et le fait courir sous la place, qu'il coud en deux points. <b>Il jaillit au milieu des bêtes et se tisse en colonne</b> autour d'elles. Puis elle tire le fil : la place se fronce, la colonne se serre, et finit par s'ouvrir comme une fleur en expirant ses spores. Change d'angle pendant qu'il tourne, et active le son, au casque de préférence.</p>
+  </header>
+
+  <section class="stage" aria-label="Prototype animé">
+    <div class="viewport" id="viewport">
+      <canvas id="scene" aria-label="La Tisseuse coud le sol jusqu'à trois Rouillards et les enferme dans une colonne tissée qui fleurit"></canvas>
+      <div class="etiquettes" id="etiquettes" hidden><span>Jeu</span><span>Côté</span><span>Face</span><span>Dessus</span></div>
+      <p class="consigne" id="consigne" hidden>Glisse pour tourner autour · pince ou molette pour zoomer</p>
+      <div class="hud"><span class="art">ART&nbsp;&nbsp;DARD TISSÉ</span><span id="hud-phase">Garde</span><span class="mesure" id="hud-ms"></span><span class="etat" id="hud-etat"></span></div>
+    </div>
+
+    <div class="timeline">
+      <div class="bar" id="bar" aria-hidden="true">
+        <div class="seg anti" id="seg-anti"></div>
+        <div class="seg actif" id="seg-actif"></div>
+        <div class="seg recup" id="seg-recup"></div>
+        <div id="ticks"></div>
+        <div class="tete" id="tete"></div>
+      </div>
+      <div class="legende">
+        <span><i class="k-anti"></i>Anticipation 760 ms (tissage, couture)</span>
+        <span><i class="k-actif"></i>Active 200 ms</span>
+        <span><i class="k-recup"></i>Récupération 600 ms</span>
+        <span><i class="k-tick"></i>Deux points de couture · éclosion · tension · floraison · clôture</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="groupe" role="radiogroup" aria-label="Angle de vue">
+        <input type="radio" name="camera" id="c-cine" value="cine" checked><label for="c-cine">Cinéma</label>
+        <input type="radio" name="camera" id="c-jeu" value="jeu"><label for="c-jeu">Jeu</label>
+        <input type="radio" name="camera" id="c-cote" value="cote"><label for="c-cote">Côté</label>
+        <input type="radio" name="camera" id="c-face" value="face"><label for="c-face">Face</label>
+        <input type="radio" name="camera" id="c-dos" value="dos"><label for="c-dos">Dos</label>
+        <input type="radio" name="camera" id="c-dessus" value="dessus"><label for="c-dessus">Dessus</label>
+        <input type="radio" name="camera" id="c-libre" value="libre"><label for="c-libre">Libre</label>
+        <input type="radio" name="camera" id="c-mosaique" value="mosaique"><label for="c-mosaique">4 angles</label>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="rejouer" id="rejouer" type="button">Rejouer</button>
+      <div class="groupe" role="radiogroup" aria-label="Vitesse">
+        <input type="radio" name="vitesse" id="s-1" value="1" checked><label for="s-1">1×</label>
+        <input type="radio" name="vitesse" id="s-05" value="0.5"><label for="s-05">½×</label>
+        <input type="radio" name="vitesse" id="s-025" value="0.25"><label for="s-025">¼×</label>
+      </div>
+      <button class="bouton" id="son" type="button" aria-pressed="false">Son coupé</button>
+      <label class="boucle"><input type="checkbox" id="boucle" checked>Boucle</label>
+      <span class="astuce">Espace : rejouer</span>
+    </div>
+  </section>
+
+  <section class="decoupage" aria-labelledby="t-decoupage">
+    <h2 id="t-decoupage">Découpage</h2>
+    <ol class="temps">
+      <li><span class="quand">0 – 520 ms · anticipation</span><h3>Tissage</h3><p>Le ciel se couvre. Des poils de mycélium sortent des joints autour de la Tisseuse et montent vers ses mains, qui tournent l'une autour de l'autre : le dard s'y tresse, sept cordes de chair et une épine de chitine. Au loin, la zone se tache de moisissure.</p></li>
+      <li><span class="quand">520 – 760 ms · anticipation</span><h3>Couture</h3><p>Elle plante le dard dans les dalles. Il file sous la place en soulevant une crête de pierre, ressort deux fois en arc et replonge : le fil reste cousu derrière lui.</p></li>
+      <li><span class="quand">760 ms · active · arrêt 110 ms</span><h3>Éclosion</h3><p>Le dard jaillit au milieu des bêtes. Les cordes fusent en gerbe puis se tissent en colonne, chacune passant sur l'autre puis dessous ; des liens partent de la paroi et ligotent les bêtes. Les dalles se soulèvent en couronne.</p></li>
+      <li><span class="quand">+390 ms</span><h3>Tension</h3><p>La Tisseuse tire le fil. Il se tend, la place se fronce le long de la couture, la colonne se serre, et le monde se tait. Deux battements de sève remontent les cordes.</p></li>
+      <li><span class="quand">+1140 ms</span><h3>Floraison</h3><p>Après un appel d'air, la colonne s'ouvre lentement par le haut en six pétales qui se recourbent, et expire un nuage de spores sombres piqué de points violets.</p></li>
+      <li><span class="quand">ensuite</span><h3>Infection</h3><p>Les spores retombent, le mycélium gagne les dalles en réseau de veines, les pétales se fanent et sèchent, les bêtes s'affaissent dans leurs liens. La Tisseuse coupe le fil entre deux doigts.</p></li>
+    </ol>
+  </section>
+
+  <section class="godot" aria-labelledby="t-godot">
+    <h2 id="t-godot">Dans Godot</h2>
+    <ul>
+      <li>Les fils (cordes, dard, couture, liens, franges, mycélium) : un seul maillage de tubes dont les sommets lisent leur position dans une texture de points (64 par fil), mise à jour à chaque image ; même shader de chair humide, de brins en hélice et de sève. En repli, des <code>Path3D</code> avec <code>CSGPolygon3D</code> ou des <code>ImmediateMesh</code>.</li>
+      <li>L'épine : un maillage tourné et courbé, matériau de chitine (vernis, irisation).</li>
+      <li>Le sol : le shader des dalles porte l'annonce, les trous, la terre retournée et l'infection (veines de Voronoï qui poussent depuis la zone) ; un décalage de sommets soulève la crête de la couture, la couronne de l'éclosion et le froncement de la tension.</li>
+      <li>Spores, nuage, sève, mottes et poussière : <code>GPUParticles3D</code> ; onde de choc, voile et images d'impact : le shader d'écran commun.</li>
+      <li>Durées supposées ici (760 / 200 / 600 ms), zone de 1,4 m à 6,4 m : à caler sur <code>arts.json</code>. La couture, la tension, la floraison et l'infection restent du visuel.</li>
+    </ul>
+  </section>
+
+  <footer>Prototype navigateur : les personnages sont des maquettes, ce sont les effets, la caméra, le son et le rythme qui sont à juger.</footer>
+</main>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+
+// ================================================================== outils
+const DEG = Math.PI / 180;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let rng = mulberry32(1);
+const rand = (a = 0, b = 1) => a + (b - a) * rng();
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LOW = Math.min(window.innerWidth, window.innerHeight) < 700 || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const Q = LOW ? 0.6 : 1; // budget de particules sur mobile
+const nq = n => Math.max(1, Math.round(n * Q));
+
+// Palette MIASME (EncreBraise) en lineaire : violet de seve, coeur lilas pale ; la chair des cordes est lie-de-vin
+const EMBER = V3(0.62, 0.32, 1.0);
+const CORE = V3(0.93, 0.86, 1.0);
+
+// Texture de bruit tuilable : r = fbm basse frequence, g = fbm haute, b = crete, a = fbm decalee
+const noiseTex = (() => {
+  const S = 256, data = new Uint8Array(S * S * 4), r0 = mulberry32(99);
+  const octs = [4, 8, 16, 32, 64].map(P => { const g = new Float32Array(P * P); for (let i = 0; i < P * P; i++) g[i] = r0(); return { P, g }; });
+  const sample = ({ P, g }, x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const X0 = ((xi % P) + P) % P, X1 = (X0 + 1) % P, Y0 = ((yi % P) + P) % P, Y1 = (Y0 + 1) % P;
+    const a = g[Y0 * P + X0], b = g[Y0 * P + X1], c = g[Y1 * P + X0], d = g[Y1 * P + X1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+  const fbm = (x, y, o0, n) => { let s = 0, a = 0.5, t = 0; for (let k = 0; k < n; k++) { const o = octs[o0 + k]; s += a * sample(o, x * o.P, y * o.P); t += a; a *= 0.5; } return s / t; };
+  const st = v => Math.round(clamp((v - 0.5) * 1.7 + 0.5) * 255);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const fx = x / S, fy = y / S, i = (y * S + x) * 4;
+    data[i] = st(fbm(fx, fy, 0, 4));
+    data[i + 1] = st(fbm(fx + 0.31, fy + 0.17, 1, 4));
+    data[i + 2] = Math.round(clamp(Math.pow(1 - Math.abs(fbm(fx + 0.5, fy + 0.25, 1, 3) * 2 - 1), 3) * 1.3) * 255);
+    data[i + 3] = st(fbm(fx + 0.73, fy + 0.59, 0, 3));
+  }
+  const t = new THREE.DataTexture(data, S, S, THREE.RGBAFormat);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true;
+  return t;
+})();
+
+const VS_UV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const PREMUL = { transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor };
+const ADDITIF = { transparent: true, depthWrite: false, depthTest: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor };
+const SOL_Y = 0.055; // dessus des dalles de la place
+// Fonctions GLSL communes : hachages, corps noir du metal en fusion (ambre sombre, or, blanc chaud), reseau de fissures, trait brise.
+const GLSL_COMMUN = `
+float h11(float p){ p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2 h22(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.103, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+vec3 corpsNoir(float T){ T = max(T, 0.0);
+  vec3 c = mix(vec3(0.0), vec3(0.42, 0.06, 0.004), smoothstep(0.0, 0.28, T));
+  c = mix(c, vec3(1.0, 0.33, 0.04), smoothstep(0.24, 0.55, T));
+  c = mix(c, vec3(1.0, 0.6, 0.17), smoothstep(0.5, 0.8, T));
+  c = mix(c, vec3(1.0, 0.86, 0.62), smoothstep(0.78, 1.1, T));
+  return c * (T * T * 6.0 + T * 1.5); }
+float voroBord(vec2 x, float P){ vec2 n = floor(x), f = fract(x), mg = vec2(0.0), mr = vec2(0.0); float md = 8.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec2 g = vec2(float(i), float(j)), c = n + g; c.x = mod(c.x, P); vec2 r = g + h22(c) - f; float d = dot(r, r); if (d < md) { md = d; mr = r; mg = g; } }
+  md = 8.0;
+  for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) { vec2 g = mg + vec2(float(i), float(j)), c = n + g; c.x = mod(c.x, P); vec2 r = g + h22(c) - f; if (dot(mr - r, mr - r) > 1e-5) md = min(md, dot(0.5 * (mr + r), normalize(r - mr))); }
+  return md; }
+// la lumiere du Miasme : encre, violet profond, violet de seve, lilas pale au coeur ; l'equivalent du corps noir
+vec3 miasme(float T){ T = max(T, 0.0);
+  vec3 c = mix(vec3(0.0), vec3(0.09, 0.015, 0.14), smoothstep(0.0, 0.25, T));
+  c = mix(c, vec3(0.62, 0.32, 1.0), smoothstep(0.2, 0.62, T));
+  c = mix(c, vec3(0.93, 0.86, 1.0), smoothstep(0.62, 1.05, T));
+  return c * (T * T * 5.0 + T * 1.2); }
+float jag(float y, float seg, float s){ float i = floor(y / seg), f = fract(y / seg); return mix(h11(i + s), h11(i + 1.0 + s), f) - 0.5; }
+`;
+// ================================================================== rendu
+const canvas = document.getElementById('scene');
+const viewport = document.getElementById('viewport');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+} catch (e) {
+  viewport.insertAdjacentHTML('beforeend', '<div class="erreur">WebGL est désactivé dans ce navigateur. Ouvre la page dans un navigateur récent (Chrome, Safari, Firefox) pour voir le prototype.</div>');
+  throw e;
+}
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.autoClear = false;
+renderer.shadowMap.enabled = !LOW; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const isGL2 = renderer.capabilities.isWebGL2;
+
+const scene = new THREE.Scene();
+const distScene = new THREE.Scene(); // ce qui tord l'image (onde de choc, chaleur)
+const camera = new THREE.PerspectiveCamera(48, 16 / 9, 0.1, 140);
+
+const rtScene = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: isGL2 ? 4 : 0 });
+const rtDist = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
+const levels = [0, 1, 2, 3, 4].map(() => new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false }));
+const postScene = new THREE.Scene();
+const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); quad.frustumCulled = false; postScene.add(quad);
+const VS_POST = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const postMat = (fs, uniforms, extra = {}) => new THREE.ShaderMaterial({ vertexShader: VS_POST, fragmentShader: fs, uniforms, depthTest: false, depthWrite: false, ...extra });
+const FS_BRIGHT = `uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uThr, uKnee; varying vec2 vUv;
+void main(){ vec2 t = uTexel;
+  vec3 c = 0.25 * (texture2D(tSrc, vUv + t * vec2(-1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(-1.0, 1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, 1.0)).rgb);
+  c = min(c, vec3(40.0));
+  float br = max(c.r, max(c.g, c.b));
+  float soft = clamp(br - uThr + uKnee, 0.0, 2.0 * uKnee); soft = soft * soft / (4.0 * uKnee + 1e-4);
+  gl_FragColor = vec4(c * max(soft, br - uThr) / max(br, 1e-4), 1.0); }`;
+const FS_DOWN = `uniform sampler2D tSrc; uniform vec2 uTexel; varying vec2 vUv;
+void main(){ vec2 t = uTexel;
+  gl_FragColor = vec4(0.25 * (texture2D(tSrc, vUv + t * vec2(-1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(-1.0, 1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, 1.0)).rgb), 1.0); }`;
+const FS_UP = `uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uScatter; varying vec2 vUv;
+void main(){ vec2 t = uTexel; vec3 s = texture2D(tSrc, vUv).rgb * 4.0;
+  s += (texture2D(tSrc, vUv + vec2(-t.x, 0.0)).rgb + texture2D(tSrc, vUv + vec2(t.x, 0.0)).rgb + texture2D(tSrc, vUv + vec2(0.0, -t.y)).rgb + texture2D(tSrc, vUv + vec2(0.0, t.y)).rgb) * 2.0;
+  s += texture2D(tSrc, vUv + vec2(-t.x, -t.y)).rgb + texture2D(tSrc, vUv + vec2(t.x, -t.y)).rgb + texture2D(tSrc, vUv + vec2(-t.x, t.y)).rgb + texture2D(tSrc, vUv + vec2(t.x, t.y)).rgb;
+  gl_FragColor = vec4(s / 16.0 * uScatter, 1.0); }`;
+// Composition finale : distorsion, flou radial + aberration, bloom, desaturation du monde, vignette, lignes de vitesse a l'encre, images d'impact.
+const FS_FINAL = `uniform sampler2D tScene, tBloom, tDist; uniform float uBloom, uVig, uRedVig, uDesat, uInv, uDuo, uRad, uCA, uLines, uSeed, uTime, uFade;
+uniform vec2 uRes, uCenter; varying vec2 vUv;
+vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+float h21(vec2 p){ p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
+void main(){
+  vec2 uv = vUv + texture2D(tDist, vUv).xy;
+  vec3 c;
+  if (uRad > 0.001 || uCA > 0.0005) {
+    vec2 toC = uv - uCenter; vec3 acc = vec3(0.0); float ws = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float t = float(i) / 11.0; vec2 p = uCenter + toC * (1.0 - uRad * t); vec2 ca = toC * uCA;
+      vec3 s = vec3(texture2D(tScene, p + ca).r, texture2D(tScene, p).g, texture2D(tScene, p - ca).b) + texture2D(tBloom, p).rgb * uBloom;
+      float w = 1.0 - t * 0.65; acc += s * w; ws += w;
+    }
+    c = acc / ws;
+  } else {
+    c = texture2D(tScene, uv).rgb + texture2D(tBloom, uv).rgb * uBloom;
+  }
+  float l0 = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+  float vif = smoothstep(0.1, 0.4, (mx - mn) / max(mx, 1e-3)) * smoothstep(0.03, 0.25, mx);
+  c = mix(c, mix(vec3(l0) * vec3(0.92, 0.98, 0.88), c, vif), uDesat);
+  vec2 q = vUv - 0.5; q.x *= 1.25;
+  float vig = smoothstep(0.82, 0.18, length(q));
+  c *= mix(1.0, 0.18 + 0.82 * vig, uVig);
+  c += vec3(0.03, 0.005, 0.045) * (1.0 - vig) * (1.0 - vig) * uRedVig;
+  vec3 m = aces(c);
+  if (uLines > 0.001) {
+    vec2 pc = (vUv - uCenter) * vec2(uRes.x / uRes.y, 1.0);
+    float k = atan(pc.y, pc.x) * 0.15915 + 0.5, r = length(pc);
+    float idx = floor(k * 110.0), fr = fract(k * 110.0);
+    float on = step(0.5, h21(vec2(idx, uSeed)));
+    float r0 = 0.22 + 0.35 * h21(vec2(idx + 3.1, uSeed));
+    float w = (0.25 + 0.6 * h21(vec2(idx + 7.7, uSeed))) * smoothstep(r0, r0 + 0.45, r);
+    float line = on * (1.0 - smoothstep(w * 0.6, w, abs(fr - 0.5) * 2.0));
+    m = mix(m, vec3(0.012, 0.004, 0.016), line * uLines * 0.9);
+  }
+  float l = dot(m, vec3(0.2126, 0.7152, 0.0722));
+  vec3 neg = mix(vec3(0.96, 0.94, 0.9), vec3(0.02, 0.0, 0.01), step(0.14, l));
+  vec3 duo = l > 0.5 ? vec3(0.93, 0.86, 1.0) : (l > 0.045 ? vec3(0.012, 0.004, 0.016) : vec3(0.36, 0.11, 0.55));
+  m = mix(m, neg, uInv); m = mix(m, duo, uDuo);
+  m += (h21(vUv * uRes + fract(uTime) * 100.0) - 0.5) * 0.012;
+  gl_FragColor = vec4(pow(max(m, 0.0), vec3(1.0 / 2.2)) * uFade, 1.0); }`;
+const matBright = postMat(FS_BRIGHT, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uThr: { value: 1.0 }, uKnee: { value: 0.45 } });
+const matDown = postMat(FS_DOWN, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() } });
+const matUp = postMat(FS_UP, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uScatter: { value: 0.85 } }, { blending: THREE.AdditiveBlending });
+const U = { tScene: { value: rtScene.texture }, tBloom: { value: levels[0].texture }, tDist: { value: rtDist.texture }, uBloom: { value: 0.75 }, uVig: { value: 0 }, uRedVig: { value: 0 }, uDesat: { value: 0 }, uInv: { value: 0 }, uDuo: { value: 0 }, uRad: { value: 0 }, uCA: { value: 0 }, uLines: { value: 0 }, uSeed: { value: 0 }, uTime: { value: 0 }, uFade: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) }, uCenter: { value: new THREE.Vector2(0.5, 0.5) } };
+const matFinal = postMat(FS_FINAL, U);
+
+function pass(mat, src, target, clear) {
+  quad.material = mat;
+  mat.uniforms.tSrc.value = src.texture; mat.uniforms.uTexel.value.set(1 / src.width, 1 / src.height);
+  renderer.setRenderTarget(target);
+  if (clear) renderer.clear();
+  renderer.render(postScene, postCam);
+}
+
+let W = 16, H = 9, echellePoints = 400;
+function resize() {
+  const r = viewport.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.25 : 1.5);
+  const w = Math.max(16, Math.round(r.width * dpr)), h = Math.max(9, Math.round(r.height * dpr));
+  if (w === W && h === H) return;
+  W = w; H = h;
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+  camera.aspect = W / H; camera.updateProjectionMatrix();
+  rtScene.setSize(W, H); rtDist.setSize(Math.max(1, W >> 1), Math.max(1, H >> 1));
+  let lw = W, lh = H;
+  for (const t of levels) { lw = Math.max(1, lw >> 1); lh = Math.max(1, lh >> 1); t.setSize(lw, lh); }
+  U.uRes.value.set(W, H);
+  echellePoints = H / (2 * Math.tan(24 * DEG));
+  streaks.mat.uniforms.uRes.value.set(W, H);
+}
+// ================================================================== decor
+const FOG = new THREE.Color('#2b302a');
+scene.fog = new THREE.FogExp2(FOG.clone(), 0.05);
+// Le ciel couvert du sous-bois : des nuees basses et lourdes, un soleil malade derriere elles.
+// Pendant l'Art, le ciel s'assombrit et le Miasme le teinte, par-dessus la zone.
+const SOLEIL = V3(-0.55, 0.2, -0.81).normalize();
+const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 48, 24), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { tNoise: { value: noiseTex }, uTop: { value: new THREE.Color('#0c0e0b') }, uHorizon: { value: FOG.clone() }, uDim: { value: 0 }, uTime: { value: 0 }, uSoleil: { value: SOLEIL }, uTrouble: { value: 0 } },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tNoise; uniform vec3 uTop, uHorizon, uSoleil; uniform float uDim, uTime, uTrouble; varying vec3 vDir;
+  void main(){ vec3 d = normalize(vDir); float y = clamp(d.y * 1.5 + 0.04, 0.0, 1.0);
+    vec3 c = mix(uHorizon, uTop, pow(y, 0.55));
+    float a = atan(d.z, d.x) * 0.15915;   // un tour vaut 1 : les nuees se lisent avec des multiples entiers, sans couture
+    vec2 q = vec2(a, d.y * 0.7 + 0.1);
+    float n1 = texture2D(tNoise, q * vec2(3.0, 2.0) + vec2(uTime * 0.004, 0.0)).r, n2 = texture2D(tNoise, q * vec2(8.0, 5.0) + vec2(uTime * 0.009, 0.3)).g, n3 = texture2D(tNoise, q * vec2(19.0, 11.0) - vec2(uTime * 0.012, 0.0)).a;
+    float dens = smoothstep(0.32, 0.74, n1 * 0.62 + n2 * 0.3 + n3 * 0.15) * smoothstep(-0.04, 0.22, d.y);
+    float sd = max(dot(d, uSoleil), 0.0);
+    vec3 lueur = vec3(0.62, 0.58, 0.4) * (pow(sd, 6.0) * 0.22 + pow(sd, 40.0) * 0.45);
+    vec3 nuage = mix(vec3(0.026, 0.03, 0.026), vec3(0.1, 0.1, 0.078), pow(sd, 3.0) * (1.0 - n2 * 0.6)) * (0.8 + 0.4 * n3);
+    c = mix(c + lueur, nuage + lueur * 0.3 * (1.0 - dens), dens * 0.85);
+    float zone = smoothstep(0.55, 0.95, dot(d, normalize(vec3(0.35, 0.55, -0.75))));
+    c = mix(c, c * vec3(0.85, 0.6, 1.05) + vec3(0.012, 0.0, 0.02) * dens, uTrouble * (0.4 + 0.6 * zone) * smoothstep(0.0, 0.4, d.y));   // le Miasme gagne le ciel
+    gl_FragColor = vec4(c * (1.0 - 0.55 * uDim), 1.0); }`
+}));
+scene.add(sky);
+
+const hemi = new THREE.HemisphereLight(0x8a9482, 0x15130f, 1.05);
+const moon = new THREE.DirectionalLight(0xcdbd96, 1.15); moon.position.set(-5.5, 6.2, -8);   // le soleil bas, derriere les nuees
+const contre = new THREE.DirectionalLight(0x7d8b84, 0.55); contre.position.set(6, 5, 7);
+scene.add(hemi, moon, contre);
+moon.castShadow = true; moon.shadow.mapSize.set(2048, 2048); Object.assign(moon.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 0.5, far: 40 }); moon.shadow.camera.updateProjectionMatrix(); moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.02;
+const LANTERNE = V3(-5.3, 1.85, 1.5);
+const lantern = new THREE.PointLight(0xffa14a, 6, 0, 2); lantern.position.copy(LANTERNE); scene.add(lantern);
+const impactLight = new THREE.PointLight(0xa36cff, 0, 0, 2); scene.add(impactLight);
+const BASE = { hemi: hemi.intensity, moon: moon.intensity, contre: contre.intensity, lantern: lantern.intensity };
+
+// Reflets : ciel couvert gris olive, horizon brumeux, le soleil malade derriere les nuees.
+const envMap = (() => {
+  const pm = new THREE.PMREMGenerator(renderer), s = new THREE.Scene();
+  s.add(new THREE.Mesh(new THREE.SphereGeometry(10, 48, 24), new THREE.ShaderMaterial({ side: THREE.BackSide,
+    vertexShader: `varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec3 vD; void main(){ vec3 d = normalize(vD);
+      vec3 c = mix(vec3(0.06, 0.066, 0.056), vec3(0.03, 0.034, 0.03), smoothstep(0.0, 0.7, d.y));
+      c += vec3(0.12, 0.125, 0.1) * exp(-abs(d.y) * 7.0);
+      c += vec3(0.02, 0.02, 0.016) * pow(max(-d.y, 0.0), 2.0);
+      c += vec3(0.62, 0.57, 0.4) * pow(max(dot(d, normalize(vec3(-0.55, 0.2, -0.81))), 0.0), 24.0) * 0.8;
+      gl_FragColor = vec4(c, 1.0); }` })));
+  const t = pm.fromScene(s, 0.02).texture; pm.dispose(); return t;
+})();
+
+// Le dallage : de vraies dalles chanfreinees, posees un peu de travers sur un lit de mortier.
+function dallageGeo() {
+  const R = 6.2, J = 0.036, BEV = 0.009, r0 = mulberry32(7), morceaux = [];
+  const col = new THREE.Color(), pale = new THREE.Color(0.55, 0.58, 0.5);
+  function dalle(contour, cx, cz) {
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(contour.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: SOL_Y - 2 * BEV, bevelEnabled: true, bevelThickness: BEV, bevelSize: BEV * 0.9, bevelSegments: 1, curveSegments: 1 });
+    g.rotateX(-Math.PI / 2); g.translate(0, BEV, 0);
+    const p = g.attributes.position, tx = (r0() - 0.5) * 0.014, tz = (r0() - 0.5) * 0.014, dy = (r0() - 0.5) * 0.008;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y > 0.01) p.setY(i, y + dy + tx * (p.getX(i) - cx) + tz * (p.getZ(i) - cz)); }
+    g.deleteAttribute('uv'); g.deleteAttribute('normal'); g.computeVertexNormals();
+    col.setHSL(80 / 360, (6 + r0() * 8) / 100, (19 + r0() * 15) / 100); if (r0() < 0.22) col.lerp(pale, 0.16);
+    const n = p.count, c = new Float32Array(n * 3), ce = new Float32Array(n * 2), sd = new Float32Array(n), s = r0();
+    for (let i = 0; i < n; i++) { c.set([col.r, col.g, col.b], i * 3); ce.set([cx, cz], i * 2); sd[i] = s; }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.setAttribute('aCentre', new THREE.BufferAttribute(ce, 2)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
+    morceaux.push(g);
+  }
+  const arc = (r, a0, a1, n) => Array.from({ length: n + 1 }, (_, k) => { const a = lerp(a0, a1, k / n); return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const rc = 0.42 - J / 2 - BEV; dalle(arc(rc, 0, Math.PI * 2, 28).slice(0, 28), 0, 0);
+  let r = 0.48;
+  while (r < R - 0.05) {
+    const w = 0.48 + r0() * 0.12, r2 = Math.min(R, r + w), mid = (r + r2) / 2;
+    const n = Math.max(6, Math.round(2 * Math.PI * mid / 0.74)), off = r0() * Math.PI * 2;
+    for (let i = 0; i < n; i++) {
+      const a0 = off + i * 2 * Math.PI / n, a1 = off + (i + 1) * 2 * Math.PI / n, e = J / 2 + BEV;
+      const ra = r + e, rb = r2 - e, seg = Math.max(2, Math.ceil((a1 - a0) * rb / 0.1));
+      const ext = arc(rb, a0 + e / rb, a1 - e / rb, seg), inn = arc(ra, a1 - e / ra, a0 + e / ra, seg);
+      const am = (a0 + a1) / 2; dalle([...ext, ...inn], Math.cos(am) * mid, Math.sin(am) * mid);
+    }
+    r = r2;
+  }
+  // fusion en une seule geometrie
+  const tot = morceaux.reduce((s, g) => s + g.attributes.position.count, 0), out = new THREE.BufferGeometry();
+  for (const [k, d] of [['position', 3], ['normal', 3], ['color', 3], ['aCentre', 2], ['aSeed', 1]]) {
+    const a = new Float32Array(tot * d); let o = 0;
+    for (const g of morceaux) { const src = g.index ? g.toNonIndexed().attributes[k].array : g.attributes[k].array; a.set(src, o); o += src.length; }
+    out.setAttribute(k, new THREE.BufferAttribute(a, d));
+  }
+  morceaux.forEach(g => g.dispose());
+  return out;
+}
+function dirtTexture() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), r0 = mulberry32(11);
+  g.fillStyle = '#1b1d17'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 2600; i++) { g.fillStyle = r0() < .5 ? 'rgba(8,9,6,0.5)' : 'rgba(110,118,96,0.16)'; const s = 1 + r0() * 3; g.fillRect(r0() * S, r0() * S, s, s); }
+  for (let i = 0; i < 18; i++) { const x = r0() * S, y = r0() * S, rr = 20 + r0() * 60, gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, 'rgba(150,160,130,0.16)'); gr.addColorStop(1, 'rgba(150,160,130,0)'); g.fillStyle = gr; g.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 10); return t;
+}
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshStandardMaterial({ map: dirtTexture(), roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const PLACE = V3(0, 0, 0);
+ground.receiveShadow = true;
+// La zone, a distance, et le chemin du dard sous la place : il plonge en E0, ressort en X1, replonge en E1, ressort en X2,
+// replonge en E2 et jaillit au centre de la zone. Sous terre, il souleve une crete de dalles.
+const TISSEUSE = V3(-3.4, 0, 0);
+const C_ZONE = V3(3.0, SOL_Y, 0.15), H_COL = 4.3;
+const COUTURE = { E0: V3(-1.95, SOL_Y, 0.1), X1: V3(-0.6, SOL_Y, -0.06), E1: V3(0.15, SOL_Y, -0.1), X2: V3(1.2, SOL_Y, 0.05), E2: V3(1.9, SOL_Y, 0.12) };
+const SOUS = [[COUTURE.E0, COUTURE.X1], [COUTURE.E1, COUTURE.X2], [COUTURE.E2, C_ZONE]];
+const SOUS_S = []; { let acc = 0; for (const [a, b] of SOUS) { SOUS_S.push(acc); acc += Math.hypot(b.x - a.x, b.z - a.z); } }
+const TROUS = [COUTURE.E0, COUTURE.X1, COUTURE.E1, COUTURE.X2, COUTURE.E2, C_ZONE];
+// Ce qui marque les dalles : l'annonce (des taches de moisissure ou la zone va eclore), les trous de la couture, la terre retournee,
+// et l'infection : un reseau de veines de mycelium qui gagne la pierre, humide et sombre, avec une seve qui luit par plaques.
+const GLSL_SOL = `
+float trou(vec2 P, vec4 T, float grand, out float bord) {
+  bord = 0.0; if (T.z <= 0.001) return 0.0;   // trou pas encore ouvert : rayon nul, et smoothstep a bornes egales est indefini
+  vec2 q = P - T.xy; float r = length(q), an = atan(q.y, q.x);
+  float n = texture2D(tNoise, vec2(an * 0.4775 + T.x, T.y * 0.3 + 0.2)).r;   // 3 periodes par tour : pas de couture
+  float R = (0.065 + 0.07 * n) * T.z * grand;
+  bord = smoothstep(R * 2.8, R * 1.05, r + (texture2D(tNoise, vec2(an * 0.955, r * 3.0)).g - 0.5) * R * 0.8) * T.z;
+  return smoothstep(R, R * 0.6, r);
+}
+float veines(vec2 P) {
+  vec2 w = (texture2D(tNoise, P * 0.21).rg - 0.5) * 1.4;
+  float b1 = voroBord(P * 2.3 + w, 1e4), b2 = voroBord(P * 6.1 + w * 2.0 + 3.1, 1e4);
+  float l1 = smoothstep(0.07, 0.0, b1 + (texture2D(tNoise, P * 1.7).b - 0.5) * 0.05), l2 = smoothstep(0.04, 0.0, b2) * 0.65;
+  return max(l1, l2);
+}
+void cheminSous(vec2 P, out float dP, out float passe) {
+  dP = 9.0; passe = 0.0;
+  for (int k = 0; k < 3; k++) {
+    vec2 a = uSegA[k].xy, b = uSegA[k].zw, ab = b - a; float L = length(ab); vec2 dir = ab / L;
+    float lam = dot(P - a, dir), lc = clamp(lam, 0.0, L), d = length(P - a - dir * lc);
+    if (d < dP) { dP = d; passe = smoothstep(uSegB[k] + lc - 0.02, uSegB[k] + lc + 0.1, uFrontS); }
+  }
+}
+void marquesSol(vec2 P, float seed, inout vec3 alb, inout float mouille, inout vec3 emis) {
+  float n1 = texture2D(tNoise, P * 0.23).r, n2 = texture2D(tNoise, P * 0.9 + seed).g, n3 = texture2D(tNoise, P * 3.1).a;
+  alb *= 0.62 + 0.5 * n1 + 0.35 * (n3 - 0.5) + 0.15 * (n2 - 0.5);
+  float mousse = smoothstep(0.58, 0.82, texture2D(tNoise, P * 0.6 + 1.3).r * 0.7 + n3 * 0.4);
+  alb = mix(alb, vec3(0.035, 0.045, 0.028), mousse * 0.6);
+  mouille = mousse * 0.25;
+  vec2 rz = P - uZone.xz; float r = length(rz);
+  // l'annonce : la zone se tache de moisissure avant l'eclosion, en points qui s'allument
+  if (uAnnonce > 0.0) {
+    float nz = texture2D(tNoise, P * 0.8 + 4.7).r;
+    float zone = smoothstep(1.6, 1.05, r + (nz - 0.5) * 0.8);
+    float taches = smoothstep(0.6, 0.8, texture2D(tNoise, P * 2.7 + 0.4).r * 0.8 + nz * 0.3) * zone * uAnnonce;
+    alb = mix(alb, vec3(0.022, 0.012, 0.022), taches * 0.8);
+    float pts = step(0.82, h21(floor(P * 30.0))) * taches;
+    emis += miasme(0.4 * pts * (0.65 + 0.35 * sin(uTime * 5.0 + P.x * 13.0 + P.y * 7.0))) * uFade;
+    mouille = max(mouille, taches * 0.8);
+  }
+  // la couture : trous dechires et terre retournee
+  float bordT = 0.0, troux = 0.0;
+  for (int k = 0; k < 6; k++) { float b; troux = max(troux, trou(P, uTrous[k], k == 5 ? 2.6 : 1.0, b)); bordT = max(bordT, b); }
+  alb = mix(alb, vec3(0.03, 0.022, 0.018) * (0.7 + 0.6 * n3), bordT * 0.75);
+  alb = mix(alb, vec3(0.004, 0.002, 0.004), troux);
+  emis += miasme(0.32 * troux * uTrousLueur * (0.6 + 0.4 * n2)) * uFade;
+  // l'infection : le mycelium gagne la pierre depuis la zone et le long de la couture
+  if (uInfR > 0.0 || uInfP > 0.0) {
+    float dP, passe; cheminSous(P, dP, passe);
+    float nn = texture2D(tNoise, P * 0.5 + 2.2).g;
+    float mz = smoothstep(uInfR, uInfR - 0.9, r + (nn - 0.5) * 1.5);
+    float mp = smoothstep(max(uInfP * 0.8, 0.002), 0.0, dP + (nn - 0.5) * 0.35) * passe * step(0.001, uInfP);   // jamais de bornes egales
+    float m = max(mz, mp);
+    if (m > 0.001) {
+      float v = veines(P);
+      float tache = smoothstep(0.15, 0.8, m * (0.55 + 0.6 * nn));
+      alb = mix(alb, vec3(0.022, 0.014, 0.022), tache * 0.6);
+      alb = mix(alb, vec3(0.012, 0.004, 0.014), v * smoothstep(0.0, 0.3, m) * 0.92);
+      mouille = max(mouille, max(tache * 0.8, v * m));
+      float front = smoothstep(0.0, 0.25, m) * (1.0 - smoothstep(0.35, 0.95, m));   // la lueur suit le front de croissance
+      float plaque = smoothstep(0.5, 0.8, texture2D(tNoise, P * 0.9 - vec2(uTime * 0.03, 0.0)).r);
+      float large = smoothstep(0.14, 0.0, voroBord(P * 2.3 + (texture2D(tNoise, P * 0.21).rg - 0.5) * 1.4, 1e4));   // la lueur suit les grosses veines, jamais les fines (elles scintillent)
+      emis += miasme((0.32 * front + 0.2 * uInfLueur * plaque) * large * smoothstep(0.0, 0.2, m)) * uFade;
+    }
+  }
+}
+`;
+const V4 = (x, y, z, w) => new THREE.Vector4(x, y, z, w);
+const uSol = { tNoise: { value: noiseTex }, uTime: { value: 0 }, uTremble: { value: 0 }, uFade: { value: 1 }, uEmber: { value: EMBER },
+  uZone: { value: C_ZONE.clone() }, uAnnonce: { value: 0 }, uTrous: { value: TROUS.map(p => V4(p.x, p.z, 0, 0)) }, uTrousLueur: { value: 0 },
+  uSegA: { value: SOUS.map(([a, b]) => V4(a.x, a.z, b.x, b.z)) }, uSegB: { value: V3(...SOUS_S) }, uFrontS: { value: -1 },
+  uInfR: { value: 0 }, uInfP: { value: 0 }, uInfLueur: { value: 0 }, uEclot: { value: 0 }, uTension: { value: 0 }, uSouffle: { value: 0 }, uMortier: { value: 0 } };
+const matDalles = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0 });
+matDalles.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, uSol);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', `#include <common>
+attribute vec2 aCentre; attribute float aSeed; uniform float uTremble, uTime, uFrontS, uEclot, uTension, uSouffle; uniform vec4 uSegA[3]; uniform vec3 uSegB, uZone;
+varying vec3 vWp; varying float vSeedD;`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+{ float haut = step(0.01, position.y), lift = 0.0; vec2 tilt = vec2(0.0);
+  // la crete : le dard passe sous la dalle, la souleve, et elle reste un peu levee ; quand le fil se tend, la place se fronce
+  for (int k = 0; k < 3; k++) {
+    vec2 a = uSegA[k].xy, b = uSegA[k].zw, ab = b - a; float L = length(ab); vec2 dir = ab / L, perp = vec2(-dir.y, dir.x);
+    float lam = dot(aCentre - a, dir), d = dot(aCentre - a, perp), sHere = uSegB[k] + clamp(lam, 0.0, L);
+    float dedans = smoothstep(-0.25, 0.05, lam) * smoothstep(L + 0.25, L - 0.05, lam);
+    float prox = exp(-pow(d / 0.4, 2.0)) * dedans;
+    float passe = smoothstep(sHere - 0.02, sHere + 0.14, uFrontS), front = exp(-pow((uFrontS - sHere) / 0.28, 2.0)) * step(-0.3, uFrontS - sHere);
+    lift += prox * (0.15 * front + 0.03 * passe + 0.045 * uTension * passe) * (0.7 + 0.6 * aSeed);
+    tilt += perp * sign(d) * prox * passe * (0.1 + 0.32 * uTension) * smoothstep(0.03, 0.18, abs(d));
+  }
+  // l'eclosion : les dalles de la zone se soulevent en couronne, celles du centre basculent
+  vec2 rz = aCentre - uZone.xz; float r = length(rz);
+  float couronne = exp(-pow((r - 0.95) / 0.55, 2.0)) * uEclot, coeur = exp(-pow(r / 0.55, 2.0)) * uEclot;
+  lift += couronne * (0.06 + 0.06 * aSeed) + coeur * (0.11 + 0.1 * aSeed) + uSouffle * 0.025 * exp(-r * r / 5.0);
+  tilt += (r > 1e-3 ? rz / r : vec2(0.0)) * (couronne * 0.32 - coeur * 0.3 * (aSeed - 0.5));
+  transformed.y += haut * (lift + dot(position.xz - aCentre, tilt) + sin(uTime * 61.0 + aSeed * 40.0) * 0.004 * uTremble * aSeed);
+  vSeedD = aSeed; vWp = (modelMatrix * vec4(transformed, 1.0)).xyz; }`);
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', `#include <common>
+uniform sampler2D tNoise; uniform float uTime, uFade, uAnnonce, uTrousLueur, uFrontS, uInfR, uInfP, uInfLueur; uniform vec3 uEmber, uZone, uSegB; uniform vec4 uTrous[6], uSegA[3];
+varying vec3 vWp; varying float vSeedD;
+${GLSL_COMMUN}
+${GLSL_SOL}`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+float mouilleS = 0.0; vec3 emisS = vec3(0.0), albS = diffuseColor.rgb;
+marquesSol(vWp.xz, vSeedD, albS, mouilleS, emisS); diffuseColor.rgb = albS;`)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = mix(roughnessFactor, 0.32, mouilleS);`)
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += emisS;`);
+};
+matDalles.customProgramCacheKey = () => 'dalles-miasme';
+const dalles = new THREE.Mesh(dallageGeo(), matDalles); dalles.receiveShadow = true; dalles.castShadow = !LOW; dalles.frustumCulled = false; scene.add(dalles);
+// Le lit de mortier, visible seulement entre les dalles : la seve y luit par plaques, le long de la couture et sous la zone.
+const mortier = new THREE.Mesh(new THREE.CircleGeometry(6.26, 120), new THREE.ShaderMaterial({ uniforms: uSol,
+  vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform sampler2D tNoise; uniform float uMortier, uFade, uTime, uFrontS; uniform vec3 uZone, uSegB; uniform vec4 uSegA[3]; varying vec3 vW;
+  ${GLSL_COMMUN}
+  void main(){ float dP = 9.0, passe = 0.0, sh = -9.0;
+    for (int k = 0; k < 3; k++) { vec2 a = uSegA[k].xy, b = uSegA[k].zw, ab = b - a; float L = length(ab); vec2 dir = ab / L; float lc = clamp(dot(vW.xz - a, dir), 0.0, L), d = length(vW.xz - a - dir * lc);
+      if (d < dP) { dP = d; sh = uSegB[k] + lc; passe = smoothstep(sh, sh + 0.1, uFrontS); } }
+    float front = exp(-pow((uFrontS - sh) / 0.35, 2.0)) * step(-0.2, uFrontS - sh);   // la seve qui suit le dard sous la place
+    float g = uMortier * (exp(-dP * dP / 0.08) * passe * 0.7 + exp(-dot(vW.xz - uZone.xz, vW.xz - uZone.xz) / 1.4)) + 1.6 * exp(-dP * dP / 0.05) * front;
+    g *= smoothstep(0.4, 0.8, texture2D(tNoise, vW.xz * 0.45 + vec2(uTime * 0.03, 0.0)).r);   // par plaques, jamais en ligne continue
+    gl_FragColor = vec4(vec3(0.006, 0.005, 0.006) + miasme(min(g, 0.4) * uFade) * 0.35, 1.0); }` }));
+mortier.rotation.x = -Math.PI / 2; mortier.position.y = 0.004; scene.add(mortier);
+
+const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true, ...o });
+(function decor() {
+  const r0 = mulberry32(23), pierre = flat(0x1b1e19), bois = flat(0x1d1914);
+  for (let i = 0; i < 14; i++) {
+    const a = -0.35 * Math.PI + r0() * 1.3 * Math.PI, d = 11 + r0() * 9;
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), pierre);
+    m.scale.set(1 + r0() * 1.8, 2 + r0() * 4.5, 1 + r0() * 1.8);
+    m.position.set(PLACE.x + Math.cos(a) * d, m.scale.y * 0.45, -Math.sin(a) * d - 1); m.rotation.set(r0() * 0.3, r0() * 3, r0() * 0.3);
+    scene.add(m);
+  }
+  // ruines : colonnes brisees et une arche
+  for (const [x, z, h] of [[-4.5, -6.5, 3.4], [-2.8, -7.4, 2.1], [6.8, -6.0, 4.2], [8.6, -4.2, 1.6], [3.2, -8.6, 2.8]]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, h, 8), pierre); m.position.set(x, h / 2, z); m.rotation.z = (r0() - 0.5) * 0.12; scene.add(m);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.9), pierre); cap.position.set(x, h + 0.08, z); cap.rotation.set(0.1, r0(), 0.15); scene.add(cap);
+  }
+  for (const x of [0.4, 3.0]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.6, 0.6), pierre); p.position.set(x, 1.8, -9.5); scene.add(p); }
+  const linteau = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 0.7), pierre); linteau.position.set(1.7, 3.85, -9.5); linteau.rotation.z = 0.05; scene.add(linteau);
+  for (let i = 0; i < 12; i++) {
+    const a = r0() * Math.PI * 2, d = 6.8 + r0() * 1.6, h = 0.8 + r0() * 1.4;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, h, 6), bois);
+    m.position.set(PLACE.x + Math.cos(a) * d, h / 2, PLACE.z + Math.sin(a) * d - (Math.sin(a) > 0.5 ? 3 : 0)); scene.add(m);
+  }
+  const pilier = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8), flat(0x24251f, { metalness: 0.4 })); pilier.position.set(LANTERNE.x, 0.8, LANTERNE.z);
+  const lanterne = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.28), new THREE.MeshStandardMaterial({ color: 0xffc27a, emissive: 0xffa24d, emissiveIntensity: 0.8 })); lanterne.position.copy(LANTERNE);
+  const toit = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.22, 6), flat(0x1f2119)); toit.position.set(LANTERNE.x, LANTERNE.y + 0.32, LANTERNE.z);
+  scene.add(pilier, lanterne, toit);
+})();
+// Brume basse
+const brumes = [];
+for (const [y, a, s] of [[0.18, 0.16, 0.05], [0.42, 0.1, -0.035], [0.75, 0.06, 0.025]]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShaderMaterial({ ...PREMUL, fog: false,
+    uniforms: { tNoise: { value: noiseTex }, uTime: { value: 0 }, uA: { value: a }, uS: { value: s }, uDim: { value: 0 }, uCol: { value: V3(0.08, 0.09, 0.075) } },
+    vertexShader: `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform sampler2D tNoise; uniform float uTime, uA, uS, uDim; uniform vec3 uCol; varying vec2 vUv; varying vec3 vW;
+      void main(){ float n = texture2D(tNoise, vUv * 3.0 + vec2(uTime * uS, uTime * uS * 0.6)).r; float n2 = texture2D(tNoise, vUv * 7.0 - vec2(uTime * uS * 1.3, 0.0)).g;
+        float d = length(vW.xz); float a = smoothstep(0.35, 0.8, n * 0.7 + n2 * 0.4) * uA * smoothstep(20.0, 6.0, d) * (1.0 - 0.6 * uDim);
+        gl_FragColor = vec4(uCol * (1.0 - 0.7 * uDim) * a, a); }` }));
+  m.rotation.x = -Math.PI / 2; m.position.set(0, y, 0); m.renderOrder = 1; scene.add(m); brumes.push(m);
+}
+// Spores en suspension : le sous-bois respire. Elles derivent lentement, montent un peu, retombent.
+const sporesAir = (() => {
+  const N = nq(520), pos = new Float32Array(N * 3), ph = new Float32Array(N), r0 = mulberry32(5);
+  for (let i = 0; i < N; i++) { pos[i * 3] = -9 + r0() * 21; pos[i * 3 + 1] = r0() * 5; pos[i * 3 + 2] = -9 + r0() * 16; ph[i] = r0() * 6.283; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const disc = document.createElement('canvas'); disc.width = disc.height = 32;
+  const dg = disc.getContext('2d'), gr = dg.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); dg.fillStyle = gr; dg.fillRect(0, 0, 32, 32);
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xa99db4, size: 0.028, map: new THREE.CanvasTexture(disc), transparent: true, opacity: 0.5, depthWrite: false })));
+  return { update(dt, t) { for (let i = 0; i < N; i++) { const p = ph[i]; pos[i * 3 + 1] += (0.035 + Math.sin(t * 0.6 + p) * 0.06) * dt; pos[i * 3] += Math.sin(t * 0.35 + p * 2.0) * 0.09 * dt; pos[i * 3 + 2] += Math.cos(t * 0.3 + p) * 0.07 * dt; if (pos[i * 3 + 1] > 5) pos[i * 3 + 1] -= 5; } geo.attributes.position.needsUpdate = true; } };
+})();
+// ================================================================== personnages
+// La Tisseuse : voutee, capuche profonde dont la pointe retombe dans le dos (aucun visage : une ombre), chale dont pendent des fils,
+// robe de toile grossiere dont l'ourlet s'effiloche, manches larges, mains bandees. Un fuseau d'os pend a sa ceinture.
+const joueur = new THREE.Group(); scene.add(joueur);
+const corpsJ = new THREE.Group(); joueur.add(corpsJ);
+const lisse = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, ...o });
+const mToile = lisse(0x2b251e, { roughness: 0.93, side: THREE.DoubleSide }), mOs = lisse(0x8a8070, { roughness: 0.5 }), mBande = lisse(0x241e19, { roughness: 0.82 });
+const mOmbre = new THREE.MeshBasicMaterial({ color: 0x000000 });
+// Infection des betes : point de contact (xyz) et quantite (w), une entree par bete
+const uInf = { value: [V4(0, -9, 0, 0), V4(0, -9, 0, 0), V4(0, -9, 0, 0)] };
+// usure : le metal et la toile ne sont jamais d'une seule couleur (taches, poli, rouille) ; le mycelium peut les gagner
+function usure(mat, rouille = 0, infecte = false) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.tNoise = { value: noiseTex }; sh.uniforms.uInf = uInf; sh.uniforms.uTime = uSol.uTime;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vPo, vWe;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPo = position; vWe = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tNoise; uniform vec4 uInf[3]; uniform float uTime; varying vec3 vPo, vWe;\n' + GLSL_COMMUN)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float nA = texture2D(tNoise, vPo.xy * 3.1 + vPo.z * 1.7).r, nB = texture2D(tNoise, vPo.zy * 7.3 + vPo.x).g;
+diffuseColor.rgb *= 0.68 + 0.6 * nA;
+${rouille ? 'float rl = smoothstep(0.5, 0.78, nB * 0.7 + nA * 0.5); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.055, 0.02), rl * 0.75);' : 'float rl = 0.0;'}
+float iv = 0.0, vein = 0.0;
+${infecte ? `for (int i = 0; i < 3; i++) iv = max(iv, uInf[i].w * smoothstep(1.3 * uInf[i].w + 0.08, 0.05, distance(vWe, uInf[i].xyz)));
+float rid = texture2D(tNoise, vPo.xy * 1.6 + vPo.z * 1.3).b, rid2 = texture2D(tNoise, vPo.zy * 3.9 + vPo.x * 0.7).b;
+vein = max(smoothstep(0.6, 0.9, rid), smoothstep(0.68, 0.95, rid2) * 0.75) * smoothstep(0.0, 0.35, iv);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.03, 0.014, 0.03), smoothstep(0.1, 0.8, iv) * 0.45);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.01, 0.003, 0.012), vein * 0.9);` : ''}`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(clamp(roughnessFactor + (nB - 0.5) * 0.35 + rl * 0.35, 0.05, 1.0), 0.3, vein);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor *= (1.0 - rl * 0.7) * (1.0 - vein);')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+${infecte ? 'totalEmissiveRadiance += miasme(0.5 * vein * iv * smoothstep(0.42, 0.75, texture2D(tNoise, vWe.xz * 1.1 + vWe.y * 0.4 + vec2(uTime * 0.06, 0.0)).r));' : ''}`);
+  };
+  mat.customProgramCacheKey = () => 'usure-' + rouille + (infecte ? '-inf' : '') + (mat.flatShading ? '-plat' : '');
+}
+for (const m of [mToile, mOs, mBande]) usure(m);
+(function () {
+  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = corpsJ) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); parent.add(m); return m; };
+  add(new THREE.CylinderGeometry(0.17, 0.24, 0.6, 16), mToile, 0.05, 1.12, 0, 0, 0, -0.24);                                      // buste, voute
+  add(new THREE.SphereGeometry(0.25, 20, 12), mToile, -0.05, 1.36, 0).scale.set(1.0, 0.85, 1.22);                                  // le dos rond
+  add(new THREE.CylinderGeometry(0.17, 0.41, 0.36, 28, 1, true), mToile, 0.02, 1.28, 0, 0, 0, -0.2);                          // la pelerine, d'ou pendent les franges
+  // capuche profonde, ouverte devant ; la pointe retombe dans le dos ; dedans, l'ombre
+  add(new THREE.SphereGeometry(0.235, 24, 14, Math.PI + 0.78, Math.PI * 2 - 1.56, 0, Math.PI * 0.82), mToile, 0.1, 1.6, 0, 0, 0, -0.45).scale.set(1.1, 1.2, 1.0);
+  add(new THREE.ConeGeometry(0.1, 0.5, 12), mToile, -0.17, 1.72, 0, 0, 0, 2.2);
+  add(new THREE.SphereGeometry(0.17, 16, 10), mOmbre, 0.15, 1.56, 0);
+  for (let k = 0; k < 11; k++) { const a = -1.1 + k * 0.22; add(new THREE.SphereGeometry(0.019 + 0.008 * (k % 3 === 0), 8, 6), mOs, 0.12 + 0.2 * Math.cos(a), 1.33 - 0.07 * Math.cos(a * 2), 0.21 * Math.sin(a)); }   // perles d'os
+  add(new THREE.TorusGeometry(0.25, 0.017, 6, 36), mBande, 0.04, 0.88, 0, Math.PI / 2, 0, 0);                                      // ceinture de corde
+  const fuseau = add(new THREE.LatheGeometry([[0, 0], [0.012, 0.02], [0.036, 0.1], [0.03, 0.15], [0.01, 0.22], [0.006, 0.38], [0, 0.4]].map(([r, y]) => new THREE.Vector2(r, y)), 12), mOs, 0.14, 0.52, 0.25, 0.22, 0, 0.18);
+  for (let k = 0; k < 5; k++) add(new THREE.TorusGeometry(0.03, 0.006, 4, 12), mBande, 0.14 + 0.02 * k, 0.6 + 0.02 * k, 0.27, Math.PI / 2 + 0.2, 0, 0);   // du fil enroule sur le fuseau
+  for (const z of [-0.1, 0.1]) add(new THREE.BoxGeometry(0.2, 0.06, 0.1), mBande, 0.1, 0.03, z, 0, 0, 0, joueur);              // bouts des pieds sous la robe
+})();
+// les deux bras : une manche large et une main bandee, recalcules a chaque image
+function brasJ() {
+  const g = new THREE.Group(); scene.add(g);
+  const manche = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.105, 1, 14, 1, true), mToile); manche.material.side = THREE.DoubleSide; g.add(manche);
+  const main = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 8), mBande); main.scale.set(1, 1.25, 0.8); g.add(main);
+  return { g, manche, main };
+}
+const brasG = brasJ(), brasD = brasJ();
+// La robe : maillage recalcule a chaque image dans le repere du personnage, des epaules jusqu'au sol ; son ourlet s'effiloche.
+const CAPE_C = 28, CAPE_R = 12;
+const capeGeo = new THREE.BufferGeometry();
+capeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((CAPE_C + 1) * (CAPE_R + 1) * 3), 3).setUsage(THREE.DynamicDrawUsage));
+{ const idx = [], uvs = []; for (let r = 0; r <= CAPE_R; r++) for (let c = 0; c <= CAPE_C; c++) uvs.push(c / CAPE_C, r / CAPE_R);
+  for (let r = 0; r < CAPE_R; r++) for (let c = 0; c < CAPE_C; c++) { const a = r * (CAPE_C + 1) + c, b = a + 1, d = a + CAPE_C + 1, e = d + 1; idx.push(a, d, b, b, d, e); }
+  capeGeo.setIndex(idx); capeGeo.setAttribute('aRobe', new THREE.Float32BufferAttribute(uvs, 2)); }
+const uBrode = { value: 0 };   // la seve qui monte dans les fils de la robe pendant le tissage
+const mCape = new THREE.MeshStandardMaterial({ color: 0x29231c, roughness: 0.95, side: THREE.DoubleSide, envMap, envMapIntensity: 0.3 });
+mCape.onBeforeCompile = sh => {
+  sh.uniforms.tNoise = { value: noiseTex }; sh.uniforms.uBrode = uBrode; sh.uniforms.uTime = uSol.uTime;
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aRobe; varying vec2 vRobe;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvRobe = aRobe;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tNoise; uniform float uBrode, uTime; varying vec2 vRobe;\n' + GLSL_COMMUN)
+    .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+// l'ourlet s'effiloche : des franges de longueur inegale, puis des fils qui pendent
+float effil = texture2D(tNoise, vec2(vRobe.x * 3.0, 0.31)).r * 0.7 + texture2D(tNoise, vec2(vRobe.x * 11.0, 0.77)).g * 0.3;
+float hem = 0.84 + 0.12 * effil, fil = step(0.8, fract(vRobe.x * 140.0 + texture2D(tNoise, vec2(vRobe.x * 23.0, 0.5)).r * 3.0));
+if (vRobe.y > hem + 0.08 * fil * texture2D(tNoise, vec2(vRobe.x * 37.0, 0.2)).r) discard;`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+vec2 tr = vRobe * vec2(150.0, 64.0); float trame = 0.5 + 0.5 * sin(tr.x * 6.2832) * sin(tr.y * 6.2832);   // la toile grossiere
+float plis = texture2D(tNoise, vRobe * vec2(4.0, 1.2)).g, tache = smoothstep(0.55, 0.85, texture2D(tNoise, vRobe * vec2(2.0, 0.8) + 0.6).r);
+diffuseColor.rgb *= (0.68 + 0.5 * plis) * (0.88 + 0.16 * trame);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.022, 0.045), tache * 0.55 * smoothstep(0.4, 1.0, vRobe.y));   // la seve a seche dans la toile
+`);
+};
+mCape.customProgramCacheKey = () => 'robe-tisseuse';
+const cape = new THREE.Mesh(capeGeo, mCape); cape.frustumCulled = false; scene.add(cape);
+const tmpV = V3();
+function majCape(souffle, t) {
+  const p = capeGeo.attributes.position.array, tw = corpsJ.rotation.y, pz = corpsJ.rotation.z;
+  for (let r = 0; r <= CAPE_R; r++) {
+    const f = r / CAPE_R, y = lerp(1.36, 0.03, f), e = Math.pow(f, 0.8), rx = lerp(0.22, 0.52, e), rz = lerp(0.27, 0.5, e);
+    const avance = (1 - f) * 0.06 - Math.sin(pz) * (1 - f) * 0.5;   // la robe suit le dos voute
+    for (let c = 0; c <= CAPE_C; c++) {
+      const a = c / CAPE_C * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a), dos = clamp(0.6 - ca * 0.6);
+      const onde = Math.sin(t * 5 + f * 4 + a * 3) * 0.03 * f * (0.3 + souffle) + Math.sin(a * 11 + f * 2) * 0.014 * f;   // plis
+      const x = ca * (rx + onde) + avance - souffle * 0.35 * Math.pow(f, 1.5) * dos, z = sa * (rz + onde), yy = y + souffle * 0.14 * f * f * dos;
+      const tf = tw * (1 - f * 0.7);
+      tmpV.set(x * Math.cos(tf) + z * Math.sin(tf), yy, -x * Math.sin(tf) + z * Math.cos(tf)); joueur.localToWorld(tmpV);
+      p.set([tmpV.x, tmpV.y, tmpV.z], (r * (CAPE_C + 1) + c) * 3);
+    }
+  }
+  capeGeo.attributes.position.needsUpdate = true; capeGeo.computeVertexNormals(); capeGeo.computeBoundingSphere();
+}
+
+// Trois Rouillards groupes au loin, au milieu de la zone, tournes vers la Tisseuse.
+const mRouille = flat(0x5b3b2a, { metalness: 0.5, roughness: 0.6 }), mFer = flat(0x2c2a2e, { metalness: 0.6, roughness: 0.5 }), mToileR = flat(0x5e5246);
+const matsEnnemi = [mRouille, mFer, mToileR];
+for (const m of [mRouille, mFer]) { m.envMap = envMap; m.envMapIntensity = 0.5; }
+usure(mRouille, 1, true); usure(mFer, 1, true); usure(mToileR, 0, true);
+function rouillard() {
+  const racine = new THREE.Group(), penche = new THREE.Group(), corps = new THREE.Group();
+  corps.rotation.y = Math.PI; racine.add(penche); penche.add(corps); scene.add(racine);
+  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); corps.add(m); return m; };
+  for (const z of [-0.16, 0.16]) { add(new THREE.BoxGeometry(0.22, 0.78, 0.22), mFer, 0, 0.39, z); add(new THREE.BoxGeometry(0.3, 0.14, 0.28), mRouille, -0.03, 0.07, z); }
+  add(new THREE.BoxGeometry(0.5, 0.42, 0.6), mToileR, 0, 0.9, 0);
+  add(new THREE.BoxGeometry(0.62, 0.7, 0.72), mRouille, 0, 1.36, 0);
+  for (const z of [-0.45, 0.45]) {
+    add(new THREE.BoxGeometry(0.42, 0.24, 0.36), mFer, 0, 1.7, z, 0, 0, 0.12);
+    for (let k = 0; k < 3; k++) add(new THREE.ConeGeometry(0.05, 0.26, 5), mFer, -0.12 + k * 0.12, 1.88, z * 1.05, z > 0 ? -0.3 : 0.3, 0, 0);
+    add(new THREE.BoxGeometry(0.17, 0.72, 0.17), mRouille, 0.04, 1.22, z * 1.08);
+  }
+  add(new THREE.BoxGeometry(0.36, 0.4, 0.36), mFer, 0.02, 2.0, 0);
+  for (const z of [-0.14, 0.14]) add(new THREE.ConeGeometry(0.045, 0.32, 5), mFer, 0.02, 2.28, z, z > 0 ? -0.5 : 0.5, 0, 0);
+  add(new THREE.BoxGeometry(0.02, 0.045, 0.26), new THREE.MeshBasicMaterial({ color: 0x050505 }), -0.19, 2.02, 0);
+  add(new THREE.BoxGeometry(0.09, 0.95, 0.3), mRouille, -0.08, 0.72, 0.56, 0, 0, 0.22);
+  return { racine, penche };
+}
+// autour du centre de la zone, a 0,6 m ; tournes vers la Tisseuse (vers -x)
+const ennemis = [[-0.48, -0.36, 0.25], [0.5, -0.32, -0.2], [0.02, 0.6, 0.05]].map(([dx, dz, ry]) => { const e = rouillard(); e.pos0 = V3(C_ZONE.x + dx, SOL_Y, C_ZONE.z + dz); e.ry = Math.PI + ry; e.racine.position.copy(e.pos0); e.racine.rotation.y = e.ry; return e; });
+for (const o of [joueur, cape, brasG.g, brasD.g, ...ennemis.map(e => e.racine)]) o.traverse(m => { if (m.isMesh) m.castShadow = true; });
+
+// ================================================================== systemes de particules
+// Points : braises (rgb HDR, alpha 0 = additif) et cendre (rgb ~0, alpha = assombrit). Melange premultiplie.
+const points = (() => {
+  const N = nq(3200);
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 4), size = new Float32Array(N);
+  const P = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), s: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), turb: new Float32Array(N), seed: new Float32Array(N), kind: new Uint8Array(N), att: new Float32Array(N * 4) };
+  let n = 0;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aCol', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { uScale: { value: 400 } },
+    vertexShader: `attribute vec4 aCol; attribute float aSize; uniform float uScale; varying vec4 vCol;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 64.0); vCol = aCol; }`,
+    fragmentShader: `varying vec4 vCol; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vCol * smoothstep(1.0, 0.15, d); }` });
+  const obj = new THREE.Points(geo, mat); obj.frustumCulled = false; obj.renderOrder = 7; scene.add(obj);
+  function spawn(o) {
+    if (n >= N) return; const i = n++;
+    P.p.set([o.p.x, o.p.y, o.p.z], i * 3); P.v.set([o.v.x, o.v.y, o.v.z], i * 3); P.c.set([o.c[0], o.c[1], o.c[2], o.a ?? 0], i * 4);
+    P.s[i] = o.size; P.age[i] = 0; P.life[i] = o.life; P.grav[i] = o.grav ?? 0; P.drag[i] = o.drag ?? 0; P.turb[i] = o.turb ?? 0; P.seed[i] = rand(0, 100); P.kind[i] = o.kind ?? 0;
+    if (o.attract) P.att.set([o.attract.x, o.attract.y, o.attract.z, o.force], i * 4); else P.att[i * 4 + 3] = 0;
+  }
+  function kill(i) {
+    const j = --n; if (i === j) return;
+    P.p.copyWithin(i * 3, j * 3, j * 3 + 3); P.v.copyWithin(i * 3, j * 3, j * 3 + 3); P.c.copyWithin(i * 4, j * 4, j * 4 + 4); P.att.copyWithin(i * 4, j * 4, j * 4 + 4);
+    for (const k of ['s', 'age', 'life', 'grav', 'drag', 'turb', 'seed', 'kind']) P[k][i] = P[k][j];
+  }
+  function update(dt) {
+    for (let i = 0; i < n; i++) {
+      P.age[i] += dt; if (P.age[i] >= P.life[i]) { kill(i); i--; continue; }
+      const i3 = i * 3, t = P.age[i];
+      if (P.att[i * 4 + 3] > 0) { const f = P.att[i * 4 + 3]; P.v[i3] += (P.att[i * 4] - P.p[i3]) * f * dt; P.v[i3 + 1] += (P.att[i * 4 + 1] - P.p[i3 + 1]) * f * dt; P.v[i3 + 2] += (P.att[i * 4 + 2] - P.p[i3 + 2]) * f * dt; }
+      const tb = P.turb[i], sd = P.seed[i];
+      P.v[i3] += Math.sin(t * 7.0 + sd) * tb * dt; P.v[i3 + 2] += Math.cos(t * 6.1 + sd * 1.7) * tb * dt; P.v[i3 + 1] += Math.sin(t * 4.3 + sd * 2.3) * 0.5 * tb * dt;
+      P.v[i3 + 1] -= P.grav[i] * dt;
+      const k = Math.exp(-P.drag[i] * dt); P.v[i3] *= k; P.v[i3 + 1] *= k; P.v[i3 + 2] *= k;
+      P.p[i3] += P.v[i3] * dt; P.p[i3 + 1] += P.v[i3 + 1] * dt; P.p[i3 + 2] += P.v[i3 + 2] * dt;
+      if (P.p[i3 + 1] < SOL_Y + 0.01) { P.p[i3 + 1] = SOL_Y + 0.01; P.v[i3 + 1] *= -0.2; }
+    }
+  }
+  function write() {
+    for (let i = 0; i < n; i++) {
+      const u = P.age[i] / P.life[i], kd = P.kind[i];
+      const f = kd === 0 ? Math.pow(1 - u, 1.4) * (0.7 + 0.3 * Math.sin(P.age[i] * 34 + P.seed[i])) : kd === 1 ? (1 - u) * smooth(0, 0.12, u) : 1 - u;
+      pos.set(P.p.subarray(i * 3, i * 3 + 3), i * 3);
+      for (let k = 0; k < 4; k++) col[i * 4 + k] = P.c[i * 4 + k] * f;
+      size[i] = P.s[i] * (kd === 0 ? 1 - u * 0.5 : 1);
+    }
+    geo.setDrawRange(0, n);
+    geo.attributes.position.needsUpdate = true; geo.attributes.aCol.needsUpdate = true; geo.attributes.aSize.needsUpdate = true;
+  }
+  return { spawn, update, write, mat, clear() { n = 0; } };
+})();
+
+// Traits : etincelles et gouttes etirees le long de leur vitesse.
+const streaks = (() => {
+  const N = nq(1600);
+  const base = new THREE.InstancedBufferGeometry();
+  base.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+  base.setAttribute('corner', new THREE.BufferAttribute(new Float32Array([0, -1, 1, -1, 1, 1, 0, 1]), 2));
+  base.setIndex([0, 1, 2, 0, 2, 3]);
+  const iPos = new Float32Array(N * 3), iVel = new Float32Array(N * 3), iCol = new Float32Array(N * 4), iDim = new Float32Array(N * 2);
+  for (const [k, a, s] of [['iPos', iPos, 3], ['iVel', iVel, 3], ['iCol', iCol, 4], ['iDim', iDim, 2]]) base.setAttribute(k, new THREE.InstancedBufferAttribute(a, s).setUsage(THREE.DynamicDrawUsage));
+  base.instanceCount = 0;
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { uRes: { value: new THREE.Vector2(1, 1) } },
+    vertexShader: `attribute vec2 corner; attribute vec3 iPos, iVel; attribute vec4 iCol; attribute vec2 iDim; uniform vec2 uRes; varying vec4 vCol; varying vec2 vC;
+      void main(){
+        vec4 ch = projectionMatrix * viewMatrix * vec4(iPos, 1.0); vec4 ct = projectionMatrix * viewMatrix * vec4(iPos - iVel * iDim.x, 1.0);
+        vec2 dir = (ch.xy / ch.w - ct.xy / ct.w) * uRes; float len = length(dir); dir = len > 1e-3 ? dir / len : vec2(1.0, 0.0);
+        vec2 nrm = vec2(-dir.y, dir.x); vec4 c = mix(ch, ct, corner.x);
+        float wpx = max(iDim.y * uRes.y * projectionMatrix[1][1] / c.w * 0.5, 0.8);
+        c.xy += (nrm * corner.y + dir * (0.5 - corner.x) * 2.0) * wpx / uRes * 2.0 * c.w;
+        gl_Position = c; vCol = iCol; vC = corner; }`,
+    fragmentShader: `varying vec4 vCol; varying vec2 vC; void main(){ gl_FragColor = vCol * smoothstep(1.0, 0.2, abs(vC.y)) * mix(1.0, 0.15, vC.x); }` });
+  const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 8; scene.add(obj);
+  const S = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), len: new Float32Array(N), w: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), ink: new Uint8Array(N), burst: new Uint8Array(N), bAt: new Float32Array(N) };
+  let n = 0;
+  function spawn(o) {
+    if (n >= N) return; const i = n++;
+    S.p.set([o.p.x, o.p.y, o.p.z], i * 3); S.v.set([o.v.x, o.v.y, o.v.z], i * 3); S.c.set([o.c[0], o.c[1], o.c[2], o.a ?? 0], i * 4);
+    S.len[i] = o.len ?? 0.03; S.w[i] = o.w ?? 0.02; S.age[i] = 0; S.life[i] = o.life; S.grav[i] = o.grav ?? 0; S.drag[i] = o.drag ?? 0; S.ink[i] = o.ink ? 1 : 0; S.burst[i] = o.burst ? 1 : 0; S.bAt[i] = o.life * (0.3 + 0.35 * rng());
+  }
+  function kill(i) { const j = --n; if (i === j) return; S.p.copyWithin(i * 3, j * 3, j * 3 + 3); S.v.copyWithin(i * 3, j * 3, j * 3 + 3); S.c.copyWithin(i * 4, j * 4, j * 4 + 4); for (const k of ['len', 'w', 'age', 'life', 'grav', 'drag', 'ink', 'burst', 'bAt']) S[k][i] = S[k][j]; }
+  function update(dt) {
+    for (let i = 0; i < n; i++) {
+      S.age[i] += dt; if (S.age[i] >= S.life[i]) { kill(i); i--; continue; }
+      if (S.burst[i] && S.age[i] > S.bAt[i]) { // l'etincelle de forge eclate en petite etoile
+        S.burst[i] = 0; const j3 = i * 3, nb = 3 + Math.floor(rng() * 3);
+        for (let k = 0; k < nb; k++) spawn({ p: V3(S.p[j3], S.p[j3 + 1], S.p[j3 + 2]), v: V3(S.v[j3] * 0.3 + (rng() * 2 - 1) * 2.2, S.v[j3 + 1] * 0.3 + (rng() * 1.8 - 0.6) * 2.2, S.v[j3 + 2] * 0.3 + (rng() * 2 - 1) * 2.2), c: [S.c[i * 4] * 1.3, S.c[i * 4 + 1] * 1.3, S.c[i * 4 + 2] * 1.3], a: 0, len: 0.025, w: S.w[i] * 0.6, life: 0.08 + rng() * 0.14, grav: 3, drag: 3 });
+      }
+      const i3 = i * 3; S.v[i3 + 1] -= S.grav[i] * dt;
+      const k = Math.exp(-S.drag[i] * dt); S.v[i3] *= k; S.v[i3 + 1] *= k; S.v[i3 + 2] *= k;
+      S.p[i3] += S.v[i3] * dt; S.p[i3 + 1] += S.v[i3 + 1] * dt; S.p[i3 + 2] += S.v[i3 + 2] * dt;
+      if (S.p[i3 + 1] < SOL_Y + 0.01) {
+        if (S.ink[i]) splats.spawn({ x: S.p[i3], z: S.p[i3 + 2], size: 0.05 + S.w[i] * 2 + rand(0, 0.06), glow: S.c[i * 4] > 0.3 ? 1.0 : 0.2, stretch: 1 + rand(0, 0.9), rot: Math.atan2(S.v[i3 + 2], S.v[i3]) });
+        kill(i); i--; continue;
+      }
+    }
+  }
+  function write() {
+    for (let i = 0; i < n; i++) {
+      const u = S.age[i] / S.life[i], f = S.ink[i] ? 1 - smooth(0.85, 1, u) : Math.pow(1 - u, 1.2);
+      iPos.set(S.p.subarray(i * 3, i * 3 + 3), i * 3); iVel.set(S.v.subarray(i * 3, i * 3 + 3), i * 3);
+      for (let k = 0; k < 4; k++) iCol[i * 4 + k] = S.c[i * 4 + k] * f;
+      iDim[i * 2] = S.len[i]; iDim[i * 2 + 1] = S.w[i];
+    }
+    base.instanceCount = n;
+    for (const a of ['iPos', 'iVel', 'iCol', 'iDim']) base.attributes[a].needsUpdate = true;
+  }
+  return { spawn, update, write, mat, clear() { n = 0; } };
+})();
+
+// Fumee d'encre et halos : quads face camera, bruit qui se dechire avec l'age.
+const sprites = (() => {
+  const N = nq(320);
+  const base = new THREE.InstancedBufferGeometry();
+  base.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+  base.setAttribute('corner', new THREE.BufferAttribute(new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]), 2));
+  base.setIndex([0, 1, 2, 0, 2, 3]);
+  const A = { iPos: new Float32Array(N * 3), iCol: new Float32Array(N * 4), iMisc: new Float32Array(N * 4) }; // misc = taille, rotation, age, graine+genre
+  base.setAttribute('iPos', new THREE.InstancedBufferAttribute(A.iPos, 3).setUsage(THREE.DynamicDrawUsage));
+  base.setAttribute('iCol', new THREE.InstancedBufferAttribute(A.iCol, 4).setUsage(THREE.DynamicDrawUsage));
+  base.setAttribute('iMisc', new THREE.InstancedBufferAttribute(A.iMisc, 4).setUsage(THREE.DynamicDrawUsage));
+  base.instanceCount = 0;
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { tNoise: { value: noiseTex }, uEmber: { value: EMBER } },
+    vertexShader: `attribute vec2 corner; attribute vec3 iPos; attribute vec4 iCol, iMisc; varying vec2 vUv; varying vec4 vCol; varying vec3 vM;
+      void main(){ vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]); vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+        float c = cos(iMisc.y), s = sin(iMisc.y); vec2 k = vec2(corner.x * c - corner.y * s, corner.x * s + corner.y * c) * iMisc.x;
+        vec3 w = iPos + right * k.x + up * k.y; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
+        vUv = corner * 0.5 + 0.5; vCol = iCol; vM = vec3(iMisc.z, fract(iMisc.w), floor(iMisc.w)); }`,
+    fragmentShader: `uniform sampler2D tNoise; uniform vec3 uEmber; varying vec2 vUv; varying vec4 vCol; varying vec3 vM;
+      void main(){ vec2 p = vUv * 2.0 - 1.0; float r = length(p); float age = vM.x;
+        if (vM.z > 0.5 && vM.z < 1.5) { float g = max(exp(-r * r * 6.0) - 0.0025, 0.0) * smoothstep(1.0, 0.55, r) * (1.0 - age) * 1.3; gl_FragColor = vec4(vCol.rgb * g, 0.0); return; }
+        vec2 nuv = vUv * 0.5 + vec2(vM.y * 7.0, vM.y * 3.1) + vec2(0.0, age * 0.1);
+        float n = texture2D(tNoise, nuv).r, n2 = texture2D(tNoise, nuv * 2.2 + 0.37).g;
+        float shape = smoothstep(1.0, 0.15, r + (n - 0.5) * 1.1);
+        float thr = age * 0.85; float dens = smoothstep(thr, thr + 0.28, shape * (0.45 + 0.7 * n2));
+        float a = dens * vCol.a * (1.0 - smoothstep(0.7, 1.0, age));
+        if (vM.z > 1.5) { float ad = min(a * 1.15, 1.0); gl_FragColor = vec4(vCol.rgb * (0.5 + 0.8 * vUv.y) * (0.65 + 0.7 * n2) * ad, ad); return; } // poussiere en volume
+        float lisiere = smoothstep(0.0, 0.35, dens) * (1.0 - smoothstep(0.35, 0.95, dens));
+        float chaud = vCol.r * (1.0 - smoothstep(0.0, 0.7, age));
+        vec3 corps = mix(vec3(0.012, 0.007, 0.012), vec3(0.055, 0.018, 0.08), chaud * (1.0 - n2 * 0.6));
+        vec2 cel = vUv * 16.0 + vM.y * 37.0; float pt = fract(sin(dot(floor(cel), vec2(12.9898, 78.233))) * 43758.5453);
+        float etoile = step(0.978, pt) * smoothstep(0.35, 0.05, length(fract(cel) - 0.5)) * (1.0 - age) * (0.6 + 0.4 * sin(age * 30.0 + pt * 50.0));
+        gl_FragColor = vec4(corps * a + vec3(0.62, 0.32, 1.0) * etoile * a * 2.0, a); }` });
+  const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 3; scene.add(obj);
+  const L = [];
+  function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v ? o.v.clone() : V3(), s0: o.size, grow: o.grow ?? 1, rot: rand(0, 6.28), spin: rand(-1, 1) * (o.spin ?? 0.8), age: 0, life: o.life, col: o.col, a: o.a ?? 0.8, glow: o.glow ?? 0, drag: o.drag ?? 2, rise: o.rise ?? 0.3, seed: rng(), kind: o.kind ?? 0 }); }
+  function update(dt) {
+    for (let i = L.length - 1; i >= 0; i--) {
+      const s = L[i]; s.age += dt; if (s.age >= s.life) { L.splice(i, 1); continue; }
+      const k = Math.exp(-s.drag * dt); s.v.multiplyScalar(k); s.v.y += s.rise * dt; s.p.addScaledVector(s.v, dt); s.rot += s.spin * dt;
+    }
+  }
+  function write() {
+    let i = 0;
+    for (const s of L) {
+      const u = s.age / s.life;
+      A.iPos.set([s.p.x, s.p.y, s.p.z], i * 3);
+      if (s.kind === 1) A.iCol.set(s.col, i * 4); else if (s.kind === 2) A.iCol.set([s.col[0], s.col[1], s.col[2], s.a], i * 4); else A.iCol.set([s.glow, 0, 0, s.a], i * 4);
+      A.iMisc.set([s.s0 * (1 + s.grow * Math.sqrt(u)), s.rot, u, s.kind + Math.min(s.seed, 0.999)], i * 4);
+      i++;
+    }
+    base.instanceCount = i;
+    for (const a of ['iPos', 'iCol', 'iMisc']) base.attributes[a].needsUpdate = true;
+  }
+  return { spawn, update, write, clear() { L.length = 0; } };
+})();
+
+// Eclats de pierre (froids) et de braise (chauds).
+const debris = (() => {
+  const N = nq(70), geo = new THREE.DodecahedronGeometry(1, 0);
+  const froid = new THREE.InstancedMesh(geo, flat(0x272a22), N), chaud = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }), N);
+  chaud.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
+  for (const m of [froid, chaud]) { m.count = 0; m.frustumCulled = false; scene.add(m); }
+  const L = [], M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3();
+  function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v.clone(), ax: V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(), ang: rand(0, 6), spin: rand(8, 20), s: o.s, age: 0, life: o.life ?? 2.2, hot: !!o.hot }); }
+  function update(dt) {
+    for (let i = L.length - 1; i >= 0; i--) {
+      const d = L[i]; d.age += dt; if (d.age > d.life) { L.splice(i, 1); continue; }
+      d.v.y -= 9.8 * dt; d.p.addScaledVector(d.v, dt); d.ang += d.spin * dt;
+      if (d.p.y < SOL_Y + d.s) { d.p.y = SOL_Y + d.s; d.v.y *= -0.32; d.v.x *= 0.55; d.v.z *= 0.55; d.spin *= 0.6; }
+    }
+  }
+  function write() {
+    let a = 0, b = 0;
+    for (const d of L) {
+      q.setFromAxisAngle(d.ax, d.ang); const k = 1 - smooth(0.8, 1, d.age / d.life); sc.setScalar(d.s * k); M.compose(d.p, q, sc);
+      if (d.hot) { const h = Math.max(0.0, 2.5 * Math.exp(-d.age * 2.5)); chaud.setMatrixAt(b, M); chaud.instanceColor.setXYZ(b, 0.07 + EMBER.x * h * 0.4, 0.014 + EMBER.y * h * 0.4, 0.045 + EMBER.z * h * 0.4); b++; }
+      else { froid.setMatrixAt(a, M); a++; }
+    }
+    froid.count = a; chaud.count = b; froid.instanceMatrix.needsUpdate = true; chaud.instanceMatrix.needsUpdate = true; chaud.instanceColor.needsUpdate = true;
+  }
+  return { spawn, update, write, clear() { L.length = 0; } };
+})();
+
+// Taches d'encre au sol (fraiches et rougeoyantes, puis refroidies en encre).
+const FS_SPLAT = `uniform sampler2D tNoise; uniform float uSeed, uLife, uGlow, uRing; uniform vec3 uEmber; varying vec2 vUv;
+${GLSL_COMMUN}
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p); float ang = atan(p.y, p.x);
+  float n = texture2D(tNoise, vec2(ang * 0.16 + uSeed, uSeed * 0.3)).r;
+  float edge = 0.55 + (n - 0.5) * 0.6; float blob = smoothstep(edge, edge - 0.07, r);
+  float sat = step(0.78, texture2D(tNoise, p * 0.6 + uSeed * 1.3).a) * smoothstep(1.0, 0.7, r) * step(edge + 0.06, r);
+  float m = max(blob, sat);
+  if (uRing > 0.0) m *= mix(1.0, smoothstep(0.15, 0.55, r / max(edge, 0.01)) * 0.75 + 0.25, uRing);
+  float a = m * 0.86 * uLife;
+  gl_FragColor = vec4(vec3(0.03, 0.008, 0.03) * a + miasme(uGlow * 0.6 * (1.15 - r) * (0.6 + 0.6 * n)) * m * uLife, a); }`;
+const splats = (() => {
+  const N = nq(70), list = [], geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+  for (let i = 0; i < N; i++) {
+    const m = new THREE.Mesh(geo, new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -2, uniforms: { tNoise: { value: noiseTex }, uSeed: { value: 0 }, uLife: { value: 1 }, uGlow: { value: 0 }, uRing: { value: 0 }, uEmber: { value: EMBER } }, vertexShader: VS_UV, fragmentShader: FS_SPLAT }));
+    m.visible = false; m.renderOrder = 2; scene.add(m); list.push({ m, age: 0 });
+  }
+  let next = 0;
+  function spawn(o) {
+    const s = list[next]; next = (next + 1) % N;
+    Object.assign(s, { age: 0, life: o.life ?? 5, glow0: o.glow ?? 0, grow: o.grow ?? 0, size: o.size, stretch: o.stretch ?? 1, cool: o.cool ?? 3 });
+    s.m.visible = true; s.m.position.set(o.x, SOL_Y + 0.004 + rand(0, 0.003), o.z); s.m.rotation.y = -(o.rot ?? rand(0, 6.28));
+    s.m.material.uniforms.uSeed.value = rand(0, 10); s.m.material.uniforms.uRing.value = o.ring ?? 0; s.m.scale.set(o.size * s.stretch, 1, o.size);
+  }
+  function update(dt) {
+    for (const s of list) {
+      if (!s.m.visible) continue; s.age += dt; const u = s.m.material.uniforms;
+      u.uLife.value = 1 - smooth(s.life * 0.6, s.life, s.age); u.uGlow.value = s.glow0 * Math.exp(-s.age * s.cool);
+      if (s.grow > 0) { const g = s.size * (0.25 + 0.75 * easeOutCubic(clamp(s.age / s.grow))); s.m.scale.set(g * s.stretch, 1, g); }
+      if (s.age >= s.life) s.m.visible = false;
+    }
+  }
+  return { spawn, update, clear() { for (const s of list) s.m.visible = false; } };
+})();
+// ================================================================== pieces d'effet
+const fx = new THREE.Group(); scene.add(fx);
+const distFx = new THREE.Group(); distScene.add(distFx);
+
+// Etoile d'impact, anneaux et ondes (panneaux face camera).
+const FS_STAR = `uniform float uT; uniform vec3 uCore, uEmber; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float k = 1.0 - uT;
+  float h = exp(-abs(p.y) * 70.0) * exp(-abs(p.x) * 2.2), vv = exp(-abs(p.x) * 70.0) * exp(-abs(p.y) * 3.4) * 0.65;
+  vec2 q = mat2(0.866, -0.5, 0.5, 0.866) * p; float dg = exp(-abs(q.y) * 90.0) * exp(-abs(q.x) * 3.0) * 0.5;
+  vec2 q2 = mat2(0.5, 0.866, -0.866, 0.5) * p; float dg2 = exp(-abs(q2.y) * 110.0) * exp(-abs(q2.x) * 4.0) * 0.35;
+  float core = exp(-dot(p, p) * 40.0), bord = 1.0 - smoothstep(0.55, 1.0, length(p));
+  gl_FragColor = vec4((uCore * (h + vv + dg + dg2 + core * 2.5) * k * bord) * 3.2, 0.0); }`;
+const FS_DSHOCK = `uniform float uT, uStrength; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p);
+  float ring = exp(-pow((r - uT * 0.9) * 8.0, 2.0)) * (1.0 - uT) * smoothstep(1.0, 0.85, r);
+  gl_FragColor = vec4((r > 1e-3 ? p / r : vec2(0.0)) * ring * uStrength, 0.0, 1.0); }`;
+const FS_DHAZE = `uniform sampler2D tNoise; uniform float uTime, uStrength; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float m = smoothstep(1.0, 0.15, length(p));
+  vec2 n = texture2D(tNoise, vUv * 0.9 + vec2(0.0, -uTime * 0.7)).rg - 0.5;
+  gl_FragColor = vec4(n * uStrength * m, 0.0, 1.0); }`;
+const panneaux = [];
+function panneau(fs, p, s0, s1, life, opts = {}) {
+  const dist = fs === FS_DSHOCK || fs === FS_DHAZE;
+  const mat = new THREE.ShaderMaterial({ ...(dist ? ADDITIF : { ...PREMUL, depthTest: !opts.top }), vertexShader: VS_UV, fragmentShader: fs,
+    uniforms: { uT: { value: 0 }, uCore: { value: CORE }, uEmber: { value: EMBER }, uStrength: { value: opts.strength ?? 0.03 }, tNoise: { value: noiseTex }, uTime: { value: 0 } } });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); m.position.copy(p); m.renderOrder = 9;
+  (dist ? distFx : fx).add(m);
+  const o = { m, mat, age: 0, life, s0, s1, follow: opts.follow, hold: !!opts.hold };
+  panneaux.push(o); return o;
+}
+function halo(p, size, life, k = 1.4) { sprites.spawn({ p, size, grow: 0.6, life, kind: 1, col: [EMBER.x * k, EMBER.y * k, EMBER.z * k, 0], drag: 0, rise: 0, spin: 0 }); }
+
+// ---------------------------------------------------------------- le dard tisse
+// Les fils : les cordes de la colonne, le dard, le fil de couture, les liens, les poils et les franges sont tous des tubes
+// construits sur la carte graphique. Chaque fil est une ligne de 64 points (position, rayon) recalculee a chaque image ;
+// le shader en fait un tube avec une normale transportee le long du fil (aucune torsion parasite), des brins en helice
+// (une vraie corde), une chair humide, et une seve qui luit par plaques.
+const FILS = (() => {
+  const SEG = 64, MAX = 176, RAD = LOW ? 4 : 6;
+  const dP = new Float32Array(SEG * MAX * 4), dN = new Float32Array(SEG * MAX * 4), dI = new Float32Array(MAX * 4);
+  const mk = (d, w, h) => { const t = new THREE.DataTexture(d, w, h, THREE.RGBAFormat, THREE.FloatType); t.magFilter = t.minFilter = THREE.NearestFilter; t.needsUpdate = true; return t; };
+  const tP = mk(dP, SEG, MAX), tN = mk(dN, SEG, MAX), tI = mk(dI, 1, MAX);
+  const geo = new THREE.BufferGeometry(), nV = MAX * SEG * (RAD + 1), af = new Float32Array(nV * 3), idx = new Uint32Array(MAX * (SEG - 1) * RAD * 6);
+  let v = 0, w = 0;
+  for (let r = 0; r < MAX; r++) for (let i = 0; i < SEG; i++) for (let k = 0; k <= RAD; k++) { af[v * 3] = r; af[v * 3 + 1] = i; af[v * 3 + 2] = k / RAD * Math.PI * 2; v++; }
+  for (let r = 0; r < MAX; r++) for (let i = 0; i < SEG - 1; i++) for (let k = 0; k < RAD; k++) { const a = (r * SEG + i) * (RAD + 1) + k, b = a + 1, c = a + RAD + 1, d = c + 1; idx.set([a, b, c, b, d, c], w); w += 6; }
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nV * 3), 3));
+  geo.setAttribute('aFil', new THREE.BufferAttribute(af, 3)); geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.boundingSphere = new THREE.Sphere(V3(), 60);
+  const GLSL_FIL_V = `uniform sampler2D tFilsP, tFilsN, tFilsI; attribute vec3 aFil;
+vec3 filPos(out vec3 nrm, out vec3 T, out vec4 inf, out float glow) {
+  float v = (aFil.x + 0.5) / ${MAX}.0, x0 = (aFil.y + 0.5) / ${SEG}.0;
+  vec4 P = texture2D(tFilsP, vec2(x0, v)), Nn = texture2D(tFilsN, vec2(x0, v));
+  vec3 Pa = texture2D(tFilsP, vec2((max(aFil.y - 1.0, 0.0) + 0.5) / ${SEG}.0, v)).xyz, Pb = texture2D(tFilsP, vec2((min(aFil.y + 1.0, ${SEG - 1}.0) + 0.5) / ${SEG}.0, v)).xyz;
+  T = Pb - Pa; float lt = length(T); T = lt > 1e-6 ? T / lt : vec3(0.0, 1.0, 0.0);
+  vec3 B1 = Nn.xyz - T * dot(Nn.xyz, T); float lb = length(B1); B1 = lb > 1e-5 ? B1 / lb : normalize(cross(T, vec3(0.31, 0.83, 0.46)));
+  vec3 B2 = cross(T, B1);
+  nrm = cos(aFil.z) * B1 + sin(aFil.z) * B2;
+  inf = texture2D(tFilsI, vec2(0.5, v)); glow = Nn.w;
+  return P.xyz + nrm * P.w;
+}`;
+  const uF = { tFilsP: { value: tP }, tFilsN: { value: tN }, tFilsI: { value: tI }, tNoise: { value: noiseTex }, uTime: uSol.uTime };
+  const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.3, envMap, envMapIntensity: 0.6 });
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, uF);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>\n${GLSL_FIL_V}\nvarying vec3 vFilT; varying vec4 vFilI; varying vec2 vFil; varying float vGlow;`)
+      .replace('#include <beginnormal_vertex>', `vec3 filN, filT; vec4 filI; float filG; vec3 filP = filPos(filN, filT, filI, filG);
+vec3 objectNormal = filN; vFilT = filT; vFilI = filI; vFil = vec2(aFil.y / ${SEG - 1}.0, aFil.z); vGlow = filG;`)
+      .replace('#include <begin_vertex>', 'vec3 transformed = filP;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+uniform sampler2D tNoise; uniform float uTime; varying vec3 vFilT; varying vec4 vFilI; varying vec2 vFil; varying float vGlow;
+${GLSL_COMMUN}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float fS = vFil.x * vFilI.x, fFam = vFilI.y, fGr = vFilI.z, fSec = vFilI.w, fAng = vFil.y;
+// les brins de la corde, en helice : quatre pour les cordes, trois pour le fil, deux pour les poils et les franges
+float fNb = fFam < 0.5 ? 4.0 : fFam < 1.5 ? 3.0 : 2.0, fPas = fFam < 0.5 ? 6.0 : fFam < 1.5 ? 24.0 : 34.0;
+float fHel = fract(fAng * 0.15915 * fNb + fS * fPas + fGr);
+float fSillon = smoothstep(0.0, 0.24, fHel) * smoothstep(1.0, 0.76, fHel);
+float fN1 = texture2D(tNoise, vec2(fS * 0.37 + fGr * 3.1, fGr)).r, fN2 = texture2D(tNoise, vec2(fS * 2.9 + fGr, fAng * 0.4775)).g, fN3 = texture2D(tNoise, vec2(fS * 11.0, fAng * 0.955 + fGr)).a;
+vec3 fBase = fFam < 0.5 ? vec3(0.085, 0.018, 0.05) : fFam < 1.5 ? vec3(0.15, 0.07, 0.095) : fFam < 2.5 ? vec3(0.16, 0.14, 0.17) : vec3(0.05, 0.042, 0.033);
+vec3 fFibre = fFam < 0.5 ? vec3(0.2, 0.07, 0.1) : fFam < 1.5 ? vec3(0.28, 0.16, 0.19) : fFam < 2.5 ? vec3(0.3, 0.27, 0.31) : vec3(0.09, 0.075, 0.058);
+vec3 fAlb = mix(fBase, fFibre, smoothstep(0.5, 0.9, fN3) * fSillon * 0.85) * (0.55 + 0.75 * fN1) * (0.45 + 0.55 * fSillon);
+fAlb = mix(fAlb, vec3(0.06, 0.052, 0.045) * (0.7 + 0.5 * fN2), fSec);   // la chair seche : grise et brune
+diffuseColor.rgb = fAlb;`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = fFam < 2.5 ? mix(mix(0.26, 0.62, fN2), 0.92, fSec) : 0.93;`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ vec3 tv = normalize((viewMatrix * vec4(vFilT, 0.0)).xyz); normal = normalize(normal + tv * sin(fHel * 6.2832) * (fFam < 2.5 ? 0.5 : 0.3)); }`)
+      .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+material.clearcoat *= step(fFam, 2.5) * (1.0 - fSec);`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+{ float plaque = smoothstep(0.48, 0.85, texture2D(tNoise, vec2(fS * 0.33 - uTime * 0.18 + fGr, fGr * 1.7)).r);
+  float rim = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.0);
+  float g = vGlow * (fFam > 0.5 && fFam < 1.5 ? 0.55 + 0.45 * plaque : 0.08 + 0.92 * plaque) * (0.5 + 0.5 * fSillon) * (1.0 - fSec);   // le fil luit d'un bout a l'autre ; les cordes, par plaques
+  totalEmissiveRadiance += miasme(g * (0.6 + 0.6 * rim)) + vec3(0.11, 0.025, 0.15) * rim * rim * (0.6 + 0.8 * plaque) * (1.0 - fSec) * step(fFam, 1.5); }`);
+  };
+  mat.customProgramCacheKey = () => 'fils-miasme';
+  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  depth.onBeforeCompile = sh => { Object.assign(sh.uniforms, uF); sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + GLSL_FIL_V).replace('#include <begin_vertex>', 'vec3 filN, filT; vec4 filI; float filG; vec3 transformed = filPos(filN, filT, filI, filG);'); };
+  depth.customProgramCacheKey = () => 'fils-ombre';
+  const mesh = new THREE.Mesh(geo, mat); mesh.customDepthMaterial = depth; mesh.frustumCulled = false; mesh.castShadow = !LOW; mesh.receiveShadow = true; scene.add(mesh);
+  const brins = [];
+  function brin(fam, graine) { const b = { row: brins.length, fam, graine: graine ?? rng(), actif: false, f: null, sec: 0, vu: false }; if (b.row < MAX) brins.push(b); return b; }
+  const p = V3(), G = { r: 0, g: 0 }, pts = new Float32Array(SEG * 3), N0 = V3(), T0 = V3(), Tn = V3();
+  function ecrire() {
+    for (const b of brins) {
+      const o = b.row * SEG * 4;
+      if (!b.actif || !b.f) { if (b.vu) { for (let i = 0; i < SEG; i++) dP[o + i * 4 + 3] = 0; b.vu = false; } continue; }
+      b.vu = true; let L = 0;
+      for (let i = 0; i < SEG; i++) {
+        G.r = 0; G.g = 0; b.f(i / (SEG - 1), p, G);
+        pts[i * 3] = p.x; pts[i * 3 + 1] = p.y; pts[i * 3 + 2] = p.z;
+        dP[o + i * 4] = p.x; dP[o + i * 4 + 1] = p.y; dP[o + i * 4 + 2] = p.z; dP[o + i * 4 + 3] = Math.max(0, G.r); dN[o + i * 4 + 3] = G.g;
+        if (i) L += Math.hypot(p.x - pts[i * 3 - 3], p.y - pts[i * 3 - 2], p.z - pts[i * 3 - 1]);
+      }
+      // normale transportee le long du fil : chaque anneau garde l'orientation du precedent
+      const g = b.graine * 6.283; N0.set(Math.cos(g), 0.37, Math.sin(g));
+      for (let i = 0; i < SEG; i++) {
+        const a = Math.max(0, i - 1), c = Math.min(SEG - 1, i + 1);
+        Tn.set(pts[c * 3] - pts[a * 3], pts[c * 3 + 1] - pts[a * 3 + 1], pts[c * 3 + 2] - pts[a * 3 + 2]);
+        const lt = Tn.length(); if (lt > 1e-7) Tn.multiplyScalar(1 / lt); else Tn.set(0, 1, 0);
+        N0.addScaledVector(Tn, -N0.dot(Tn)); let ln = N0.length();
+        if (ln < 1e-4) { N0.set(0.31, 0.83, 0.46).addScaledVector(Tn, -Tn.dot(T0.set(0.31, 0.83, 0.46))); ln = N0.length(); }
+        N0.multiplyScalar(1 / ln);
+        dN[o + i * 4] = N0.x; dN[o + i * 4 + 1] = N0.y; dN[o + i * 4 + 2] = N0.z;
+      }
+      dI[b.row * 4] = L; dI[b.row * 4 + 1] = b.fam; dI[b.row * 4 + 2] = b.graine; dI[b.row * 4 + 3] = b.sec;
+    }
+    tP.needsUpdate = true; tN.needsUpdate = true; tI.needsUpdate = true;
+  }
+  return { brin, ecrire, mesh, eteindre() { for (const b of brins) b.actif = false; } };
+})();
+
+// Le chemin du dard : de la main, il plonge dans les dalles (E0), file dessous, ressort en arc (X1 -> E1, puis X2 -> E2),
+// et jaillit au centre de la zone, jusqu'au sommet de la colonne. Abscisse curviligne en metres.
+const CHEMIN = (() => {
+  const P = [], S = [], M = {}; let L = 0;
+  const pousser = q => { if (P.length) L += P[P.length - 1].distanceTo(q); P.push(q.clone()); S.push(L); };
+  function construire(depart) {
+    P.length = 0; S.length = 0; L = 0;
+    const seg = (a, b, n, h) => { for (let k = 1; k <= n; k++) { const l = k / n, q = a.clone().lerp(b, l); q.y = lerp(a.y, b.y, l) + h * Math.sin(Math.PI * l); pousser(q); } };
+    pousser(depart);
+    seg(depart, COUTURE.E0, 10, 0); M.E0 = L;
+    seg(COUTURE.E0, COUTURE.X1, 26, -0.24); M.X1 = L;
+    seg(COUTURE.X1, COUTURE.E1, 24, 0.56); M.E1 = L;
+    seg(COUTURE.E1, COUTURE.X2, 26, -0.24); M.X2 = L;
+    seg(COUTURE.X2, COUTURE.E2, 24, 0.5); M.E2 = L;
+    seg(COUTURE.E2, C_ZONE, 26, -0.28); M.C = L;
+    seg(C_ZONE, C_ZONE.clone().add(V3(0, H_COL + 0.05, 0)), 26, 0); M.haut = L;
+  }
+  function at(s, out = V3()) {
+    if (!P.length) return out.set(0, 0, 0);
+    s = clamp(s, 0, L); let a = 0, b = S.length - 1;
+    while (b - a > 1) { const m = (a + b) >> 1; if (S[m] <= s) a = m; else b = m; }
+    return out.copy(P[a]).lerp(P[b], (s - S[a]) / Math.max(1e-6, S[b] - S[a]));
+  }
+  const ta = V3(), tb = V3();
+  function tangente(s, out = V3()) { at(s - 0.04, ta); at(s + 0.04, tb); return out.copy(tb).sub(ta).normalize(); }
+  return { construire, at, tangente, M, get L() { return L; }, get pret() { return P.length > 0; } };
+})();
+// abscisse sous terre (pour la crete de dalles) a partir de l'abscisse du dard sur le chemin
+function sousTerre(s) {
+  const M = CHEMIN.M, l0 = SOUS_S[1] - SOUS_S[0], l1 = SOUS_S[2] - SOUS_S[1], l2 = Math.hypot(C_ZONE.x - COUTURE.E2.x, C_ZONE.z - COUTURE.E2.z);
+  if (s < M.E0) return -1;
+  if (s < M.X1) return SOUS_S[0] + l0 * (s - M.E0) / (M.X1 - M.E0);
+  if (s < M.E1) return SOUS_S[0] + l0;
+  if (s < M.X2) return SOUS_S[1] + l1 * (s - M.E1) / (M.X2 - M.E1);
+  if (s < M.E2) return SOUS_S[1] + l1;
+  if (s < M.C) return SOUS_S[2] + l2 * (s - M.E2) / (M.C - M.E2);
+  return SOUS_S[2] + l2 + 0.5;
+}
+
+// L'epine du dard : une corne de chitine courbe, annelee, avec trois barbes ; sombre et irisee.
+const matChitine = new THREE.MeshPhysicalMaterial({ color: 0x1c1016, roughness: 0.3, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.14, iridescence: LOW ? 0 : 0.75, iridescenceIOR: 1.45, iridescenceThicknessRange: [220, 560], envMap, envMapIntensity: 1.2 });
+const epine = new THREE.Group(); scene.add(epine);
+{
+  const prof = []; for (let k = 0; k <= 22; k++) { const f = k / 22, r = 0.046 * Math.pow(1 - f, 0.75) * (1 + 0.13 * Math.sin(k * 2.2)) + 0.0006; prof.push(new THREE.Vector2(r, f * 0.32)); }
+  const g = new THREE.LatheGeometry(prof, 14), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setX(i, p.getX(i) + 0.75 * y * y); }   // la corne se courbe
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, matChitine); m.castShadow = true; epine.add(m);
+  for (let k = 0; k < 3; k++) { const a = k * 2.094, b = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.08, 6), matChitine); b.position.set(Math.cos(a) * 0.04, 0.06, Math.sin(a) * 0.04); b.quaternion.setFromUnitVectors(V3(0, 1, 0), V3(Math.cos(a) * 0.8, -1, Math.sin(a) * 0.8).normalize()); epine.add(b); }   // barbes tournees vers l'arriere
+}
+epine.visible = false;
+const lueurDard = new THREE.PointLight(0xa36cff, 0, 0, 2); scene.add(lueurDard);
+const lueurCol = new THREE.PointLight(0xa36cff, 0, 0, 2); scene.add(lueurCol);   // la seve allume la colonne de l'interieur : elle filtre entre les mailles
+
+// ---------------------------------------------------------------- les brins et leurs formes
+const UP = V3(0, 1, 0), AXE_Z = V3(0, 0, 1);
+const fA = V3(), fB = V3(), fC = V3(), fD = V3(), fE = V3(), fT = V3(), fN = V3(), fBn = V3();
+const bout = (u, a = 0.05, b = 0.05) => smooth(0, a, u) * smooth(1, 1 - b, u);   // les fils s'amincissent aux deux bouts
+function bez(p0, p1, p2, p3, u, out) { const a = 1 - u, k0 = a * a * a, k1 = 3 * a * a * u, k2 = 3 * a * u * u, k3 = u * u * u; return out.set(k0 * p0.x + k1 * p1.x + k2 * p2.x + k3 * p3.x, k0 * p0.y + k1 * p1.y + k2 * p2.y + k3 * p3.y, k0 * p0.z + k1 * p1.z + k2 * p2.z + k3 * p3.z); }
+// l'etat du moment, calcule une fois par image avant les fils
+const E = { t: 0, tension: 0, ouvre: 0, coupe: 0, fane: 0, us: 1, dardS: -1, sous: -1, tete: V3(), dir: V3(1, 0, 0), coupeP: V3(), main: V3(), cheveuxC: V3() };
+// la colonne : profil d'un cocon, plus large au pied, une taille, un ventre, puis elle se referme au-dessus des betes
+function rayonCol(u) { return 1.24 + 0.32 * Math.exp(-u * 7) + 0.16 * Math.exp(-Math.pow((u - 0.64) / 0.16, 2)) - 0.82 * smooth(0.78, 1.0, u); }
+const NCORDE = 48, MCORDE = 24;
+const cordes = Array.from({ length: NCORDE }, (_, c) => { const dir = c % 2 ? -1 : 1, k = c >> 1; return { b: FILS.brin(0), dir, phi0: 2 * Math.PI * k / MCORDE + (dir < 0 ? Math.PI / MCORDE : 0) + 0.2, ep: 0.036 + 0.016 * ((k * 7 + c) % 5) / 4 }; });
+function angleCol(cd, u) { return cd.phi0 + cd.dir * 1.15 * Math.PI * (1 + 0.22 * E.tension) * u; }
+function pointColonne(cd, u, out) {
+  const phi = angleCol(cd, u);
+  // armure : a chaque croisement, une corde passe dessus et l'autre dessous (decalage de pi/M entre les deux sens)
+  const r = rayonCol(u) * (1 - 0.1 * E.tension) + 0.04 * cd.dir * Math.sin(MCORDE * phi) + 0.025 * Math.sin(u * 23 + cd.phi0 * 5);
+  const ferme = smooth(0.9, 1.0, u);   // le haut se referme en cocon sur l'epine
+  return out.set(C_ZONE.x + Math.cos(phi) * r * (1 - 0.7 * ferme), SOL_Y + u * H_COL + ferme * 0.12, C_ZONE.z + Math.sin(phi) * r * (1 - 0.7 * ferme));
+}
+function lueurBrin(u, t, base) {
+  let g = base;
+  if (t > T.eclot) g += 1.5 * Math.exp(-(t - T.eclot) / 230) * smooth(0, 0.15, u);   // l'eclosion : la seve monte dans les cordes, puis s'eteint
+  for (const tb of T.batt) if (t > tb && t < tb + 700) g += 0.85 * Math.exp(-Math.pow((u - (t - tb) / 430) / 0.08, 2));   // un battement de seve remonte les cordes
+  return g;
+}
+function formeCorde(cd) {
+  return (u, out, G) => {
+    const t = E.t, te = t - T.eclot, g = easeOutCubic(clamp(te / 170)), uu = u * g;
+    pointColonne(cd, uu, fA);
+    const k = easeInOut(clamp((te - 40) / 340));
+    if (k < 1) {   // la gerbe : les cordes fusent du centre en fontaine, puis se tissent
+      const a = cd.phi0 + Math.sin(cd.phi0 * 3 + uu * 4) * 0.25, rr = 0.1 + 1.0 * Math.pow(uu, 1.6);
+      fB.set(C_ZONE.x + Math.cos(a) * rr, SOL_Y + uu * H_COL * 1.12, C_ZONE.z + Math.sin(a) * rr);
+      fA.lerp(fB, 1 - k);
+    }
+    if (E.ouvre > 0 && uu > E.us) {   // la floraison : au-dessus de la fente, la corde se recourbe en petale
+      pointColonne(cd, E.us, fC);
+      // six petales : les cordes se rassemblent autour de l'angle du petale ; chacun est etroit au bout, large au milieu
+      const phs = angleCol(cd, E.us), pas = Math.PI / 3, php = Math.round((phs - 0.1) / pas) * pas + 0.1, d = phs - php, rS = rayonCol(E.us);
+      const th = 2.7 * E.ouvre + 0.8 * E.fane, Lp = (1 - E.us) * H_COL * 1.3, v = (uu - E.us) / (1 - E.us);
+      fD.set(Math.cos(php), 0, Math.sin(php));
+      const A = th > 0.01 ? Lp / th * Math.sin(th * v) : Lp * v, B = th > 0.01 ? Lp / th * (1 - Math.cos(th * v)) : 0;
+      const larg = d * rS * ((1 - 0.8 * smooth(0, 0.2, v)) + 1.0 * Math.sin(Math.PI * Math.pow(v, 0.8)));
+      fE.copy(fC).addScaledVector(UP, A).addScaledVector(fD, B).addScaledVector(fN.set(-Math.sin(php), 0, Math.cos(php)), (larg - d * rS) * E.ouvre);
+      fE.y -= 0.45 * E.fane * v * v;
+      fA.lerp(fE, smooth(0, 0.3, E.ouvre));
+    }
+    out.copy(fA);
+    G.r = cd.ep * (0.7 + 0.3 * Math.sin(u * 17 + cd.phi0 * 3)) * (1 - 0.35 * E.fane) * bout(u, 0.03, 0.03 + (1 - g) * 0.15);
+    G.g = lueurBrin(uu, t, 0.07 + 0.12 * E.tension) * (1 - E.fane) + (E.ouvre > 0 ? 1.4 * Math.exp(-(t - T.flor) / 600) * smooth(E.us - 0.3, E.us, uu) : 0);
+  };
+}
+cordes.forEach(cd => { cd.b.f = formeCorde(cd); });
+// les liens : des cordes partent de la paroi et ligotent chaque bete, bras compris
+const liens = [];
+ennemis.forEach((e, i) => { for (let j = 0; j < 5; j++) liens.push({ b: FILS.brin(0), e, i, j, h0: 1.62 - 0.11 * j, tours: 1.25 + 0.12 * j, r0: 0.56 + 0.05 * ((j * 3) % 4) / 3, ph: j * 1.9 + i }); });
+const locL = V3();
+function formeLien(l) {
+  return (u, out, G) => {
+    const t = E.t, te = t - T.eclot - 50 - 35 * l.j, g = easeOutCubic(clamp(te / 280)), uu = u * g, k0 = 0.24;
+    const phiE = Math.atan2(l.e.pos0.z - C_ZONE.z, l.e.pos0.x - C_ZONE.x) + (l.j - 2) * 0.14, hA = 0.75 + 0.28 * l.j;
+    const rw = rayonCol(hA / H_COL) * (1 - 0.1 * E.tension);
+    fA.set(C_ZONE.x + Math.cos(phiE) * rw, SOL_Y + hA, C_ZONE.z + Math.sin(phiE) * rw);
+    const r = l.r0 * (1 - 0.1 * E.tension);
+    const spirale = (v, o) => { const th = l.ph + v * Math.PI * 2 * l.tours; locL.set(Math.cos(th) * r * (1 + 0.08 * Math.sin(v * 13)), l.h0 - v * 0.62, Math.sin(th) * r); return l.e.penche.localToWorld(o.copy(locL)); };
+    if (uu < k0) { const v = uu / k0; spirale(0, fB); out.copy(fA).lerp(fB, v); out.y -= 0.1 * Math.sin(Math.PI * v) * (1 - E.tension); }
+    else spirale((uu - k0) / (1 - k0), out);
+    G.r = 0.015 * (1 - 0.3 * E.fane) * bout(u, 0.04, 0.04 + (1 - g) * 0.12);
+    G.g = lueurBrin(uu, t, 0.06 + 0.1 * E.tension) * 0.8 * (1 - E.fane);
+  };
+}
+liens.forEach(l => { l.b.f = formeLien(l); });
+// le dard : sept cordes tressees en fuseau, de la queue (u = 0) vers l'epine (u = 1)
+const DARD_L = 0.85;
+const tresse = Array.from({ length: 8 }, (_, j) => ({ b: FILS.brin(0, 0.1 + j * 0.11), j }));
+function axeDard(u, out, tg) {   // centre du dard et sa tangente au point u
+  if (E.dardS < 0) { out.copy(E.tete).addScaledVector(E.dir, -(1 - u) * DARD_L); tg.copy(E.dir); }
+  else { const s = E.dardS - (1 - u) * DARD_L; CHEMIN.at(s, out); CHEMIN.tangente(s, tg); }
+  return out;
+}
+function formeTresse(tr) {
+  return (u, out, G) => {
+    const t = E.t, g = clamp((t - T.tresse) / (T.lancer - T.tresse - 50)), uu = u * g, serre = smooth(T.tresse, T.lancer - 30, t);
+    axeDard(uu, fA, fT);
+    fN.crossVectors(fT, AXE_Z); if (fN.lengthSq() < 1e-4) fN.crossVectors(fT, UP); fN.normalize(); fBn.crossVectors(fT, fN);
+    const th = tr.j / 7 * Math.PI * 2 + uu * Math.PI * 6, sp = Math.sin(Math.PI * Math.min(1, uu * 1.04));
+    const rho = tr.j === 7 ? 0 : (0.04 * Math.pow(Math.max(sp, 0), 0.7) * serre + (1 - serre) * 0.17 * sp) * (1 + 0.15 * Math.sin(uu * 28 + tr.j * Math.PI));
+    out.copy(fA).addScaledVector(fN, Math.cos(th) * rho).addScaledVector(fBn, Math.sin(th) * rho);
+    G.r = (tr.j === 7 ? 0.03 : 0.019) * (0.5 + 0.5 * sp) * bout(u, 0.04, 0.04);
+    G.g = 0.12 + 0.35 * Math.max(0, Math.sin(uu * 9 - t * 0.02)) * (t < T.eclot ? 1 : 0.4);
+  };
+}
+tresse.forEach(tr => { tr.b.f = formeTresse(tr); });
+// le fil de couture : de la main droite au talon du dard, a travers la place
+const filC = FILS.brin(1, 0.37);
+filC.f = (u, out, G) => {
+  const t = E.t, M = CHEMIN.M, sT = Math.min(Math.max(0, E.dardS - DARD_L), M.C + 0.25), s = u * sT;   // le fil s'arrete au pied de la colonne : il ne monte pas dans son axe
+  if (s < M.E0) {
+    const l = s / M.E0, depart = E.coupe > 0 ? E.coupeP : E.main;
+    out.copy(depart).lerp(COUTURE.E0, l);
+    out.y -= 0.14 * Math.sin(Math.PI * l) * (1 - E.tension);
+    if (E.coupe > 0) { const ch = 4.9 * E.coupe * E.coupe; out.y = Math.max(SOL_Y + 0.014 + 0.01 * Math.sin(l * 9), out.y - ch * Math.pow(1 - l, 0.6)); }
+  } else {
+    CHEMIN.at(s, out);
+    if (out.y > SOL_Y + 0.005 && s < M.C) out.y = SOL_Y + (out.y - SOL_Y) * (1 - 0.38 * E.tension);
+  }
+  if (t > T.tension && E.coupe <= 0) out.z += 0.03 * Math.sin((t - T.tension) * 0.06 + s * 6) * Math.exp(-(t - T.tension) / 280) * smooth(0, 0.3, s);   // le fil vibre quand il se tend
+  G.r = 0.022 * bout(u, 0.01, 0.01);
+  let gl = 0.05 + 1.1 * E.tension;   // tendu, le fil s'allume d'un bout a l'autre : c'est lui qu'on doit lire
+  for (const tb of T.batt) if (t > tb && t < tb + 900) gl += 1.1 * Math.exp(-Math.pow((s - (t - tb) * 0.011) / 0.5, 2));   // la seve file de la main vers la colonne
+  G.g = gl * (E.coupe > 0 ? Math.max(0, 1 - E.coupe * 3) : 1);
+};
+// les poils de mycelium qui montent des joints vers les mains pendant le tissage
+const cheveux = Array.from({ length: 20 }, (_, j) => {
+  const a = -1.7 + 3.4 * ((j * 7) % 20) / 19 + Math.sin(j * 3.7) * 0.1, r = 0.65 + 0.9 * ((j * 11) % 20) / 19;
+  return { b: FILS.brin(2), j, sol: V3(TISSEUSE.x + Math.cos(a) * r, SOL_Y + 0.004, TISSEUSE.z + Math.sin(a) * r), ph: j * 1.3 };
+});
+function formeCheveu(c) {
+  return (u, out, G) => {
+    const t = E.t, g = easeOutCubic(clamp((t - 20 - 11 * c.j) / 280)), s0 = easeInOut(clamp((t - 330 - 7 * c.j) / 170)), uu = s0 + u * (g - s0);
+    fA.copy(c.sol).addScaledVector(UP, 0.75 + 0.2 * Math.sin(c.ph)); fB.copy(E.cheveuxC).sub(c.sol).normalize();
+    fC.copy(E.cheveuxC).addScaledVector(fB, -0.4).addScaledVector(UP, 0.25);
+    bez(c.sol, fA, fC, E.cheveuxC, uu, out);
+    out.x += 0.05 * Math.sin(uu * 9 + t * 0.012 + c.ph) * Math.sin(Math.PI * uu); out.z += 0.05 * Math.cos(uu * 8 + t * 0.01 + c.ph) * Math.sin(Math.PI * uu);
+    G.r = 0.0055 * (1 - 0.45 * uu) * bout(u, 0.03, 0.08);
+    G.g = 0.08 + 0.6 * smooth(0.75, 1, uu) + 0.35 * Math.max(0, Math.sin(uu * 14 - t * 0.03));
+  };
+}
+cheveux.forEach(c => { c.b.f = formeCheveu(c); });
+// les franges du chale et des manches : elles pendent, se balancent, suivent le corps avec un peu de retard
+const franges = Array.from({ length: LOW ? 12 : 26 }, (_, j) => {
+  if (j < (LOW ? 8 : 18)) { const n = LOW ? 8 : 18, a = -2.7 + 5.4 * j / (n - 1); return { b: FILS.brin(3), j, loc: V3(0.02 + Math.cos(a) * 0.4, 1.1 - 0.075 * Math.cos(a), Math.sin(a) * 0.41), L: 0.28 + 0.3 * ((j * 7) % 5) / 4, a }; }
+  return { b: FILS.brin(3), j, main: j % 2, L: 0.16 + 0.12 * (j % 3) / 2, dec: V3(Math.sin(j * 2.1) * 0.03, -0.03, Math.cos(j * 1.7) * 0.03) };
+});
+function formeFrange(fr) {
+  return (u, out, G) => {
+    const t = E.t * 0.001;
+    if (fr.loc) { corpsJ.localToWorld(fA.copy(fr.loc)); fB.set(Math.cos(fr.a), 0, Math.sin(fr.a)).applyQuaternion(joueur.quaternion); }
+    else { fA.copy(fr.main ? mainDroite() : mainGauche()).add(fr.dec); fB.set(0, 0, 0); }
+    const sw = Math.sin(t * 2.3 + fr.j) * 0.035 + run.souffle * 0.12;
+    out.copy(fA).addScaledVector(fB, 0.07 * u).addScaledVector(UP, -fr.L * u);
+    out.x += (sw - 0.05 * run.souffle) * u * u; out.z += Math.cos(t * 1.9 + fr.j * 1.7) * 0.03 * u * u;
+    G.r = 0.0045 * (1 - 0.4 * u) * bout(u, 0.0, 0.06); G.g = 0;
+  };
+}
+franges.forEach(fr => { fr.b.f = formeFrange(fr); fr.b.actif = true; });
+// le mycelium qui sort des joints, le long de la couture et autour de la zone
+const poils = LOW ? [] : Array.from({ length: 24 }, (_, j) => {
+  const r0 = mulberry32(400 + j);
+  if (j < 12) { const k = j % 3, [a, b] = SOUS[k], l = 0.1 + 0.8 * r0(), q = a.clone().lerp(b, l), d = V3(-(b.z - a.z), 0, b.x - a.x).normalize().multiplyScalar((r0() - 0.5) * 0.6); q.add(d); q.y = SOL_Y + 0.004; return { b: FILS.brin(2), j, sol: q, s: SOUS_S[k] + l * Math.hypot(b.x - a.x, b.z - a.z), L: 0.08 + 0.16 * r0(), ph: r0() * 6.28, ta: Infinity }; }
+  const a = r0() * 6.283, r = 1.45 + 0.9 * r0();
+  return { b: FILS.brin(2), j, sol: V3(C_ZONE.x + Math.cos(a) * r, SOL_Y + 0.004, C_ZONE.z + Math.sin(a) * r), L: 0.1 + 0.2 * r0(), ph: r0() * 6.28, taD: 120 + 450 * r0(), ta: Infinity };
+});
+function formePoil(po) {
+  return (u, out, G) => {
+    const t = E.t, g = easeOutCubic(clamp((t - po.ta) / 450)), L = po.L * g, a = po.ph + u * 4.5;
+    out.copy(po.sol).addScaledVector(UP, L * u * (1 - 0.6 * E.fane * u)).add(fA.set(Math.cos(a) * 0.035 * u, 0, Math.sin(a) * 0.035 * u));
+    out.x += 0.06 * E.fane * u * u * Math.cos(po.ph);
+    G.r = 0.004 * (1 - 0.6 * u) * bout(u, 0.0, 0.1); G.g = (0.2 + 1.0 * smooth(0.7, 1, u)) * (1 - 0.8 * E.fane);
+  };
+}
+poils.forEach(po => { po.b.f = formePoil(po); });
+// les racines : a l'eclosion, des cordes rampent sur les dalles depuis le pied de la colonne et s'y agrippent
+const racines = Array.from({ length: 10 }, (_, j) => ({ b: FILS.brin(0), j, a: j / 10 * Math.PI * 2 + 0.31 * Math.sin(j * 5.1), L: 1.0 + 0.9 * ((j * 7) % 10) / 9, ph: j * 2.3 }));
+function formeRacine(ra) {
+  return (u, out, G) => {
+    const t = E.t, g = easeOutCubic(clamp((t - T.eclot - 30 - 18 * ra.j) / 320)), uu = u * g, a = ra.a + 0.35 * Math.sin(uu * 3 + ra.ph);
+    const r = rayonCol(0) * 0.85 + ra.L * uu;
+    out.set(C_ZONE.x + Math.cos(a) * r, SOL_Y + 0.028 + 0.16 * Math.sin(Math.PI * Math.min(1, uu * 1.6)) * (1 - uu) + 0.03 * Math.max(0, Math.sin(uu * 13 + ra.ph)), C_ZONE.z + Math.sin(a) * r);
+    G.r = 0.032 * (1 - 0.8 * uu) * (1 - 0.3 * E.fane) * bout(u, 0.0, 0.05 + (1 - g) * 0.1);
+    G.g = lueurBrin(uu * 0.5, t, 0.05) * (1 - E.fane) * 0.5;
+  };
+}
+racines.forEach(ra => { ra.b.f = formeRacine(ra); });
+
+// Tout ce qui bouge dans les fils, a l'instant t : appele une fois par image, avant d'ecrire les textures.
+function majFils(t) {
+  E.t = t;
+  E.tension = smooth(T.tension, T.tension + 220, t) * (1 - smooth(T.flor - 60, T.flor + 250, t));
+  E.ouvre = t >= T.flor ? easeOutCubic(clamp((t - T.flor) / 760)) : 0;
+  E.us = 1 - 0.5 * E.ouvre;
+  E.fane = smooth(T.flor + 650, T.bout - 250, t);
+  E.coupe = t >= T.coupe ? Math.min(0.45, (t - T.coupe) / 1000) : 0;
+  E.main.copy(mainDroite());
+  if (t < T.coupe) E.coupeP.copy(E.main);
+  // le dard : dans les mains, puis sur le chemin
+  const mG = mainGauche(), mD = E.main;
+  E.cheveuxC.copy(mG).add(mD).multiplyScalar(0.5);
+  E.dardS = dardS(t);
+  if (E.dardS < 0) { E.dir.copy(COUTURE.E0).sub(E.cheveuxC).normalize(); E.tete.copy(E.cheveuxC).addScaledVector(E.dir, 0.34); }
+  E.sous = E.dardS < 0 ? -1 : sousTerre(E.dardS);
+  if (E.dardS >= 0) { CHEMIN.at(E.dardS, E.tete); CHEMIN.tangente(E.dardS, E.dir); }
+  // qui est visible
+  const avantFlor = t < T.flor + 120;
+  for (const tr of tresse) tr.b.actif = t >= T.tresse && avantFlor;
+  for (const tr of tresse) tr.b.sec = 0;
+  filC.actif = t >= T.lancer && CHEMIN.pret;
+  for (const c of cheveux) c.b.actif = t >= 0 && t < T.lancer + 40;
+  for (const cd of cordes) { cd.b.actif = t >= T.eclot; cd.b.sec = E.fane * 0.92; }
+  for (const l of liens) { l.b.actif = t >= T.eclot + 50; l.b.sec = E.fane * 0.85; }
+  for (const ra of racines) { ra.b.actif = t >= T.eclot; ra.b.sec = E.fane * 0.8; }
+  for (const po of poils) { if (po.j < 12 && po.ta === Infinity && E.sous >= po.s) po.ta = t + 60; po.b.actif = t >= po.ta; po.b.sec = E.fane * 0.7; }
+  // l'epine : au bout du dard, puis elle tombe dans la colonne quand elle s'ouvre, et se plante
+  epine.visible = t >= T.lancer - 120;
+  if (t < T.flor + 80) {
+    fT.copy(E.dir); epine.position.copy(E.tete); epine.quaternion.setFromUnitVectors(UP, fT);
+    epine.scale.setScalar(t < T.lancer ? smooth(T.lancer - 120, T.lancer - 40, t) : 1);
+  } else {
+    const dt = (t - T.flor - 80) / 1000, y = SOL_Y + H_COL + 0.05 - 4.9 * dt * dt;
+    epine.position.set(C_ZONE.x + 0.12 * dt, Math.max(SOL_Y + 0.12, y), C_ZONE.z);
+    epine.quaternion.setFromUnitVectors(UP, fT.set(0.3 * Math.min(1, dt * 2), -1, 0.15).normalize());
+  }
+  lueurDard.position.copy(E.dardS < 0 ? E.cheveuxC : E.tete); lueurDard.intensity = 0.55 * smooth(T.tresse, T.lancer - 100, t) * (1 - smooth(T.lancer, T.lancer + 80, t));
+  let lc = t > T.eclot ? (0.9 + 2.4 * Math.exp(-(t - T.eclot) / 300)) * smooth(T.eclot, T.eclot + 40, t) : 0;
+  for (const tb of T.batt) if (t > tb) lc += 0.9 * Math.exp(-(t - tb) / 180);
+  if (t > T.flor) lc += 3.0 * Math.exp(-(t - T.flor) / 500);
+  lueurCol.intensity = lc * (1 - E.fane) * (1 + 0.3 * E.tension); lueurCol.position.set(C_ZONE.x, SOL_Y + 1.5 + 2.0 * E.ouvre, C_ZONE.z);
+  FILS.ecrire();
+}
+// a chaque relance : les poils de la couture attendent le passage du dard, ceux de la zone l'eclosion
+function resetFils() { for (const po of poils) po.ta = po.j < 12 ? Infinity : T.eclot + po.taD; }
+
+// ================================================================== son (bruitages calcules, sans musique ni fichier)
+/* <synthese> : JS pur, sans DOM ni WebAudio, pour pouvoir le verifier hors navigateur */
+function creerBruitages(SR, graine) {
+  let a = graine >>> 0;
+  const R = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const RR = (x, y) => x + (y - x) * R();
+  const TAU = Math.PI * 2;
+  const N = s => Math.max(1, Math.round(s * SR));
+  const vide = s => ({ L: new Float32Array(N(s)), R: new Float32Array(N(s)) });
+  // mono -> stereo, panoramique fixe ou qui se deplace (fonction du temps)
+  function mix(d, x, t0, g, pan = 0) {
+    const o = Math.round(t0 * SR), n = d.L.length, pf = typeof pan === 'function';
+    let cl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, cr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+    for (let i = 0; i < x.length; i++) {
+      const j = o + i; if (j < 0) continue; if (j >= n) break;
+      if (pf && (i & 7) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
+      d.L[j] += x[i] * g * cl; d.R[j] += x[i] * g * cr;
+    }
+  }
+  const blanc = n => { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = R() * 2 - 1; return x; };
+  const rose = n => { const x = new Float32Array(n); let b0 = 0, b1 = 0, b2 = 0; for (let i = 0; i < n; i++) { const w = R() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099046; b1 = 0.963 * b1 + w * 0.2965164; b2 = 0.57 * b2 + w * 1.0526913; x[i] = (b0 + b1 + b2 + w * 0.1848) * 0.22; } return x; };
+  const brun = n => { const x = new Float32Array(n); let l = 0; for (let i = 0; i < n; i++) { l = (l + 0.02 * (R() * 2 - 1)) / 1.02; x[i] = l * 3.5; } return x; };
+  // biquad (RBJ), frequence fixe ou fonction du temps
+  function filtre(x, type, f, q = 0.707) {
+    const y = new Float32Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0, b0 = 0, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+    const maj = fr => {
+      fr = Math.min(Math.max(fr, 15), SR * 0.45); const w = TAU * fr / SR, cs = Math.cos(w), al = Math.sin(w) / (2 * q); let B0, B1, B2;
+      if (type === 'lp') { B0 = (1 - cs) / 2; B1 = 1 - cs; B2 = B0; } else if (type === 'hp') { B0 = (1 + cs) / 2; B1 = -(1 + cs); B2 = B0; } else { B0 = al; B1 = 0; B2 = -al; }
+      const A0 = 1 + al; b0 = B0 / A0; b1 = B1 / A0; b2 = B2 / A0; a1 = -2 * cs / A0; a2 = (1 - al) / A0;
+    };
+    const vf = typeof f === 'function'; if (!vf) maj(f);
+    for (let i = 0; i < x.length; i++) {
+      if (vf && (i & 7) === 0) maj(f(i / SR));
+      const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  }
+  const env = (x, fn) => { for (let i = 0; i < x.length; i++) x[i] *= fn(i / SR); return x; };
+  const sat = (x, dr) => { const k = Math.tanh(dr); for (let i = 0; i < x.length; i++) x[i] = Math.tanh(x[i] * dr) / k; return x; };
+  const ad = (att, dec) => t => t < att ? t / att : Math.exp(-(t - att) / dec);
+  function lent(n, hz) { // modulation aleatoire douce
+    const m = Math.ceil(n / SR * hz) + 3, v = new Float32Array(m); for (let k = 0; k < m; k++) v[k] = R() * 2 - 1;
+    const y = new Float32Array(n); for (let i = 0; i < n; i++) { const p = i / SR * hz, k = Math.floor(p), f = p - k; y[i] = v[k] + (v[k + 1] - v[k]) * f * f * (3 - 2 * f); } return y;
+  }
+  function sinus(n, fn) { const y = new Float32Array(n); let ph = 0; for (let i = 0; i < n; i++) { ph += TAU * fn(i / SR) / SR; y[i] = Math.sin(ph); } return y; }
+  // resonance modale : partiels amortis, doubles et legerement desaccordes (le chatoiement du metal)
+  function modal(n, parts, bat) {
+    const y = new Float32Array(n);
+    for (const p of parts) {
+      const df = bat * RR(0.5, 1.5), w1 = TAU * (p.f - df / 2) / SR, w2 = TAU * (p.f + df / 2) / SR, ph1 = R() * TAU, ph2 = R() * TAU, k = Math.exp(-1 / (p.d * SR));
+      let e = p.a; for (let i = 0; i < n && e > 1e-5; i++) { y[i] += e * 0.5 * (Math.sin(w1 * i + ph1) + Math.sin(w2 * i + ph2)); e *= k; }
+    }
+    return y;
+  }
+  // crepitements : petites detonations au hasard (processus de Poisson)
+  function crepite(n, dens, gros) {
+    const y = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      if (R() >= dens(i / SR) / SR) continue;
+      const big = R() < gros, len = N(big ? RR(0.006, 0.016) : RR(0.003, 0.007)), f = big ? RR(150, 600) : RR(600, 1800);
+      const amp = (big ? 0.7 : 0.25) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len), att = N(big ? 0.002 : 0.0012);
+      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * (j < att ? 0.5 - 0.5 * Math.cos(Math.PI * j / att) : 1) * Math.sin(w * j + ph); e *= k; } // monte en douceur : pas de clic
+    }
+    return y;
+  }
+  const pic = s => { let m = 0; for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) m = Math.max(m, Math.abs(c[i])); return m; };
+  const normer = (s, p) => { const k = p / (pic(s) || 1); for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) c[i] *= k; return s; };
+  const densifier = (s, dr) => { sat(s.L, dr); sat(s.R, dr); return s; }; // plus de corps, moins de pic
+  const fondu = (s, t) => { const n = s.L.length, k = Math.min(n, N(t)); for (let i = 0; i < k; i++) { const g = i / k; s.L[n - 1 - i] *= g; s.R[n - 1 - i] *= g; } return s; };
+
+  // ---------------------------------------------------------------- briques
+  function souffleFeu(d, t0, dur, g, o = {}) { // le feu qui s'embrase d'un coup
+    const n = N(dur), att = o.att ?? 0.03, tau = o.tau ?? dur * 0.32, fmax = o.fmax ?? 3800;
+    for (const pan of [-0.55, 0.55]) {
+      const x = filtre(rose(n), 'lp', t => t < att ? 160 + (fmax - 160) * (t / att) : 520 + (fmax - 520) * Math.exp(-(t - att) / (tau * 0.6)), 0.9);
+      const f1 = lent(n, 13), f2 = lent(n, 4);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= (t < att ? Math.pow(t / att, 1.5) : Math.exp(-(t - att) / tau)) * (1 + 0.45 * f1[i] + 0.25 * f2[i]); }
+      mix(d, x, t0, g * 2.2, pan);
+    }
+    mix(d, env(filtre(brun(n), 'lp', 160, 0.7), ad(0.02, tau * 1.2)), t0, g * 1.2, 0);
+    mix(d, env(filtre(blanc(n), 'hp', 4500), ad(0.01, 0.12)), t0, g * 0.12, 0);
+    mix(d, crepite(n, t => (o.crep ?? 160) * Math.exp(-t / (tau * 1.3)), 0.1), t0 + 0.02, g * 0.55, 0.25);
+  }
+  function armure(d, t0, g, o = {}) { // plaque de fer rouille : modes serres et vite etouffes
+    const f1 = o.f1 ?? 185, n = N(0.9);
+    const x = modal(n, [1, 1.59, 2.14, 2.3, 2.65, 2.92, 3.16, 3.5, 4.06, 4.6].map(r => ({ f: f1 * r * RR(0.98, 1.02), a: RR(0.3, 1), d: RR(0.08, 0.32) * (o.dec ?? 1) })), 3);
+    const cl = env(filtre(blanc(n), 'bp', 1900, 0.8), t => Math.exp(-t / 0.035)); for (let i = 0; i < n; i++) x[i] += cl[i] * 1.2;
+    mix(d, sat(x, 1.8), t0, g, o.pan ?? 0);
+  }
+  function coup(d, t0, g, o = {}) { // le poids du coup : un sinus qui chute, sature
+    const f0 = o.f0 ?? 165, f1 = o.f1 ?? 46, x = sinus(N(o.dur ?? 0.5), t => f1 + (f0 - f1) * Math.exp(-t / (o.chute ?? 0.035)));
+    mix(d, sat(env(x, t => Math.min(1, t / 0.002) * Math.exp(-t / (o.tau ?? 0.13))), o.drive ?? 2.5), t0, g, 0);
+  }
+  function grave(d, t0, g, o = {}) { // grave de cinema
+    const f0 = o.f0 ?? 58, f1 = o.f1 ?? 27, x = sinus(N(o.dur ?? 1.6), t => f1 + (f0 - f1) * Math.exp(-t / 0.22));
+    mix(d, env(x, t => Math.min(1, t / 0.012) * Math.exp(-t / (o.tau ?? 0.5))), t0, g, 0);
+  }
+  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.15; x[1] += 0.3; x[2] += 0.15; mix(d, x, t0, g, 0); }
+  function craque(d, t0, g, pan) { // l'armure qui cede
+    const n = N(0.14), x = sat(env(filtre(blanc(n), 'bp', 1150, 0.9), t => Math.exp(-t / 0.028)), 5), y = env(filtre(blanc(n), 'bp', 3200, 1.5), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] += y[i] * 0.6; mix(d, x, t0, g, pan);
+  }
+  function eclabousse(d, t0, g, pan) { // goutte de sang et d'encre qui s'ecrase
+    const n = N(0.07), f0 = RR(1800, 3200), fb = RR(420, 700);
+    const x = env(filtre(blanc(n), 'lp', t => f0 * Math.exp(-t / 0.015) + 250, 1.6), t => Math.min(1, t / 0.001) * Math.exp(-t / 0.014));
+    const b = env(sinus(n, t => fb * Math.exp(-t / 0.02) + 180), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 2 + b[i] * 0.25; mix(d, x, t0, g, pan);
+  }
+  function caillou(d, t0, g, pan) { // eclat de pierre qui retombe
+    const f = RR(1800, 4200), x = modal(N(0.08), [{ f, a: 1, d: RR(0.012, 0.03) }, { f: f * RR(1.4, 2.3), a: 0.6, d: RR(0.008, 0.02) }], 0);
+    const c = env(filtre(blanc(N(0.004)), 'hp', 2500), t => Math.exp(-t / 0.0007)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.5;
+    mix(d, x, t0, g, pan);
+  }
+  function souffle(d, t0, dur, g, o = {}) { // la lame fend l'air : bande de bruit qui monte et retombe, sifflement, dechirure
+    const n = N(dur), pk = o.pic ?? dur * 0.4, f0 = o.f0 ?? 280, f1 = o.f1 ?? 1900, f2 = o.f2 ?? 450;
+    const cf = t => t < pk ? f0 * Math.pow(f1 / f0, t / pk) : f1 * Math.pow(f2 / f1, (t - pk) / (dur - pk));
+    const e = t => t < pk ? Math.pow(t / pk, 2.2) : Math.exp(-(t - pk) / ((dur - pk) * 0.35));
+    const x = env(filtre(rose(n), 'bp', cf, 1.3), e), s = env(filtre(blanc(n), 'bp', t => cf(t) * 1.7, 11), e), air = env(filtre(blanc(n), 'hp', 5200), t => Math.exp(-Math.pow((t - pk) / 0.018, 2)));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 3 + s[i] * (o.siffle ?? 0.6) * 2 + air[i] * (o.dechire ?? 0.35);
+    const p0 = o.de ?? -0.7, p1 = o.vers ?? 0.7;
+    mix(d, x, t0, g, t => p0 + (p1 - p0) * Math.min(1, t / dur));
+  }
+  function encre(d, t0, dur, g) { // l'encre qui tourbillonne et monte : bruit resonant qui tourne de plus en plus vite
+    const n = N(dur);
+    for (const pan of [-0.5, 0.5]) {
+      const cf = new Float32Array(n); let ph = R() * TAU;
+      for (let i = 0; i < n; i++) { ph += TAU * (4 + 10 * i / n) / SR; cf[i] = 480 + 240 * Math.sin(ph) + 600 * i / n; }
+      const x = env(filtre(rose(n), 'bp', t => cf[Math.min(n - 1, Math.round(t * SR))], 3), t => Math.pow(Math.min(1, t / (dur * 0.7)), 1.2) * (t > dur - 0.03 ? Math.max(0, (dur - t) / 0.03) : 1));
+      mix(d, x, t0, g * 3.2, pan);
+    }
+    let t = 0.03; while (t < dur - 0.05) { // gouttes visqueuses
+      const L = RR(0.03, 0.06), f0 = RR(180, 300), f1 = f0 * RR(1.5, 2.1);
+      mix(d, env(sinus(N(L), s => f0 + (f1 - f0) * (s / L)), s => Math.sin(Math.PI * s / L) * Math.exp(-s / (L * 0.6))), t0 + t, g * 0.1 * (0.4 + t / dur), RR(-0.7, 0.7));
+      t += RR(0.035, 0.09) * (1.2 - t / dur);
+    }
+  }
+  function feuMonte(d, t0, dur, g) { // la lame s'embrase de la garde a la pointe et gronde
+    const n = N(dur + 0.25), e = t => Math.pow(Math.min(1, t / dur), 1.6) * (t > dur ? Math.exp(-(t - dur) / 0.08) : 1);
+    for (const pan of [-0.5, 0.5]) {
+      const x = filtre(rose(n), 'lp', t => 220 + 1500 * Math.min(1, t / dur), 0.8), f1 = lent(n, 9), f2 = lent(n, 2.5);
+      for (let i = 0; i < n; i++) x[i] *= e(i / SR) * (1 + 0.5 * f1[i] + 0.3 * f2[i]);
+      mix(d, x, t0, g * 2.4, pan);
+    }
+    mix(d, crepite(n, t => 25 + 190 * Math.min(1, t / dur), 0.1), t0, g * 0.55, 0.2);
+    mix(d, env(filtre(blanc(n), 'hp', 3500), t => e(t) * Math.min(1, t / dur)), t0, g * 0.1, -0.2);
+  }
+  function aspire(d, t0, dur, g) { // souffle a l'envers qui monte jusqu'au coup
+    const n = N(dur);
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(n), 'lp', t => 300 + 6500 * Math.pow(t / dur, 2), 0.9), t => Math.pow(t / dur, 3.2)), t0, g * 2.2, pan);
+    mix(d, env(sinus(n, t => 40 + 30 * t / dur), t => Math.pow(t / dur, 2.5)), t0, g * 0.6, 0);
+  }
+  // scie a bande limitee (polyBLEP) : la matiere des montees de puissance
+  function scie(n, fn) { // spectre de dent de scie, harmoniques dephasees au hasard (aucun front raide), coupees en douceur vers 3,2 kHz
+    const y = new Float32Array(n), H = 96, cp = new Float32Array(H + 1), sp = new Float32Array(H + 1), lim = Math.min(3200, SR * 0.4); let ph = R();
+    for (let h = 1; h <= H; h++) { const p = R() * TAU; cp[h] = Math.cos(p) / h; sp[h] = Math.sin(p) / h; }
+    for (let i = 0; i < n; i++) {
+      const f = fn(i / SR); ph += f / SR; if (ph >= 1) ph -= 1;
+      const c1 = Math.cos(TAU * ph), s1 = Math.sin(TAU * ph); let c = 1, s = 0, v = 0;
+      for (let h = 1; h <= H; h++) { const fh = f * h; if (fh > lim) break; const c2 = c * c1 - s * s1; s = s * c1 + c * s1; c = c2; v += (fh > 0.7 * lim ? (lim - fh) / (0.3 * lim) : 1) * (s * cp[h] + c * sp[h]); } // sin(h.a + p) par rotation
+      y[i] = v * 0.6366;
+    }
+    return y;
+  }
+  function montee(d, t0, dur, g, o = {}) { // la puissance monte : accord grave de scies qui grimpe, s'ouvre et vibre de plus en plus vite
+    const n = N(dur), f0 = o.f0 ?? 55, f1 = o.f1 ?? 110, k = t => Math.pow(Math.min(1, t / dur), 1.5);
+    for (const [pan, cents] of [[-0.6, -7], [0.6, 7]]) {
+      const x = new Float32Array(n);
+      for (const r of [1, 1.5, 2]) { const z = scie(n, t => f0 * Math.pow(f1 / f0, k(t)) * r * Math.pow(2, cents / 1200)); for (let i = 0; i < n; i++) x[i] += z[i] * (r === 1 ? 1 : 0.6); }
+      const y = filtre(x, 'lp', t => 220 + 2400 * Math.pow(Math.min(1, t / dur), 2), 1.2);
+      let ph = 0;
+      for (let i = 0; i < n; i++) { const t = i / SR; ph += TAU * (6 + 24 * Math.min(1, t / dur)) / SR; y[i] *= Math.pow(Math.min(1, t / dur), o.courbe ?? 1.8) * (1 - 0.35 * (0.5 + 0.5 * Math.sin(ph))); }
+      mix(d, sat(y, 1.8), t0, g * 0.5, pan);
+    }
+  }
+  function chute(d, t0, g) { // le temps s'arrete : accord qui s'effondre vers le grave, etouffe
+    const n = N(0.9), x = new Float32Array(n);
+    for (const r of [1, 1.5, 2.01]) { const z = scie(n, t => 55 * r + 165 * r * Math.exp(-t / 0.16)); for (let i = 0; i < n; i++) x[i] += z[i]; }
+    mix(d, sat(env(filtre(x, 'lp', t => 180 + 1300 * Math.exp(-t / 0.14), 0.8), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
+  }
+  function explosion(d, t0, g, o = {}) { // le coeur des grands coups : claquement, coup sature, grave, corps qui gronde, debris
+    const tau = o.tau ?? 0.75, L = o.dur ?? 3.2, n = N(L);
+    mix(d, sat(env(filtre(blanc(N(0.02)), 'hp', 700), t => Math.exp(-t / 0.004)), 3), t0, g * 0.9, 0);
+    coup(d, t0, g * 0.9, { f0: 230, f1: 55, chute: 0.02, tau: 0.09, drive: 6, dur: 0.4 });
+    coup(d, t0 + 0.004, g * 0.9, { f0: 120, f1: 36, chute: 0.05, tau: 0.22, drive: 4, dur: 0.9 });
+    grave(d, t0 + 0.006, g * 0.85, { f0: 62, f1: 22, tau: tau * 1.3, dur: L });
+    for (const pan of [-0.65, 0.65]) {
+      const x = filtre(rose(n), 'lp', t => 180 + 2600 * Math.exp(-t / (tau * 0.5)), 0.7), b = filtre(brun(n), 'lp', 400), am = lent(n, 9);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.2 + b[i] * 1.6) * Math.min(1, t / 0.003) * Math.exp(-t / tau) * (1 + 0.5 * am[i]); }
+      mix(d, sat(x, 2.4), t0, g * 1.1, pan);
+    }
+    mix(d, env(filtre(blanc(n), 'hp', 3000), t => Math.exp(-t / (tau * 0.35))), t0, g * 0.18, 0.2);
+    mix(d, crepite(n, t => (o.crep ?? 280) * 0.3 * Math.exp(-t / (tau * 1.4)), 0.7), t0 + 0.03, g * 0.6, -0.15);
+    mix(d, env(filtre(brun(n), 'lp', 110), t => Math.min(1, t / 0.05) * Math.exp(-t / (tau * 2.2))), t0, g * 1.4, 0);
+  }
+  function zan(d, t0, g, pan = 0) { // le "zan" de la lame : dechirure claire et courte, eclat metallique bref
+    mix(d, env(filtre(blanc(N(0.12)), 'hp', 2400), t => Math.min(1, t / 0.002) * Math.exp(-t / 0.05)), t0, g * 0.9, pan);
+    mix(d, env(filtre(blanc(N(0.1)), 'bp', 4200, 3.5), t => Math.exp(-t / 0.03)), t0, g * 1.4, pan);
+    mix(d, modal(N(0.25), [2700, 3900, 5300, 6900].map(f => ({ f: f * RR(0.97, 1.03), a: RR(0.4, 1), d: RR(0.03, 0.07) })), 6), t0, g * 0.5, pan);
+    mix(d, env(filtre(rose(N(0.14)), 'bp', t => 900 * Math.exp(-t / 0.05) + 180, 1.2), t => Math.exp(-t / 0.045)), t0, g * 2.2, pan);
+  }
+  function rugit(d, t0, dur, g, o = {}) { // le grand feu qui rugit : grondement grave tourmente, souffle, crepitements
+    const n = N(dur), tau = o.tau ?? dur * 0.4, att = o.att ?? 0.06;
+    for (const pan of [-0.6, 0.6]) {
+      const x = filtre(rose(n), 'lp', t => 300 + 2400 * Math.exp(-t / (tau * 0.7)) * Math.min(1, t / att), 0.8), b = filtre(brun(n), 'lp', 260), a1 = lent(n, 11), a2 = lent(n, 3);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.4 + b[i] * 1.8) * Math.min(1, Math.pow(t / att, 1.4)) * Math.exp(-Math.max(0, t - att) / tau) * (1 + 0.6 * a1[i] + 0.35 * a2[i]); }
+      mix(d, sat(x, 2), t0, g, pan);
+    }
+    mix(d, crepite(n, t => (o.crep ?? 220) * 0.3 * Math.exp(-t / (tau * 1.2)), 0.7), t0 + 0.02, g * 0.5, 0.25);
+    mix(d, env(filtre(blanc(n), 'hp', 4000), t => Math.min(1, t / att) * Math.exp(-t / (tau * 0.5))), t0, g * 0.1, -0.25);
+  }
+  function battement(d, t0, g) { // un seul battement sourd dans le silence
+    coup(d, t0, g, { f0: 75, f1: 42, chute: 0.04, tau: 0.11, drive: 2.2, dur: 0.5 });
+    mix(d, env(filtre(brun(N(0.3)), 'lp', 150), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.08)), t0, g * 0.8, 0);
+  }
+  function gel(d, t0, g) { // le monde se fige : tout s'effondre vers le grave et s'etouffe
+    chute(d, t0, g);
+    coup(d, t0, g * 0.9, { f0: 140, f1: 34, chute: 0.05, tau: 0.25, drive: 3, dur: 0.9 });
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(N(0.5)), 'lp', t => 150 + 4200 * Math.exp(-t / 0.08), 0.8), t => Math.min(1, t / 0.006) * Math.exp(-t / 0.14)), t0, g * 1.6, pan);
+  }
+  // ---------------------------------------------------------------- le Miasme : souffles, chair humide, cordes qui se serrent, battements
+  // L'humide se fait avec du bruit filtre qui glisse, a attaque douce, jamais avec des petits clics ; rien d'aigu, rien de tenu.
+  function inverse(d, t0, dur, g, gen) { // un son joue a l'envers, qui gonfle jusqu'a l'instant t0 + dur
+    const tmp = vide(dur + 0.05); gen(tmp);
+    const n = N(dur); for (const [c, pan] of [[tmp.L, -0.3], [tmp.R, 0.3]]) { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = c[n - 1 - i] * Math.pow(i / n, 1.3); mix(d, x, t0, g, pan); }
+  }
+  function respire(d, t0, dur, g) { // le grave qui respire : deux sinus graves qui battent, gonfles et relaches par un souffle lent
+    const n = N(dur);
+    for (const [f, pan] of [[46, -0.3], [46.8, 0.3]]) mix(d, env(sinus(n, t => f + 3 * Math.sin(t * 2.4)), t => Math.min(1, t / 0.2) * (0.65 + 0.35 * Math.sin(t * 4.1)) * (t > dur - 0.3 ? Math.max(0, (dur - t) / 0.3) : 1)), t0, g, pan);
+  }
+  function glisse(d, t0, dur, g, o = {}) { // la chair humide qui glisse : du bruit dans une bande qui descend, attaque douce, passe-bas
+    const n = N(dur), f0 = o.f0 ?? 900, f1 = o.f1 ?? 220;
+    const x = env(filtre(rose(n), 'bp', t => f0 * Math.pow(f1 / f0, t / dur), o.q ?? 2.2), t => Math.pow(Math.sin(Math.PI * Math.min(1, t / dur)), 1.4));
+    mix(d, filtre(x, 'lp', 2400), t0, g * 3.2, o.pan ?? 0);
+  }
+  function serre(d, t0, dur, g, pan = 0) { // des cordes qui se serrent : deux bandes de bruit etroites et graves qui montent lentement
+    const n = N(dur);
+    for (const [k, p] of [[1, pan - 0.3], [1.33, pan + 0.3]]) {
+      const x = filtre(rose(n), 'bp', t => (140 + 260 * Math.pow(t / dur, 1.3)) * k, 5.0), am = lent(n, 11);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.05) * (t > dur - 0.06 ? Math.max(0, (dur - t) / 0.06) : 1) * (0.6 + 0.4 * am[i]); }
+      mix(d, x, t0, g * 4.5, p);
+    }
+  }
+  function dechireHumide(d, t0, g, pan = 0, gros = 1) { // la chair qui se dechire : bruit sature puis adouci, qui glisse vers le grave
+    const n = N(0.5 * gros);
+    const x = env(filtre(rose(n), 'bp', t => 1300 * Math.exp(-t / (0.07 * gros)) + 180, 1.2), t => Math.min(1, t / 0.004) * Math.exp(-t / (0.11 * gros)));
+    mix(d, filtre(sat(x, 3), 'lp', 2600), t0, g * 3.4, pan);
+    mix(d, env(filtre(brun(n), 'lp', 380), t => Math.min(1, t / 0.006) * Math.exp(-t / (0.14 * gros))), t0, g * 1.6, pan);
+  }
+  function pierreSourde(d, t0, g, pan = 0) { // une dalle qui se souleve et retombe : choc sourd, pierre qui frotte, sans eclat
+    coup(d, t0, g * 0.7, { f0: 120, f1: 50, tau: 0.06, drive: 2.5, dur: 0.3 });
+    mix(d, env(filtre(rose(N(0.25)), 'bp', 520, 1.4), t => Math.min(1, t / 0.003) * Math.exp(-t / 0.05)), t0, g * 2.2, pan);
+    mix(d, env(filtre(brun(N(0.35)), 'lp', 300), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.09)), t0, g * 1.4, pan);
+  }
+  function tendu(d, t0, g) { // la corde se tend : un « vrong » grave et court, un frottement qui monte, aucune vibration aigue
+    const n = N(0.9);
+    mix(d, sat(env(sinus(n, t => 62 + 30 * Math.exp(-t / 0.05)), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.22)), 2.2), t0, g * 0.9, 0);
+    mix(d, env(sinus(n, t => 93 + 45 * Math.exp(-t / 0.05)), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.12)), t0, g * 0.35, 0.2);
+    mix(d, env(filtre(rose(n), 'lp', t => 700 * Math.exp(-t / 0.08) + 120, 0.8), t => Math.min(1, t / 0.003) * Math.exp(-t / 0.1)), t0, g * 1.8, 0);
+  }
+  function expire(d, t0, dur, g) { // la grande expiration : un souffle grave et large qui s'ouvre, puis retombe longtemps
+    const n = N(dur);
+    for (const pan of [-0.7, 0, 0.7]) {
+      const x = filtre(rose(n), 'lp', t => 220 + 1500 * Math.exp(-t / (dur * 0.22)) * Math.min(1, t / 0.08), 0.8), am = lent(n, 5);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, Math.pow(t / 0.09, 1.5)) * Math.exp(-t / (dur * 0.38)) * (0.75 + 0.25 * am[i]); }
+      mix(d, x, t0, g * 2.6, pan);
+    }
+    mix(d, env(filtre(brun(n), 'lp', 140), t => Math.min(1, t / 0.06) * Math.exp(-t / (dur * 0.5))), t0, g * 2.0, 0);
+  }
+  function soupir(d, t0, dur, g) { // les spores qui retombent : un soupir tres bas qui tourne d'une oreille a l'autre
+    const n = N(dur);
+    for (const pan of [-0.6, 0.6]) { const x = filtre(rose(n), 'bp', t => 420 - 200 * t / dur + 60 * Math.sin(t * 3 + pan), 0.9), am = lent(n, 2.5); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.sin(Math.PI * Math.min(1, t / dur)) * (0.6 + 0.4 * am[i]); } mix(d, filtre(x, 'lp', 1400), t0, g * 2.4, pan); }
+  }
+  function grondeSous(d, t0, dur, g) { // ca court sous la place : grondement de terre qui va de gauche a droite
+    const n = N(dur);
+    const x = filtre(brun(n), 'lp', 260, 0.8), y = filtre(rose(n), 'bp', 380, 1.0), am = lent(n, 18);
+    for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.5 + y[i] * 1.2) * Math.min(1, t / 0.03) * (t > dur - 0.06 ? Math.max(0, (dur - t) / 0.06) : 1) * (0.7 + 0.3 * am[i]); }
+    mix(d, filtre(sat(x, 2), 'lp', 1800), t0, g * 1.6, t => -0.8 + 1.6 * Math.min(1, t / dur));
+  }
+  function battementHumide(d, t0, g) { // un battement de seve : deux coups sourds (lub-dub) et un glissement mou
+    coup(d, t0, g, { f0: 75, f1: 38, chute: 0.03, tau: 0.09, drive: 1.6, dur: 0.4 });
+    coup(d, t0 + 0.16, g * 0.65, { f0: 66, f1: 34, chute: 0.03, tau: 0.08, drive: 1.4, dur: 0.35 });
+    glisse(d, t0 + 0.01, 0.22, g * 0.25, { f0: 500, f1: 160, q: 1.6 });
+  }
+
+  // ---------------------------------------------------------------- les bruitages du Dard Tisse
+  return {
+    tissage() { // le grave respire, la puissance monte, la chair glisse et se serre ; une inspiration a l'envers jusqu'au lancer (0,52 s)
+      const d = vide(0.75);
+      respire(d, 0, 0.72, 0.4); montee(d, 0.02, 0.52, 0.3, { f0: 44, f1: 88, courbe: 1.5 });
+      for (let k = 0; k < 4; k++) glisse(d, 0.04 + k * 0.11, 0.2, 0.3, { f0: RR(700, 1000), f1: RR(180, 260), pan: -0.6 + 0.4 * k });
+      serre(d, 0.15, 0.37, 0.3); aspire(d, 0.22, 0.3, 0.55);
+      return fondu(normer(densifier(normer(d, 0.9), 1.4), 0.8), 0.06);
+    },
+    lancer() { // le dard part et entre dans la pierre (+60 ms), puis file dessous jusqu'a la zone (+240 ms)
+      const d = vide(0.7);
+      souffle(d, 0, 0.12, 0.5, { f0: 200, f1: 900, f2: 260, pic: 0.05, siffle: 0.05, dechire: 0.04, de: -0.4, vers: 0.1 });
+      pierreSourde(d, 0.06, 0.9, -0.3); dechireHumide(d, 0.06, 0.6, -0.3, 0.8); grave(d, 0.065, 0.5, { f0: 58, f1: 30, tau: 0.25, dur: 0.6 });
+      grondeSous(d, 0.07, 0.19, 0.55);
+      return fondu(normer(densifier(normer(d, 0.9), 1.6), 0.85), 0.15);
+    },
+    point(k) { // un point de couture : la dalle se souleve, la chair sort, le fil file vers le haut
+      const d = vide(0.6), pan = k === 1 ? -0.25 : 0.2;
+      pierreSourde(d, 0, 0.7, pan); dechireHumide(d, 0.005, 0.5, pan, 0.6);
+      glisse(d, 0.02, 0.16, 0.4, { f0: 300, f1: 900, q: 1.8, pan });
+      return fondu(normer(d, 0.7), 0.1);
+    },
+    eclosion() { // la colonne jaillit : claquement, coup sature, grave, dechirure humide, cordes qui se tendent, corps qui gronde
+      const d = vide(2.6);
+      claque(d, 0, 0.5);
+      coup(d, 0, 0.95, { f0: 160, f1: 42, chute: 0.025, tau: 0.14, drive: 4.5, dur: 0.7 });
+      grave(d, 0.004, 0.85, { f0: 62, f1: 22, tau: 0.6, dur: 1.8 });
+      dechireHumide(d, 0.003, 1.0, 0, 1.4);
+      for (const p of [-0.6, 0.6]) dechireHumide(d, RR(0.02, 0.06), 0.5, p, 0.9);
+      serre(d, 0.05, 0.5, 0.45);
+      for (const pan of [-0.6, 0.6]) mix(d, filtre(sat(env(filtre(rose(N(1.6)), 'lp', t => 1600 * Math.exp(-t / 0.12) + 160, 0.8), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.4)), 2), 'lp', 3000), 0, 1.3, pan);
+      for (let i = 0; i < 6; i++) pierreSourde(d, RR(0.1, 0.9), RR(0.15, 0.3), RR(-0.8, 0.8));   // les dalles qui retombent
+      return fondu(normer(densifier(normer(d, 0.95), 2.0), 0.95), 0.4);
+    },
+    tension() { const d = vide(1.0); tendu(d, 0, 1); serre(d, 0, 0.3, 0.25); for (let i = 0; i < 3; i++) pierreSourde(d, 0.03 + i * 0.07, 0.25, -0.6 + 0.5 * i); return fondu(normer(d, 0.8), 0.2); },
+    battement(k) { const d = vide(0.6); battementHumide(d, 0, 1); return fondu(normer(d, 0.6 + 0.1 * k), 0.15); },
+    avant() { // l'appel d'air : la grande expiration jouee a l'envers, qui finit pile sur la floraison
+      const L = 0.3, d = vide(L); inverse(d, 0, L, 1, t => expire(t, 0, 0.9, 1)); aspire(d, 0, L, 0.6);
+      return fondu(normer(d, 0.65), 0.004);
+    },
+    floraison() { // la colonne s'ouvre : une enorme expiration grave et humide, qui dure ; le sommet de l'Art
+      const d = vide(3.6);
+      coup(d, 0, 0.9, { f0: 110, f1: 36, chute: 0.05, tau: 0.25, drive: 3.5, dur: 1.0 });
+      grave(d, 0.01, 1.0, { f0: 52, f1: 20, tau: 1.1, dur: 3.2 });
+      expire(d, 0, 3.2, 1.0);
+      for (let k = 0; k < 6; k++) glisse(d, 0.05 + k * 0.08, 0.5, 0.35, { f0: RR(600, 900), f1: RR(140, 200), pan: -0.75 + 0.3 * k });   // les petales qui se deroulent
+      dechireHumide(d, 0.02, 0.8, 0, 1.6);
+      return fondu(normer(densifier(normer(d, 0.95), 2.4), 0.99), 0.6);
+    },
+    spores() { const d = vide(2.2); soupir(d, 0, 2.1, 0.8); respire(d, 0, 2.0, 0.25); return fondu(normer(d, 0.5), 0.4); },
+    cloture() { const d = vide(0.8); coup(d, 0, 0.5, { f0: 90, f1: 45, tau: 0.05, drive: 1.6, dur: 0.3 }); glisse(d, 0, 0.12, 0.25, { f0: 600, f1: 300 }); souffle(d, 0.08, 0.4, 0.25, { f0: 160, f1: 600, f2: 220, siffle: 0.04, dechire: 0.02, de: 0.3, vers: -0.3 }); return fondu(normer(d, 0.5), 0.12); },
+    ambiance() { // vent dans les ruines et lanterne, en boucle sans couture
+      const T = 8, X = 1, n = N(T + X), d = vide(T + X);
+      for (const pan of [-0.7, 0.7]) {
+        const m = lent(n, 0.35), am = lent(n, 0.22), x = filtre(rose(n), 'bp', t => 330 + 220 * m[Math.min(n - 1, Math.round(t * SR))], 0.6);
+        for (let i = 0; i < n; i++) x[i] *= 0.55 + 0.45 * am[i];
+        mix(d, filtre(x, 'lp', 1600), 0, 2.2, pan);
+      }
+      mix(d, filtre(brun(n), 'lp', 70), 0, 0.8, 0);
+      const out = vide(T), k = N(X), m = out.L.length;
+      for (let i = 0; i < m; i++) { out.L[i] = d.L[i]; out.R[i] = d.R[i]; }
+      for (let i = 0; i < k; i++) { const g = i / k; out.L[i] = d.L[i] * g + d.L[m + i] * (1 - g); out.R[i] = d.R[i] * g + d.R[m + i] * (1 - g); }
+      return normer(out, 0.5);
+    },
+    reverb(dur = 3.4) { // reponse de la place : bruit qui decroit et s'assombrit
+      const n = N(dur), d = vide(dur);
+      for (const c of [d.L, d.R]) { let lp = 0; for (let i = 0; i < n; i++) { const t = i / SR; lp += (R() * 2 - 1 - lp) * (1 - (0.15 + 0.8 * Math.min(1, t / dur)) * 0.9); c[i] = t < 0.015 ? 0 : lp * Math.exp(-t / 0.8); } }
+      for (let j = 0; j < 8; j++) { const i = N(RR(0.012, 0.06)); d.L[i] += RR(-0.6, 0.6); d.R[i] += RR(-0.6, 0.6); }
+      return d;
+    }
+  };
+}
+function toutesLesRecettes(syn) {
+  return { reverb: syn.reverb(), tissage: syn.tissage(), lancer: syn.lancer(), point: [syn.point(1), syn.point(2)], eclosion: syn.eclosion(), tension: syn.tension(), battement: [syn.battement(1), syn.battement(2)], avant: syn.avant(), floraison: syn.floraison(), spores: syn.spores(), cloture: syn.cloture(), ambiance: syn.ambiance() };
+}
+/* </synthese> */
+// La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
+function synthetiser(SR) {
+  return new Promise((ok, ko) => {
+    try {
+      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() +
+        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) tr.push(x.L.buffer, x.R.buffer); postMessage(o, tr); };';
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
+      w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
+      w.onerror = e => { w.terminate(); ko(e); };
+      w.postMessage({ SR });
+    } catch (e) { ko(e); }
+  });
+}
+
+const Son = (() => {
+  let ctx = null, on = false, pret = false, enCours = false, bus, envoi, retour, ambGain, ambFiltre, ambSrc = null, B = null;
+  const actifs = new Set();
+  const enBuffer = s => { const b = ctx.createBuffer(2, s.L.length, ctx.sampleRate); b.copyToChannel(s.L, 0); b.copyToChannel(s.R, 1); return b; };
+  async function preparer() {
+    enCours = true;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.3;
+    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.6) / Math.tanh(1.6); chaleur.curve = cv; chaleur.oversample = '2x';
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -1.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.95;
+    bus = ctx.createGain(); bus.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
+    let S;
+    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)); window.__sonVia = 'page'; }
+    const verb = ctx.createConvolver(); verb.buffer = enBuffer(S.reverb);
+    envoi = ctx.createGain(); retour = ctx.createGain(); retour.gain.value = 0.6; envoi.connect(verb); verb.connect(retour); retour.connect(bus);
+    B = {};
+    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(enBuffer) : enBuffer(r);
+    ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
+    ambGain = ctx.createGain(); ambGain.gain.value = 0;
+    ambFiltre.connect(ambGain); ambGain.connect(bus);
+    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
+    pret = true; enCours = false;
+    ambiance('normal');
+  }
+  function jouer(nom, g = 1, envoiV = 0.3, idx, baisse) {
+    if (!on || !pret) return;
+    let b = B[nom]; if (Array.isArray(b)) b = b[idx ?? (actifs.size % b.length)];
+    if (baisse) for (const a of actifs) { a.niv = (a.niv ?? 1) * baisse; a.gn.gain.setTargetAtTime(a.g0 * a.niv, ctx.currentTime, 0.04); } // le nouveau coup passe devant
+    const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = Math.pow(vitesse, 0.6);
+    const gn = ctx.createGain(); gn.gain.value = g; src.connect(gn); gn.connect(bus);
+    const s = ctx.createGain(); s.gain.value = envoiV; gn.connect(s); s.connect(envoi);
+    src.start(); actifs.add({ src, gn, g0: g }); src.onended = () => { for (const a of actifs) if (a.src === src) actifs.delete(a); };
+  }
+  function ambiance(etat) { // le vent se coupe pendant le gel et le silence, puis revient
+    if (!pret) return; const t = ctx.currentTime;
+    const [g, f, tc] = etat === 'fige' ? [0.3, 380, 0.04] : etat === 'silence' ? [0, 300, 0.05] : [1, 18000, 0.35];
+    ambGain.gain.setTargetAtTime(g * 0.22, t, tc); ambFiltre.frequency.setTargetAtTime(f, t, 0.05);
+    if (etat === 'silence') for (const a of actifs) a.gn.gain.setTargetAtTime(a.g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
+    retour.gain.setTargetAtTime(etat === 'silence' ? 0.12 : 0.6, t, etat === 'silence' ? 0.06 : 0.2);
+    ambSrc.playbackRate.value = Math.pow(vitesse, 0.6);
+  }
+  function couper() { // a chaque relance, les bruitages en cours s'eteignent vite
+    if (!pret) return; const t = ctx.currentTime;
+    for (const a of actifs) { a.gn.gain.setTargetAtTime(0, t, 0.03); try { a.src.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
+    actifs.clear(); ambiance('normal');
+  }
+  return {
+    get on() { return on; }, get pret() { return pret; },
+    async set(v) {
+      on = v;
+      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
+      if (!ctx) return;
+      if (v) { await ctx.resume(); if (!pret && !enCours) await preparer(); } else await ctx.suspend();
+    },
+    jouer, ambiance, couper
+  };
+})();
+
+// ================================================================== mise en scene
+// Durees supposees (a caler sur arts.json) : anticipation 760 ms (tissage, couture), active 200 ms, recuperation 600 ms.
+const T = { tresse: 150, lancer: 520, act: 760, eclot: 760, rec: 960, fin: 1560, tension: 1150, silence: 1240, batt: [1330, 1560], flor: 1900, spores: 2250, coupe: 2900, bout: 3800, points: [630, 695] };
+let vue = 'cine', vitesse = 1, boucle = true, run = null;
+const IDLE = 500;
+// ou en est le dard sur son chemin (abscisse en metres), -1 tant qu'il est dans les mains
+function dardS(t) {
+  if (t < T.lancer || !CHEMIN.pret) return -1;
+  if (t < T.eclot) return CHEMIN.M.C * Math.pow(clamp((t - T.lancer) / (T.eclot - T.lancer)), 1.08);
+  return CHEMIN.M.C + (CHEMIN.M.haut - CHEMIN.M.C) * easeOutCubic(clamp((t - T.eclot) / 130));
+}
+// un chemin provisoire, pour la frise : le vrai part de la main au moment du lancer
+CHEMIN.construire(V3(TISSEUSE.x + 0.95, 0.95, 0.15));
+T.points = [CHEMIN.M.X1, CHEMIN.M.X2].map(s => Math.round(T.lancer + (T.eclot - T.lancer) * Math.pow(s / CHEMIN.M.C, 1 / 1.08)));
+// les poses des mains, dans le repere du buste (devant +x, droite +z) : une suite de cles, chacune part de la precedente
+const EPG = V3(0.06, 1.3, -0.25), EPD = V3(0.06, 1.3, 0.25);
+function cles(t, depart, liste) {
+  const p = depart.clone();
+  for (const [t0, t1, cible, ease] of liste) { const k = clamp((t - t0) / (t1 - t0)); if (k <= 0) break; p.lerp(cible, (ease ?? easeInOut)(k)); }
+  return p;
+}
+function mainsLocales(t) {
+  const garde = [V3(0.16, 0.88, -0.28), V3(0.16, 0.88, 0.28)];
+  if (t < 0) return garde;
+  // le tissage : les mains tournent l'une autour de l'autre devant la poitrine, et le cercle se resserre avec la tresse
+  const th = t * 0.026, amp = 0.15 - 0.06 * smooth(T.tresse, T.lancer, t), M = V3(0.46, 1.12, 0);
+  const tG = M.clone().add(V3(0.03 * Math.sin(th * 2), amp * Math.sin(th), -amp * Math.cos(th) - 0.05)), tD = M.clone().add(V3(-0.03 * Math.sin(th * 2), -amp * Math.sin(th), amp * Math.cos(th) + 0.05));
+  const ouvreG = V3(0.32, 1.34, -0.5), ouvreD = V3(0.32, 1.34, 0.5);
+  const G = cles(t, garde[0], [[0, 90, tG], [T.lancer, T.lancer + 200, V3(0.12, 1.02, -0.36)], [T.tension, T.tension + 140, V3(0.06, 1.12, -0.38), easeOutCubic],
+    [T.flor - 100, T.flor + 500, ouvreG], [T.coupe - 300, T.coupe - 60, V3(0.52, 1.14, -0.02)], [T.coupe + 160, T.coupe + 760, garde[0]]]);
+  const D = cles(t, garde[1], [[0, 90, tD], [T.lancer - 40, T.lancer + 50, V3(0.8, 0.6, 0.12), easeOutCubic], [T.lancer + 50, T.lancer + 270, V3(0.62, 0.98, 0.16)],
+    [T.tension, T.tension + 140, V3(-0.14, 1.12, 0.3), easeOutCubic], [T.flor - 100, T.flor + 500, ouvreD], [T.coupe - 300, T.coupe - 60, V3(0.52, 1.12, 0.07)], [T.coupe + 160, T.coupe + 760, garde[1]]]);
+  return [G, D];
+}
+let mainsCache = null;
+function mainGauche() { return mainsCache ? mainsCache[0].clone() : corpsJ.localToWorld(V3(0.46, 1.12, -0.12)); }
+function mainDroite() { return mainsCache ? mainsCache[1].clone() : corpsJ.localToWorld(V3(0.46, 1.12, 0.12)); }
+function poserBras(b, epaule, main) {
+  const e = corpsJ.localToWorld(epaule.clone()), m = corpsJ.localToWorld(main.clone()), d = m.clone().sub(e), L = d.length();
+  b.manche.position.copy(e).addScaledVector(d, 0.5); b.manche.quaternion.setFromUnitVectors(V3(0, 1, 0), d.normalize()); b.manche.scale.set(1, L, 1);
+  b.main.position.copy(m); b.main.quaternion.copy(b.manche.quaternion);
+  return m;
+}
+function poseJoueur() {
+  const t = run.tau;
+  const elan = smooth(T.lancer - 40, T.lancer + 60, t) * (1 - smooth(T.lancer + 300, T.fin, t)), tire = smooth(T.tension, T.tension + 140, t) * (1 - smooth(T.flor - 100, T.flor + 400, t));
+  const souffle = Math.sin(run.sim * 0.0021) * 0.012;
+  joueur.position.set(TISSEUSE.x + 0.24 * elan - 0.14 * tire, SOL_Y + souffle - 0.05 * elan, TISSEUSE.z);
+  corpsJ.rotation.set(0, 0.1 * Math.sin(t * 0.026) * (t > 0 && t < T.lancer ? 1 : 0) - 0.18 * elan, -0.08 - 0.2 * elan + 0.2 * tire + 0.08 * smooth(T.flor, T.flor + 500, t) * (1 - smooth(T.coupe, T.coupe + 600, t)));
+  joueur.updateMatrixWorld(true);
+  const [G, D] = mainsLocales(t);
+  mainsCache = [poserBras(brasG, EPG, G), poserBras(brasD, EPD, D)];
+}
+function poseEnnemis() {
+  const t = run.tau;
+  ennemis.forEach((e, i) => {
+    const dt = t - T.eclot, pris = dt >= 0 ? 1 : 0, choc = pris * Math.exp(-dt / 140) * Math.min(1, dt / 25);
+    const genou = smooth(T.flor + 380 + 90 * i, T.flor + 1100 + 90 * i, t) * (1 - smooth(T.bout - 500, T.bout - 60, t));
+    const vie = pris ? 0 : Math.sin(t * 0.004 + i * 2.1) * 0.025;   // avant l'eclosion, elles respirent ; prises, elles ne bougent plus
+    const serre = smooth(T.tension, T.tension + 200, t) * (1 - smooth(T.flor, T.flor + 300, t));
+    e.racine.position.set(e.pos0.x, SOL_Y + 0.07 * choc + 0.04 * pris * (1 - genou) - 0.32 * genou, e.pos0.z);
+    e.racine.rotation.y = e.ry + 0.12 * choc * (i - 1);
+    e.penche.rotation.z = vie - 0.14 * choc + 0.03 * Math.sin(t * 0.09 + i) * serre - 0.34 * genou;
+    e.penche.rotation.x = 0.05 * Math.sin(t * 0.07 + i * 2) * serre;
+    e.racine.updateMatrixWorld(true);
+    const inf = smooth(T.eclot + 60, T.flor, t) * 0.65 + 0.35 * smooth(T.flor, T.flor + 900, t);
+    uInf.value[i].set(e.pos0.x, 1.25, e.pos0.z, inf * (1 - smooth(T.bout - 450, T.bout - 60, t)));
+  });
+  for (const m of matsEnnemi) { m.emissive.setRGB(0.5, 0.2, 1); m.emissiveIntensity = run.flash * 0.035; }
+}
+function shake(s) { if (!reduceMotion) run.trauma = Math.min(1, run.trauma + s); }
+function hitstop(ms) { run.hitstop = ms; run.stopLabel = ms; }
+function centreEcran(p) { const v = p.clone().project(camera); run.centre.set(v.x * 0.5 + 0.5, v.y * 0.5 + 0.5); }
+const POUSSIERE = [0.03, 0.031, 0.026];
+// les spores : des points violets qui derivent, montent, puis retombent doucement
+function spores(p, n, o = {}) {
+  for (let i = 0; i < nq(n); i++) {
+    const v = V3(rand(-1, 1), rand(-0.2, 1), rand(-1, 1)).multiplyScalar((o.speed ?? 0.8) * rand(0.3, 1)).add(o.v ?? V3()), k = rand(0.9, 2.4) * (o.eclat ?? 1);
+    points.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.08)), v, c: rand() < 0.2 ? [CORE.x * k, CORE.y * k, CORE.z * k] : [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0,
+      size: rand(0.008, 0.022) * (o.taille ?? 1), life: rand(1.0, 2.3) * (o.life ?? 1), grav: o.grav ?? -0.04, drag: o.drag ?? 1.3, turb: o.turb ?? 1.4, kind: 0, attract: o.attract, force: o.force });
+  }
+}
+// le nuage de spores : une fumee sombre, lourde et transparente, piquee de points violets
+function nuage(p, n, o = {}) {
+  for (let i = 0; i < nq(n); i++) sprites.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-0.4, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.2)), v: (o.v ?? V3()).clone().add(V3(rand(-1, 1), rand(-0.3, 1), rand(-1, 1)).multiplyScalar(o.speed ?? 0.5)),
+    size: rand(0.5, 1.0) * (o.size ?? 0.6), grow: o.grow ?? 1.6, life: rand(1.1, 1.8) * (o.life ?? 1), a: o.a ?? 0.6, glow: o.glow ?? 0.5, drag: o.drag ?? 1.6, rise: o.rise ?? 0.1 });
+}
+// la seve : des gouttes sombres qui volent, retombent et tachent les dalles
+function seve(p, dir, n, o = {}) {
+  for (let i = 0; i < nq(n); i++) {
+    const v = dir.clone().normalize().add(V3(rand(-1, 1), rand(-0.4, 1), rand(-1, 1)).multiplyScalar(o.spread ?? 0.7)).normalize().multiplyScalar((o.speed ?? 4) * rand(0.4, 1.2));
+    streaks.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.05)), v, c: [0.02, 0.004, 0.03], a: 0.9, len: 0.035, w: rand(0.008, 0.02), life: rand(0.7, 1.3), grav: 7, drag: 1.1, ink: true });
+  }
+}
+// des filaments de seve lumineuse, courts, qui s'eteignent vite
+function filaments(p, dir, n, speed = 7) {
+  for (let i = 0; i < nq(n); i++) {
+    const v = dir.clone().normalize().add(V3(rand(-1, 1), rand(-0.5, 1), rand(-1, 1)).multiplyScalar(0.7)).normalize().multiplyScalar(speed * rand(0.4, 1.2)), k = rand(1.6, 3.2);
+    streaks.spawn({ p, v, c: [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, len: 0.05, w: rand(0.008, 0.016), life: rand(0.2, 0.45), grav: 4, drag: 2.6 });
+  }
+}
+function mottes(p, n, force) { for (let i = 0; i < nq(n); i++) { const a = rand(0, 6.28); debris.spawn({ p: p.clone().add(V3(Math.cos(a) * rand(0, 0.3), rand(0, 0.3), Math.sin(a) * rand(0, 0.3))), v: V3(Math.cos(a) * rand(0.3, 1) * force, rand(1.5, 3.5) * force * 0.6, Math.sin(a) * rand(0.3, 1) * force), s: rand(0.03, 0.06), hot: true, life: 2.2 }); } }
+function cailloux(p, n, force) { for (let i = 0; i < nq(n); i++) { const a = rand(0, 6.28); debris.spawn({ p: p.clone().add(V3(Math.cos(a) * rand(0.05, 0.4), SOL_Y + 0.03, Math.sin(a) * rand(0.05, 0.4))), v: V3(Math.cos(a) * rand(0, 1) * force, rand(1.2, 3) * force, Math.sin(a) * rand(0, 1) * force), s: rand(0.018, 0.045), hot: false, life: 1.6 }); } }
+function bouffee(p, n, o = {}) { // la poussiere de pierre qui sort des joints
+  for (let i = 0; i < nq(n); i++) sprites.spawn({ p: p.clone().add(V3(rand(-1, 1) * (o.jitter ?? 0.2), rand(0.02, 0.12), rand(-1, 1) * (o.jitter ?? 0.2))), v: V3(rand(-0.4, 0.4), rand(0.2, 0.7) * (o.force ?? 1), rand(-0.4, 0.4)), size: rand(0.18, 0.32) * (o.size ?? 1), grow: 1.8, life: rand(0.8, 1.3), kind: 2, col: POUSSIERE, a: o.a ?? 0.3, drag: 2.4, rise: 0.12 });
+}
+function anneauPoussiere(r0, n, vitesse, o = {}) {
+  for (let i = 0; i < nq(n); i++) {
+    const a = i / nq(n) * Math.PI * 2 + rand(-0.1, 0.1), d = V3(Math.cos(a), 0, Math.sin(a));
+    sprites.spawn({ p: d.clone().multiplyScalar(r0).add(V3(o.centre ? o.centre.x : 0, SOL_Y + rand(0.1, 0.35), o.centre ? o.centre.z : 0)), v: d.multiplyScalar(vitesse * rand(0.7, 1.2)).add(V3(0, rand(0.2, 0.8), 0)), size: rand(0.45, 0.8) * (o.size ?? 1), grow: 1.6, life: rand(0.8, 1.3) * (o.life ?? 1), kind: 2, col: POUSSIERE, a: o.a ?? 0.55, drag: 2.6, rise: 0.15 });
+  }
+}
+const TROU_T = new Array(6).fill(Infinity);
+function ouvrirTrou(k, t) { if (TROU_T[k] === Infinity) TROU_T[k] = t; }
+
+function start() {
+  Son.couper();
+  rng = mulberry32(808);
+  for (const grp of [fx, distFx]) for (const c of [...grp.children]) { grp.remove(c); c.traverse(o => { if (o.material && o.material.dispose) o.material.dispose(); if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+  panneaux.length = 0;
+  points.clear(); streaks.clear(); splats.clear(); sprites.clear(); debris.clear();
+  run = { tau: -IDLE, sim: 0, hitstop: 0, stopLabel: 0, trauma: 0, inv: 0, duo: 0, lines: 0, rad: 0, ca: 0, fovPunch: 0, dim: 0, desat: 0, flash: 0, souffle: 0, trouble: 0, fige: 0, light: null, flags: {}, centre: new THREE.Vector2(0.5, 0.5), done: false, wait: 0, fade: 0, lastSeed: -999, lineSeed: 0 };
+  FILS.eteindre(); for (const fr of franges) fr.b.actif = true; resetFils();
+  TROU_T.fill(Infinity);
+  const s = uSol; s.uAnnonce.value = 0; s.uTrousLueur.value = 0; s.uFrontS.value = -1; s.uInfR.value = 0; s.uInfP.value = 0; s.uInfLueur.value = 0; s.uEclot.value = 0; s.uTension.value = 0; s.uSouffle.value = 0; s.uMortier.value = 0; s.uFade.value = 1; s.uTremble.value = 0;
+  for (const v of s.uTrous.value) v.z = 0;
+  for (const g of uInf.value) g.w = 0;
+  epine.visible = false;
+  mainsCache = null; poseJoueur(); poseEnnemis();
+  drawTimeline();
+}
+
+function step(dtMs) {
+  run.sim += dtMs; run.dtLast = dtMs;
+  const s = dtMs / 1000;
+  run.trauma = Math.max(0, run.trauma - s * 1.6);
+  if (run.inv > 0) run.inv -= dtMs; else run.duo = Math.max(0, run.duo - dtMs);
+  run.lines = Math.max(0, run.lines - s * 3.2); run.rad *= Math.exp(-s * 7); run.ca *= Math.exp(-s * 6); run.fovPunch *= Math.exp(-s * 6);
+  if (run.sim - run.lastSeed > 45) { run.lineSeed = rng() * 100; run.lastSeed = run.sim; }
+  if (run.hitstop > 0) { run.hitstop -= dtMs; return; }
+  run.stopLabel = 0;
+  if (run.done) { run.wait += dtMs; run.fade = Math.min(1, run.wait / 260); if (boucle && run.wait > 320) { start(); run.fade = 1; } return; }
+  run.fade = Math.max(0, run.fade - s * 5);
+  run.tau += dtMs;
+  scenario(run.tau, dtMs);
+  poseJoueur(); poseEnnemis();
+  majCape(run.souffle, run.sim / 1000);
+  points.update(s); streaks.update(s); splats.update(s); sprites.update(s); debris.update(s); sporesAir.update(s, run.sim / 1000);
+  for (let i = panneaux.length - 1; i >= 0; i--) { const p = panneaux[i]; p.age += s; const u = clamp(p.age / p.life); p.mat.uniforms.uT.value = u; p.m.scale.setScalar(lerp(p.s0, p.s1, easeOutCubic(u))); if (p.follow) p.m.position.copy(p.follow()); if (p.age > p.life) { p.m.parent.remove(p.m); p.mat.dispose(); p.m.geometry.dispose(); panneaux.splice(i, 1); } }
+  const tt = run.sim / 1000;
+  for (const grp of [fx, distFx]) for (const o of grp.children) if (o.material && o.material.uniforms && o.material.uniforms.uTime) o.material.uniforms.uTime.value = tt;
+  uSol.uTime.value = tt; sky.material.uniforms.uTime.value = tt;
+  for (const b of brumes) b.material.uniforms.uTime.value += s;
+  if (run.light) { run.light.age += s; impactLight.position.copy(run.light.p); impactLight.intensity = run.light.peak * Math.exp(-run.light.age * (run.light.decay ?? 5)); } else impactLight.intensity = 0;
+  if (run.tau > T.bout) run.done = true;
+}
+
+const sA = V3(), sB = V3();
+function scenario(t, dt) {
+  const F = run.flags, so = uSol, M = CHEMIN.M, haut = V3(C_ZONE.x, SOL_Y + H_COL, C_ZONE.z);
+  // ---------------------------------------------------------------- tissage : le mycelium monte vers les mains, le dard se tresse
+  if (t >= 0 && !F.tissage) { F.tissage = 1; Son.ambiance('fige'); Son.jouer('tissage', 0.85, 0.45); }
+  uBrode.value = smooth(0, 220, t) * (1 - smooth(T.lancer, T.lancer + 400, t)) + 0.6 * smooth(T.tension, T.tension + 200, t) * (1 - smooth(T.flor, T.flor + 500, t));
+  const centreMains = mainGauche().add(mainDroite()).multiplyScalar(0.5);
+  if (t > 30 && t < T.lancer - 30 && rng() < dt * 0.3) {   // les spores convergent vers les mains
+    const a = rand(-1.8, 1.8), r = rand(0.8, 2.3);
+    spores(V3(TISSEUSE.x + Math.cos(a) * r, SOL_Y + rand(0.05, 1.6), TISSEUSE.z + Math.sin(a) * r), 1, { speed: 0.1, life: 0.5, attract: centreMains, force: 22, drag: 3, turb: 0.4 });
+  }
+  if (t > 60 && t < T.lancer && rng() < dt * 0.02) nuage(centreMains, 1, { size: 0.22, a: 0.25, speed: 0.15, life: 0.6, glow: 0.4 });
+  so.uAnnonce.value = smooth(260, 640, t) * (1 - smooth(T.eclot + 150, T.eclot + 700, t));
+  if (t > 300 && t < T.eclot && rng() < dt * 0.05) { const a = rand(0, 6.28), r = rand(0, 1.3); spores(V3(C_ZONE.x + Math.cos(a) * r, SOL_Y + 0.05, C_ZONE.z + Math.sin(a) * r), 1, { speed: 0.15, v: V3(0, 0.35, 0), life: 0.9 }); }
+  // ---------------------------------------------------------------- lancer et couture : le dard plonge, file sous la place, ressort deux fois
+  if (t >= T.lancer && !F.lancer) {
+    F.lancer = 1; Son.jouer('lancer', 0.9, 0.35);
+    const dir = COUTURE.E0.clone().sub(centreMains).normalize();
+    CHEMIN.construire(centreMains.clone().addScaledVector(dir, 0.34));
+    T.points = [M.X1, M.X2].map(s => Math.round(T.lancer + (T.eclot - T.lancer) * Math.pow(s / M.C, 1 / 1.08))); drawTimeline();
+    run.souffle = 0.7; filaments(mainDroite(), dir, 8, 4); seve(mainDroite(), dir, 6, { speed: 3 });
+  }
+  const sd = dardS(t);
+  so.uFrontS.value = sd < 0 ? -1 : sousTerre(sd);
+  const passages = [['E0', 0, 1.0], ['X1', 1, 0.8], ['E1', 2, 0.45], ['X2', 3, 0.8], ['E2', 4, 0.45]];
+  for (const [nom, k, force] of passages) {
+    if (F['p' + nom] || sd < M[nom]) continue;
+    F['p' + nom] = 1; ouvrirTrou(k, t);
+    const p = TROUS[k], sort = nom[0] === 'X';
+    cailloux(p, sort ? 9 : 6, 0.7 * force); bouffee(p, sort ? 5 : 3, { a: 0.5 }); spores(p.clone().setY(SOL_Y + 0.05), 10, { speed: 0.9 * force, v: V3(0, 0.6, 0) });
+    if (sort) { Son.jouer('point', 0.75, 0.35, k === 1 ? 0 : 1); seve(p, V3(0.5, 1, 0), 8, { speed: 3.5 }); filaments(p, V3(0.4, 1, 0), 8, 4); shake(0.15); }
+    else if (k === 0) { shake(0.25); seve(p, V3(0.3, 1, 0), 6, { speed: 2.5 }); }
+    run.light = { p: p.clone().setY(0.7), peak: sort ? 0.5 : 0.3, age: 0 };
+  }
+  if (sd >= M.E0 && sd < M.C && rng() < dt * 0.6) { const f = CHEMIN.at(sd, sA); if (f.y < SOL_Y) bouffee(V3(f.x, SOL_Y, f.z), 1, { jitter: 0.3, size: 0.6, a: 0.3, force: 1.4 }); }
+  if (sd >= M.E0 && sd < M.C && rng() < dt * 0.15) { const f = CHEMIN.at(sd, sA); if (f.y < SOL_Y) cailloux(V3(f.x, 0, f.z), 1, 0.4); }
+  if (sd >= 0 && sd < M.C && rng() < dt * 0.25) { const f = CHEMIN.at(sd, sA); if (f.y > SOL_Y) spores(f, 1, { speed: 0.3, life: 0.7 }); }
+  so.uTremble.value = smooth(T.lancer, T.lancer + 60, t) * (1 - smooth(T.eclot, T.eclot + 200, t)) * 0.8;
+  for (let k = 0; k < 6; k++) so.uTrous.value[k].z = TROU_T[k] === Infinity ? 0 : easeOutCubic(clamp((t - TROU_T[k]) / 120));
+  so.uTrousLueur.value = smooth(T.lancer, T.eclot, t) * (1 - smooth(T.flor + 500, T.bout - 300, t)) + 0.6 * Math.exp(-Math.abs(t - T.eclot) / 200);
+  // ---------------------------------------------------------------- eclosion : la colonne jaillit et se tisse autour des betes
+  if (t >= T.eclot && !F.eclot) {
+    F.eclot = 1; ouvrirTrou(5, t);
+    hitstop(110); shake(0.85); run.flash = 1; run.fovPunch = 5;
+    Son.jouer('eclosion', 1, 0.5, undefined, 0.45);
+    const c = C_ZONE.clone();
+    spores(c.clone().setY(0.6), 110, { speed: 3.0, v: V3(0, 2.2, 0), eclat: 1.4, life: 1.2, jitter: 0.3 });
+    nuage(c.clone().setY(0.5), 8, { size: 0.8, speed: 1.2, a: 0.4, glow: 0.4, jitter: 0.4 });
+    seve(c.clone().setY(0.4), UP, 40, { speed: 6, spread: 0.9 }); mottes(c.clone().setY(0.3), 14, 4.2); cailloux(c, 24, 1.7); halo(c.clone().setY(0.4), 2.4, 0.32, 1.1); filaments(c.clone().setY(0.5), UP, 26, 9);
+    anneauPoussiere(0.9, 14, 2.6, { centre: C_ZONE, a: 0.25, size: 0.6 });
+    panneau(FS_DSHOCK, c.clone().setY(0.9), 0.4, 7, 0.45, { strength: 0.035 });
+    run.light = { p: c.clone().setY(1.9), peak: 5, age: 0 };
+    centreEcran(c.clone().setY(1.2));
+    if (!reduceMotion) { run.inv = 34; run.duo = 45; run.lines = 0.9; run.rad = 0.12; run.ca = 0.012; }
+  }
+  so.uEclot.value = t >= T.eclot ? easeOutCubic(clamp((t - T.eclot) / 140)) * (1 - 0.4 * smooth(T.eclot + 200, T.eclot + 900, t)) : 0;
+  if (t > T.eclot && t < T.flor && rng() < dt * 0.05) seve(V3(C_ZONE.x + rand(-1, 1), SOL_Y + rand(1.5, 4), C_ZONE.z + rand(-1, 1)), V3(0, -1, 0), 1, { speed: 0.5 });
+  if (t > T.eclot + 100 && t < T.flor && rng() < dt * 0.08) { const a = rand(0, 6.28); spores(V3(C_ZONE.x + Math.cos(a) * 1.3, SOL_Y + rand(0.3, 3.8), C_ZONE.z + Math.sin(a) * 1.3), 1, { speed: 0.2, life: 1.2 }); }
+  // ---------------------------------------------------------------- tension : la Tisseuse tire le fil, la place se fronce, le monde se tait
+  if (t >= T.tension && !F.tension) {
+    F.tension = 1; Son.jouer('tension', 0.85, 0.4); shake(0.3); run.fovPunch = 1.5;
+    for (const [a, b] of SOUS) for (let k = 0; k < 3; k++) bouffee(a.clone().lerp(b, rand(0.1, 0.9)), 1, { size: 0.8, a: 0.4, force: 0.8 });
+  }
+  if (t >= T.silence && !F.silence) { F.silence = 1; Son.ambiance('silence'); }
+  const tens = smooth(T.tension, T.tension + 220, t) * (1 - smooth(T.flor - 60, T.flor + 250, t));
+  so.uTension.value = tens;
+  T.batt.forEach((tb, k) => {
+    if (F['b' + k] || t < tb) return;
+    F['b' + k] = 1; Son.jouer('battement', 0.85, 0.3, k); run.fovPunch = 0.9; shake(0.08);
+    spores(haut.clone().setY(SOL_Y + H_COL * 0.95), 14, { speed: 0.5, v: V3(0, 0.5, 0), life: 1.2 });
+  });
+  // ---------------------------------------------------------------- floraison : la colonne s'ouvre lentement et expire ses spores
+  if (t >= T.flor - 300 && !F.avant) { F.avant = 1; Son.jouer('avant', 0.9, 0.4); }
+  if (t >= T.flor && !F.flor) {
+    F.flor = 1; Son.ambiance('normal'); Son.jouer('floraison', 1.25, 0.6, undefined, 0.4);
+    shake(0.6); run.fovPunch = 4; run.flash = 0.8;
+    const h = haut.clone().setY(SOL_Y + H_COL * 0.8);
+    panneau(FS_DSHOCK, h, 0.6, 10, 0.8, { strength: 0.025 }); panneau(FS_DHAZE, h, 3, 6, 1.6, { strength: 0.02 });
+    for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; nuage(V3(C_ZONE.x + Math.cos(a) * 0.9, SOL_Y + H_COL * 0.75, C_ZONE.z + Math.sin(a) * 0.9), 1, { size: 0.8, speed: 0.4, v: V3(Math.cos(a) * 0.6, 1.2, Math.sin(a) * 0.6), rise: 0.5, a: 0.3, glow: 0.35, life: 1.8, grow: 2.4, jitter: 0.3 }); }
+    run.light = { p: h, peak: 6, age: 0, decay: 1.6 };
+    centreEcran(h);
+    if (!reduceMotion) { run.duo = 60; run.lines = 0.6; run.rad = 0.08; run.ca = 0.01; }
+  }
+  if (t > T.flor && t < T.flor + 900) {
+    const k = 1 - (t - T.flor) / 900;
+    if (rng() < dt * 0.5 * k) { const a = rand(0, 6.28), r = rand(0.4, 1.9); spores(V3(C_ZONE.x + Math.cos(a) * r, SOL_Y + rand(2.4, 4.4), C_ZONE.z + Math.sin(a) * r), 1, { speed: 1.2, v: V3(Math.cos(a) * 1.0, rand(1.2, 2.6), Math.sin(a) * 1.0), life: 2.2, grav: 0.12, taille: 0.8 }); }
+    if (rng() < dt * 0.04 * k) { const a = rand(0, 6.28), r = rand(0, 0.6); nuage(V3(C_ZONE.x + Math.cos(a) * r, SOL_Y + H_COL * 0.5, C_ZONE.z + Math.sin(a) * r), 1, { size: 0.6, rise: 0.8, speed: 0.3, v: V3(0, 1.6, 0), a: 0.3, glow: 0.5, life: 1.7, grow: 2.6 }); }
+    if (rng() < dt * 0.04 * k) { const a = rand(0, 6.28); seve(V3(C_ZONE.x + Math.cos(a) * 2.0, SOL_Y + rand(2.0, 3.2), C_ZONE.z + Math.sin(a) * 2.0), V3(0, -1, 0), 1, { speed: 0.6 }); }
+  }
+  if (t > T.flor + 300 && t < T.bout - 500 && rng() < dt * 0.06) { const a = rand(0, 6.28), r = rand(0, 4); spores(V3(C_ZONE.x + Math.cos(a) * r, SOL_Y + rand(1.5, 4), C_ZONE.z + Math.sin(a) * r), 1, { speed: 0.15, v: V3(0, -0.15, 0), life: 1.6, grav: 0.05 }); }
+  if (t >= T.spores && !F.spores) { F.spores = 1; Son.jouer('spores', 0.6, 0.6); }
+  // ---------------------------------------------------------------- l'infection gagne les dalles
+  so.uInfR.value = 1.5 * smooth(T.eclot, T.flor, t) + 3.0 * smooth(T.flor + 100, T.flor + 1500, t);
+  so.uInfP.value = smooth(T.lancer + 100, T.eclot + 700, t) + 0.6 * smooth(T.flor, T.flor + 1200, t);
+  so.uInfLueur.value = 0.25 + T.batt.reduce((a, tb) => a + (t > tb ? 1.2 * Math.exp(-(t - tb) / 220) : 0), 0) + (t > T.flor ? 1.0 * Math.exp(-(t - T.flor) / 700) : 0);
+  so.uMortier.value = smooth(T.lancer, T.eclot, t) * (1 - smooth(T.flor + 600, T.bout - 300, t)) * 0.9;
+  so.uSouffle.value = t > T.flor ? Math.sin(clamp((t - T.flor) / 700) * Math.PI) : 0;
+  // ---------------------------------------------------------------- cloture : la Tisseuse coupe le fil
+  if (!F.cloture && t >= T.coupe) { F.cloture = 1; Son.jouer('cloture', 0.7, 0.3); spores(mainDroite(), 8, { speed: 0.3 }); filaments(mainDroite(), V3(0, -1, 0), 4, 1.5); }
+  // ---------------------------------------------------------------- le monde s'assombrit, le Miasme gagne le ciel, puis tout revient
+  run.flash *= Math.exp(-dt / 160);
+  run.souffle = Math.max(0.25 * smooth(0, 300, t) * (1 - smooth(T.lancer, T.lancer + 300, t)), run.souffle * Math.exp(-dt / 350), t > T.flor ? 0.5 * Math.exp(-(t - T.flor) / 600) : 0);
+  run.dim = 0.38 * smooth(0, 380, t) * (1 - smooth(T.flor + 900, T.bout - 200, t));
+  run.desat = 0.42 * smooth(0, 300, t) * (1 - smooth(T.flor + 600, T.flor + 1600, t)) + 0.15 * tens;
+  run.trouble = 0.7 * smooth(T.eclot, T.flor, t) * (1 - smooth(T.flor + 1200, T.bout, t));
+  so.uFade.value = 1 - smooth(T.bout - 450, T.bout - 60, t);
+}
+
+// ================================================================== camera
+function lerpPose(a, b, k) { return { p: a.p.clone().lerp(b.p, k), l: a.l.clone().lerp(b.l, k), fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) }; }
+const CAM_JEU = V3(-1.4, 5.4, 9.0), LOOK_JEU = V3(0.4, 1.2, 0);
+const VUES = {
+  jeu: { p: CAM_JEU, l: LOOK_JEU, fov: 52 },
+  cote: { p: V3(0, 2.2, 10.8), l: V3(0, 1.6, 0), fov: 50 },
+  face: { p: V3(9.6, 2.8, 2.6), l: V3(-0.2, 1.6, 0), fov: 48 },
+  dos: { p: V3(-8.8, 2.7, 1.3), l: V3(1.5, 1.6, 0), fov: 46 },
+  dessus: { p: V3(0, 14.5, 4.0), l: V3(0, 0, 0), fov: 50 }
+};
+const MOSAIQUE = ['jeu', 'cote', 'face', 'dessus'];
+const orbite = { az: -0.1, el: 0.3, dist: 10.5, cible: V3(0.3, 1.5, 0), dernier: -1e9 };
+function camPose(v) {
+  const t = run.tau;
+  if (v === 'cine' && t >= 0) return poseCine();
+  if (v === 'libre') { const c = Math.cos(orbite.el); return { p: orbite.cible.clone().add(V3(Math.sin(orbite.az) * c, Math.sin(orbite.el), Math.cos(orbite.az) * c).multiplyScalar(orbite.dist)), l: orbite.cible.clone(), fov: 48, roll: 0 }; }
+  const f = VUES[v] ?? VUES.jeu;
+  return { p: f.p.clone(), l: f.l.clone(), fov: f.fov, roll: 0 };
+}
+const cA = V3();
+function poseCine() {
+  const t = run.tau, mains = V3(TISSEUSE.x + 0.45, 1.12, 0);
+  // tissage : de trois quarts face, bas, sur les mains qui tissent
+  const tisse = { p: V3(TISSEUSE.x + 2.5, 1.45, 1.9).lerp(V3(TISSEUSE.x + 2.1, 1.35, 1.55), smooth(0, T.lancer, t)), l: mains, fov: 38, roll: 2 * DEG };
+  if (t < T.lancer - 30) return tisse;
+  // couture : au ras des dalles, la camera suit le dard sous la place
+  const sd = dardS(t), f = sd >= 0 ? CHEMIN.at(Math.min(sd, CHEMIN.M.C - 0.4), cA) : COUTURE.E0;
+  const ras = { p: V3(f.x - 0.75, 0.42, f.z + 1.45), l: V3(f.x + 0.75, 0.2, f.z - 0.05), fov: 58, roll: -1.5 * DEG };
+  if (t < T.eclot) return lerpPose(tisse, ras, easeOutCubic(clamp((t - T.lancer + 30) / 90)));
+  // eclosion : coupe au pied de la zone, puis la camera leve la tete avec la colonne
+  const pied = { p: V3(C_ZONE.x - 3.0, 0.55, C_ZONE.z + 3.2), l: V3(C_ZONE.x, 1.3, C_ZONE.z), fov: 62, roll: 0 };
+  const leve = { p: V3(C_ZONE.x - 3.7, 1.3, C_ZONE.z + 4.1), l: V3(C_ZONE.x, 3.0, C_ZONE.z), fov: 62, roll: 0 };
+  const ecl = lerpPose(pied, leve, easeInOut(clamp((t - T.eclot) / 520)));
+  // tension : plan large de cote, le fil tendu de la main a la colonne
+  const large = { p: V3(-0.2, 2.4, 9.0).lerp(V3(-0.1, 2.2, 8.0), smooth(T.tension, T.flor, t)), l: V3(0.1, 1.75, 0), fov: 52, roll: 0 };
+  if (t < T.flor - 220) return lerpPose(ecl, large, easeInOut(clamp((t - T.tension + 80) / 260)));
+  // floraison : plongee au-dessus de la colonne qui s'ouvre
+  const plonge = { p: V3(C_ZONE.x - 1.9, 6.7, C_ZONE.z + 2.7).lerp(V3(C_ZONE.x - 2.5, 7.6, C_ZONE.z + 3.6), smooth(T.flor, T.flor + 1400, t)), l: V3(C_ZONE.x, 2.7, C_ZONE.z), fov: 52, roll: 0 };
+  if (t < T.flor + 1300) return lerpPose(large, plonge, easeInOut(clamp((t - T.flor + 220) / 420)));
+  // fin : plan haut derriere la Tisseuse
+  const fin = { p: V3(-7.6, 4.3, 4.4), l: V3(0.8, 1.0, 0), fov: 50, roll: 0 };
+  return lerpPose(plonge, fin, easeInOut(clamp((t - T.flor - 1300) / 1100)));
+}
+
+// ================================================================== image
+function applyFrame() {
+  const d = run.dim;
+  hemi.intensity = BASE.hemi * (1 - 0.75 * d); moon.intensity = BASE.moon * (1 - 0.65 * d); contre.intensity = BASE.contre * (1 - 0.5 * d); lantern.intensity = BASE.lantern * (1 - 0.8 * d);
+  scene.fog.color.copy(FOG).multiplyScalar(1 - 0.65 * d); sky.material.uniforms.uDim.value = d; sky.material.uniforms.uTrouble.value = run.trouble;
+  for (const b of brumes) b.material.uniforms.uDim.value = d;
+  U.uVig.value = Math.min(1, d * 1.1); U.uRedVig.value = d * 0.6; U.uDesat.value = clamp(run.desat);
+  U.uInv.value = run.inv > 0 ? 1 : 0; U.uDuo.value = run.inv <= 0 && run.duo > 0 ? 1 : 0;
+  const mos = vue === 'mosaique';
+  // budget mobile du guide : ni flou radial ni distorsion sur les appareils faibles
+  U.uLines.value = reduceMotion || mos ? 0 : run.lines; U.uSeed.value = run.lineSeed; U.uRad.value = mos || LOW ? 0 : run.rad; U.uCA.value = mos || LOW ? 0 : run.ca; U.uCenter.value.copy(run.centre);
+  points.mat.uniforms.uScale.value = echellePoints * (mos ? 0.5 : 1);
+  U.uFade.value = 1 - run.fade;
+  majFils(run.tau);
+  points.write(); streaks.write(); sprites.write(); debris.write();
+  U.uTime.value = run.sim / 1000;
+}
+function poserCamera(pose) {
+  const tr = run.trauma * run.trauma, s = run.sim / 1000;
+  camera.fov = pose.fov + run.fovPunch; camera.updateProjectionMatrix();
+  camera.position.copy(pose.p).add(V3(Math.sin(s * 63.1) * 0.1 * tr, Math.sin(s * 71.7 + 1.3) * 0.08 * tr, Math.sin(s * 57.3 + 2.1) * 0.06 * tr));
+  if (camera.position.y < 0.22) camera.position.y = 0.22;   // jamais sous les dalles
+  camera.lookAt(pose.l); camera.rotateZ(pose.roll + Math.sin(s * 49.9 + 0.7) * 0.03 * tr);
+  camera.updateMatrixWorld();
+  sky.position.copy(camera.position);
+  for (const p of panneaux) p.m.quaternion.copy(camera.quaternion);
+}
+function renderFrame() {
+  const mos = vue === 'mosaique', liste = mos ? MOSAIQUE : [vue];
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
+  renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 1); renderer.clear();
+  renderer.setRenderTarget(rtDist); renderer.setClearColor(0x000000, 0); renderer.clear();
+  liste.forEach((v, i) => {
+    poserCamera(camPose(v));
+    for (const rt of [rtScene, rtDist]) {
+      if (mos) {
+        const hw = Math.floor(rt.width / 2), hh = Math.floor(rt.height / 2), x = (i % 2) * hw, y = (i < 2 ? 1 : 0) * hh, g = rt === rtScene ? 1 : 0;
+        rt.viewport.set(x + (x > 0 ? g : 0), y + (y > 0 ? g : 0), hw - g, hh - g); rt.scissor.copy(rt.viewport); rt.scissorTest = true;
+      }
+      if (rt === rtDist && LOW) continue;
+      renderer.setRenderTarget(rt); renderer.render(rt === rtScene ? scene : distScene, camera);
+    }
+  });
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
+  pass(matBright, rtScene, levels[0], true);
+  for (let i = 1; i < levels.length; i++) pass(matDown, levels[i - 1], levels[i], true);
+  for (let i = levels.length - 2; i >= 0; i--) pass(matUp, levels[i + 1], levels[i], false);
+  quad.material = matFinal; renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(postScene, postCam);
+}
+
+// ================================================================== interface
+const hudPhase = document.getElementById('hud-phase'), hudMs = document.getElementById('hud-ms'), hudEtat = document.getElementById('hud-etat');
+const tete = document.getElementById('tete'), ticks = document.getElementById('ticks');
+const echelle = T.bout;
+const pct = ms => (clamp(ms / echelle) * 100).toFixed(2) + '%';
+function drawTimeline() {
+  const seg = (id, a, b) => { const el = document.getElementById(id); el.style.left = pct(a); el.style.width = pct(b - a); };
+  seg('seg-anti', 0, T.act); seg('seg-actif', T.act, T.rec); seg('seg-recup', T.rec, T.fin);
+  ticks.innerHTML = '';
+  for (const x of [...T.points, T.eclot, T.tension, T.flor, T.coupe]) { const d = document.createElement('div'); d.className = 'tick'; d.style.left = pct(x); ticks.appendChild(d); }
+}
+function updateHud() {
+  const t = run.tau;
+  let nom = 'Garde', txt = '';
+  if (t >= 0 && t < T.act) { nom = t < T.lancer ? 'Tissage' : 'Couture'; txt = `${Math.round(t)} / 760 ms`; }
+  else if (t >= T.act && t < T.rec) { nom = 'Éclosion'; txt = `${Math.round(t - T.act)} / 200 ms`; }
+  else if (t >= T.rec && t < T.fin) { nom = 'Récupération'; txt = `${Math.round(t - T.rec)} / 600 ms`; }
+  else if (t >= T.fin) { nom = 'Suite'; txt = `+${Math.round(t - T.fin)} ms`; }
+  hudPhase.textContent = nom; hudMs.textContent = txt;
+  hudEtat.textContent = run.hitstop > 0 ? `arrêt sur coup ${run.stopLabel} ms` : t >= T.tension && t < T.flor ? 'le fil se tend' : t >= T.flor && t < T.flor + 900 ? 'floraison' : '';
+  tete.style.left = pct(Math.max(0, t));
+}
+function changerVue(v) {
+  vue = v;
+  viewport.classList.toggle('libre', v === 'libre'); viewport.tabIndex = v === 'libre' ? 0 : -1;
+  document.getElementById('etiquettes').hidden = v !== 'mosaique';
+  document.getElementById('consigne').hidden = v !== 'libre';
+}
+document.querySelectorAll('input[name="camera"]').forEach(r => r.addEventListener('change', () => changerVue(r.value)));
+const pointeurs = new Map();
+const touche = () => { orbite.dernier = performance.now(); };
+viewport.addEventListener('pointerdown', e => { if (vue !== 'libre') return; viewport.setPointerCapture(e.pointerId); pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche(); document.getElementById('consigne').hidden = true; });
+viewport.addEventListener('pointermove', e => {
+  if (vue !== 'libre' || !pointeurs.has(e.pointerId)) return;
+  const avant = pointeurs.get(e.pointerId);
+  if (pointeurs.size === 1) { orbite.az -= (e.clientX - avant.x) * 0.008; orbite.el = clamp(orbite.el + (e.clientY - avant.y) * 0.006, 0.03, 1.45); }
+  else {
+    const autre = [...pointeurs.entries()].find(([id]) => id !== e.pointerId)[1];
+    const d0 = Math.hypot(avant.x - autre.x, avant.y - autre.y), d1 = Math.hypot(e.clientX - autre.x, e.clientY - autre.y);
+    if (d0 > 0 && d1 > 0) orbite.dist = clamp(orbite.dist * d0 / d1, 3, 18);
+  }
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche();
+});
+for (const n of ['pointerup', 'pointercancel', 'lostpointercapture']) viewport.addEventListener(n, e => pointeurs.delete(e.pointerId));
+viewport.addEventListener('wheel', e => { if (vue !== 'libre') return; e.preventDefault(); orbite.dist = clamp(orbite.dist * Math.exp(e.deltaY * 0.0012), 3, 18); touche(); }, { passive: false });
+viewport.addEventListener('keydown', e => {
+  if (vue !== 'libre') return;
+  const k = { ArrowLeft: [0.12, 0, 1], ArrowRight: [-0.12, 0, 1], ArrowUp: [0, 0.08, 1], ArrowDown: [0, -0.08, 1], '+': [0, 0, 0.9], '-': [0, 0, 1.1] }[e.key];
+  if (!k) return; e.preventDefault();
+  orbite.az += k[0]; orbite.el = clamp(orbite.el + k[1], 0.03, 1.45); orbite.dist = clamp(orbite.dist * k[2], 3, 18); touche();
+});
+document.querySelectorAll('input[name="vitesse"]').forEach(r => r.addEventListener('change', () => { vitesse = parseFloat(r.value); }));
+document.getElementById('boucle').addEventListener('change', e => { boucle = e.target.checked; if (boucle && run.done) start(); });
+document.getElementById('rejouer').addEventListener('click', () => start());
+const btnSon = document.getElementById('son');
+btnSon.addEventListener('click', async () => {
+  const v = !Son.on; btnSon.setAttribute('aria-pressed', String(v));
+  btnSon.textContent = v && !Son.pret ? 'Son : préparation…' : v ? 'Son activé' : 'Son coupé';
+  try { await Son.set(v); } catch (e) { btnSon.textContent = 'Son indisponible'; btnSon.setAttribute('aria-pressed', 'false'); return; }
+  if (Son.on === v) btnSon.textContent = v ? 'Son activé' : 'Son coupé';
+  if (v) start();
+});
+window.addEventListener('keydown', e => { if (e.key === ' ' && !(e.target.closest && e.target.closest('input, button'))) { e.preventDefault(); start(); } });
+
+if (reduceMotion) { boucle = false; document.getElementById('boucle').checked = false; }
+new ResizeObserver(resize).observe(viewport);
+resize();
+start();
+if (reduceMotion) { let n = 0; while (run.tau < T.flor + 300 && n++ < 400) step(1000 / 60); }
+
+let last = performance.now();
+function frame(now) {
+  const real = Math.min(50, now - last); last = now;
+  let sim = real * vitesse;
+  while (sim > 0) { const d = Math.min(sim, 1000 / 60); step(d); sim -= d; }
+  if (vue === 'libre' && !reduceMotion && now - orbite.dernier > 2500) orbite.az += real / 1000 * 0.22;
+  applyFrame(); updateHud(); renderFrame();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// Pour les captures de controle : rejoue jusqu'a l'instant tau (ms depuis le debut de l'Art), eventuellement pendant un arret sur coup.
+window.__dardTisse = { son: Son, T, get sim() { return run.sim; }, get tau() { return run.tau; }, seek(mode, ms, pendantArret, orb) { if (orb) { Object.assign(orbite, orb); if (orb.cy !== undefined) orbite.cible.y = orb.cy; if (orb.cx !== undefined) orbite.cible.x = orb.cx; } orbite.dernier = 1e15; changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 4000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
+</script>
+</body>
+</html>

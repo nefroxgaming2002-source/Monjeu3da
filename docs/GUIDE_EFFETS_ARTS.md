@@ -2,6 +2,8 @@
 
 À lire **avant** de toucher aux effets, aux sons, aux animations ou à la caméra d'un Art de MonJeu3d.
 
+**Pour faire un Art complet en une passe**, suis le skill `.claude/skills/nouvel-art/SKILL.md`. Il donne l'ordre des étapes, la liste à vérifier avant le premier rendu et la définition de « fini ». Les outils de vérification sont dans `outils/` (voir `outils/LISEZMOI.md`), et l'anatomie d'une page de prototype est dans `docs/MOTEUR_PROTOTYPES.md`.
+
 La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, pas un modèle à recopier. Chaque Art doit atteindre le même niveau de beauté, de densité, de rythme et de son, avec **sa propre identité** : sa forme, sa matière, son rythme, son geste, son son. Ne reprends jamais le croissant, les entailles retardées ou le chiburi pour un autre Art. Reprends seulement les techniques et l'exigence.
 
 ---
@@ -59,6 +61,16 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Tout désaturer et assombrir pendant le gel au point de ne plus rien lire | Assombrir modérément ; choisir un plan de caméra qui montre le sol et la lame. |
 | Pluie de petits éclats aigus de verre, de bronze ou de pierre (« bruits de pièces inutiles ») | Aucun tintement. La matière passe par des craquements graves, du bruit filtré et quelques chocs sourds. Le style vient des montées, des appels d'air inversés, des déchirements d'air et des impacts graves. |
 | Petits clics partout, « comme si le son buguait » : crépitements à attaque instantanée et aigus, lanterne qui claque dans l'ambiance, fêlure de cloche hachée, dents de scie graves | Appliquer la règle « aucune friture » de la section 3.4, puis compter les grains au-dessus de 2 kHz dans le rendu complet (compresseur et réverbération compris) : un impact en donne un ou deux, une friture des dizaines. |
+| `smoothstep` à bornes égales, revenu sur le Dard Tissé : le rayon d'un trou pas encore ouvert valait 0, et **toute la place** est devenue violette | La règle ne suffisait pas : chercher chaque `smoothstep` dont une borne dépend d'un uniform qui peut valoir 0, puis sortir tôt (`if (r <= 0.001) return 0.0;`) ou borner (`max(r, 0.002)`). |
+| Lumière ponctuelle d'impact posée à 30 cm du sol : les dalles proches deviennent une nappe de couleur | Près du sol ou d'un corps, intensité de 1 au plus et hauteur d'au moins 0,6 m. Les fortes lumières restent en hauteur. |
+| Lanterne du décor (émission 2,2) au centre du premier plan : un carré éblouissant | Émission de 1 au plus pour le décor, et jamais dans l'axe des plans principaux. |
+| Taches de lumière (émission) sur la robe du lanceur : une lampe à lave | Pas d'émission sur les vêtements. La forme qui luit dans ses mains l'éclaire, avec une lumière faible et proche. |
+| Tresse de sept brins fins et écartés : un ressort | Des brins qui se touchent (rayon ≥ écart), avec un cœur plein. |
+| Spores de 3 cm, par centaines : des pastilles et des confettis | 0,8 à 2,2 cm, une centaine par gerbe au plus, et 20 % de cœurs pâles seulement. |
+| Poussière claire (0,07) dans une scène sombre, et nuage de spores violet et opaque en boule : du coton, qui cache la forme principale | Poussière de 0,03 au plus, opacité de 0,3 au plus. Le nuage est sombre, transparent, en panache qui monte, émis en continu, jamais en boule. |
+| Veines fines et lumineuses au sol, vues de loin : une guirlande qui scintille | La lumière ne suit que les grosses veines, à leur front de croissance ; les fines restent sombres. |
+| Un fil lumineux qui passe dans l'axe d'une forme ajourée : on voit un trait pointillé au milieu de la colonne | Arrêter le fil à l'entrée de la forme, ou l'éteindre dedans. |
+| Accrocs découpés au bruit avec un seuil bas : un motif de léopard | Seuil de 0,98 au moins : quelques accrocs, pas un motif. |
 | Bips synthétiques (« son bizarre ») ; résonance aiguë qui traîne à la fin (« son aigu inutile ») | Son en **couches**, beaucoup de grave, **aucun son aigu tenu**, et un **silence** avant le climax. |
 | Effets qui s'empilent jusqu'à l'illisible | **Une seule forme principale par temps** ; le reste l'accompagne. |
 | Images d'impact trop longues ou trop fréquentes | Deux images au plus (négatif puis couleur de voie), seulement sur les vrais pics, coupées si l'option « réduction des flashs » est active. |
@@ -186,6 +198,21 @@ Pour chaque Art, change **au moins** :
 - le geste de clôture ;
 - le son de la matière.
 
+### Déjà pris : ne pas le reprendre
+
+| | Taille Rouge (Sang) | Cloche fêlée (Airain) | Trait d'Étoile (Astro) | Dard Tissé (Miasme) |
+|---|---|---|---|---|
+| Forme de jeu | contact, en arc | zone autour du lanceur | tir en ligne | zone à distance |
+| Forme principale | croissant de lame en encre et feu | cloche de bronze en fusion, puis en morceaux | lance de verre d'étoile | colonne tissée de cordes de chair |
+| Ce qui voyage | la lame, en arc | la cloche, qui tombe du ciel | la lance, dans l'air, à travers les bêtes | le dard, **sous** le sol, en cousant les dalles |
+| Contrepoint | silence, puis entailles qui éclatent | trois échos, puis rupture | monde figé, puis extinctions une à une | tension du fil, puis floraison lente |
+| Sommet | éclatement | rupture du bronze | dernière extinction | ouverture en fleur et expiration de spores |
+| Caméra signature | gel et coupe | ciel qui s'ouvre, plan vertical | suivi de la pointe | au ras des dalles, puis plongée sur la fleur |
+| Clôture | chiburi (la lame égouttée) | la masse sur l'épaule | la main se referme sur une étoile | le fil coupé entre deux doigts |
+| Son de la matière | feu, lame, giclées | cloches graves et fêlées, bronze | air glacé, glace qui craque | souffles, chair humide, cordes qui se tendent, battements |
+| Lumière | `corpsNoir()` | `corpsNoir()` | `froid()` | `miasme()` |
+| Trace au sol | brûlure et cendre | dalles soulevées, fissures, or dans les joints | givre en fougère, cratère | couture, trous, mycélium qui gagne la pierre |
+
 ## 5. La méthode, Art par Art
 
 1. **Lire** ces sources :
@@ -203,8 +230,8 @@ Pour chaque Art, change **au moins** :
    - ce qui le distingue des Arts déjà faits ;
    - le budget mobile.
 
-   La faire valider par le développeur en quelques lignes.
-3. **Prototype navigateur**, recommandé pour aller vite. Partir du moteur de `prototypes/taille-rouge.html` :
+   La faire valider par le développeur en quelques lignes. S'il a demandé l'Art d'un seul coup (« un prompt, un Art complet »), l'annoncer en trois lignes et enchaîner.
+3. **Prototype navigateur**, recommandé pour aller vite. Partir de la page la plus récente (`prototypes/dard-tisse.html`) avec un assembleur, sur le modèle de `prototypes/sources/dard-tisse/` ; l'anatomie de la page est dans `docs/MOTEUR_PROTOTYPES.md`. Le moteur fournit :
    - rendu avec halo ;
    - image retravaillée : distorsion, flou radial, lignes de vitesse, images d'impact, désaturation sélective ;
    - particules et fumée ;
@@ -213,6 +240,14 @@ Pour chaque Art, change **au moins** :
    - ralenti et frise des phases.
 
    Garder ce socle, réécrire la scène de l'Art, publier, et attendre le retour avant Godot.
+
+   Pour ce qui est souple, organique ou tressé, et pour un sol qui réagit, partir de `prototypes/dard-tisse.html` :
+   - les fils sur la carte graphique : un seul maillage de tubes, dont les sommets lisent leur position dans une texture de points (64 par fil, mise à jour à chaque image). La normale est transportée le long du fil, les brins sont en hélice et la chair est humide, avec une sève par plaques. Cordes, tresses, liens, franges et poils sortent du même système ;
+   - un tissage vrai : deux familles de cordes en hélice décalées de π/M, et un décalage radial `d · sin(M·φ)`. À chaque croisement, une corde passe dessus et l'autre dessous ;
+   - un chemin **sous** le sol : une crête de dalles qui se soulève au passage (décalage de sommets selon la distance au chemin), de la sève dans les joints, des trous qui s'ouvrent ;
+   - l'infection : des veines de Voronoï qui poussent depuis un point, une lueur seulement au front de croissance ;
+   - la lumière intérieure : une lumière faible au cœur d'une forme ajourée, qui filtre entre les mailles ;
+   - la fonction `miasme()`.
 
    Pour le verre, le froid et le tir, partir de `prototypes/trait-etoile.html` :
    - la passe de verre : la scène est copiée, puis le verre la lit de travers (réfraction et dispersion) ;
@@ -230,7 +265,8 @@ Pour chaque Art, change **au moins** :
    - les étincelles de forge.
 4. **Porter dans Godot** (section 6), sans changer les dégâts ni les durées, sauf demande.
 5. **Vérifier** :
-   - captures fixes sur une campagne dédiée (sur le modèle de `--reference-encre`) ;
+   - en prototype : les outils de `outils/` (`controle.js`, `son.js`, `captures.js`, `planche.py`), avec les seuils de `outils/LISEZMOI.md` ;
+   - dans Godot, des captures fixes sur une campagne dédiée (sur le modèle de `--reference-encre`) ;
    - film Movie Maker. Au 25 octobre, il s'arrêtait encore parfois après une image, sans message d'erreur. Écrire l'AVI dans le dossier temporaire a aidé sans tout régler : c'est à éclaircir en premier ;
    - plusieurs angles ;
    - palier mobile ;
@@ -239,7 +275,7 @@ Pour chaque Art, change **au moins** :
 6. **Livrer** :
    - un lien ou une vidéo ;
    - trois lignes : ce qui a changé, ce qui reste, la question ouverte ;
-   - demander avant de commiter.
+   - dans le dépôt du jeu, demander avant de commiter ; dans ce dépôt de prototypes, commiter et pousser sur la branche de travail.
 
 ## 6. Du prototype à Godot
 
@@ -260,6 +296,9 @@ Pour chaque Art, change **au moins** :
 | Dalles qui sautent, or dans les joints, marques peintes au sol | shader du sol avec décalage de sommets, et un plan de mortier émissif dessous |
 | Nuées qui tournent, jet de bronze | plans et cylindre avec shader |
 | Étincelles de forge qui éclatent | `GPUParticles3D` avec sous-émetteur |
+| Fils du Dard Tissé : texture de points, tubes construits dans le shader, normale transportée, brins en hélice, sève par plaques | un `MeshInstance3D` de tubes et un `ShaderMaterial` spatial qui lit une `ImageTexture` de points (mise à jour par `ImageTexture.update`). En repli, des `Path3D` avec `CSGPolygon3D`, ou des `ImmediateMesh` |
+| Sol cousu : crête au passage, trous, froncement, infection en veines | le shader des dalles (décalage de sommets selon la distance au chemin, Voronoï pour les veines), et le mortier émissif dessous |
+| Lumière intérieure de la colonne | une `OmniLight3D` faible au centre, sans ombre |
 | Sons | WAV dans le dossier audio, `donnees/audio/sons.json`, `bande_son.gd`. Les nouveaux moments (silence, éclatement, clôture) doivent être autorisés dans la validation de `depot.gd`. |
 
 Les sons de la Taille Rouge sont déjà exportés dans `prototypes/sons/taille-rouge/`, avec la fiche des moments, volumes et réglages du bus. Le script `prototypes/sons/export_wav.js` les régénère ; pour un autre Art : `node prototypes/sons/export_wav.js prototypes/<art>.html prototypes/sons/<art> <prefixe>`.
@@ -279,7 +318,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 | `INSTANT_FIGE` | à confirmer | Fissures au sol pour l'instant. |
 | `FLORAISON` | Miasme | « La fleur de spores qui s'ouvre » : cercle et colonne. |
 | `SOUFFLE_DE_SPORES` | Miasme | Cône de spores. |
-| `DARD_TISSE` | Miasme | En forme ZONE : une colonne à distance. |
+| `DARD_TISSE` | Miasme | **Fait** en prototype : `prototypes/dard-tisse.html`, fiche `docs/arts/DARD_TISSE.md`. La Tisseuse tresse un dard de chair, le plante dans les dalles et le fait courir sous la place, qu'il coud en deux points. Il jaillit au milieu des bêtes et se tisse en colonne. Elle tire le fil : la place se fronce, puis la colonne fleurit et expire ses spores, et le mycélium gagne les dalles. |
 | `COEUR_OUVERT` | à confirmer | Fissures au sol, sur 3,2 m. |
 | Arts d'arme (ADR-028) | toutes | Lame, hampe, masse, crochet : des Arts sur une troisième touche, dans la matière de la voie. |
 
@@ -289,6 +328,10 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 - `prototypes/sons/taille-rouge/LISEZMOI.md` : la fiche son.
 - `prototypes/cloche-felee.html`, `docs/arts/CLOCHE_FELEE.md` et `prototypes/sons/cloche-felee/LISEZMOI.md` : un deuxième exemple, lourd et vertical, qui montre comment un Art se distingue du premier. C'est aussi **la référence pour la matière** (section 3.6).
 - `prototypes/trait-etoile.html`, `docs/arts/TRAIT_D_ETOILE.md` et `prototypes/sons/trait-etoile/LISEZMOI.md` : un troisième exemple, froid et à distance. C'est la référence pour le verre, la nuit et le tir.
+- `prototypes/dard-tisse.html`, `docs/arts/DARD_TISSE.md`, `prototypes/sons/dard-tisse/LISEZMOI.md` et `prototypes/sources/dard-tisse/` : un quatrième exemple, organique, à distance et sous le sol. C'est la référence pour les fils et les tissages, le sol qui réagit et l'infection. C'est aussi **la page la plus récente**, celle dont on part.
+- `.claude/skills/nouvel-art/SKILL.md` : la méthode en une passe.
+- `docs/MOTEUR_PROTOTYPES.md` : l'anatomie d'une page.
+- `outils/` et `outils/LISEZMOI.md` : les vérifications et leurs seuils.
 - Dans le projet du jeu :
   - `docs/REPRISE_SESSION.md` ;
   - `docs/00_decisions/ADR-027-le-poids-des-combats.md` § 9 à 18 ;
