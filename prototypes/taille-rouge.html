@@ -117,7 +117,7 @@
   <header>
     <p class="eyebrow">MonJeu3d · Voie du Sang · Art de frappe</p>
     <h1>Taille <span>Rouge</span></h1>
-    <p class="lede">Version Art majeur, style <b>Encre et braise</b>. Le monde se fige, l'encre monte dans la lame, la Ruée tranche, puis les entailles éclatent sur la bête. Les fenêtres de jeu restent celles du jeu : 240 ms d'anticipation, 140 ms actives, 360 ms de récupération. Change d'angle pendant qu'elle tourne, prends <b>Libre</b> pour tourner autour, ou <b>4 angles</b> pour tout voir en même temps.</p>
+    <p class="lede">Version Art majeur, style <b>Encre et braise</b>. Le monde se fige, l'encre monte dans la lame, la Ruée tranche, puis les entailles éclatent sur la bête. Les fenêtres de jeu restent celles du jeu : 240 ms d'anticipation, 140 ms actives, 360 ms de récupération. Change d'angle pendant qu'elle tourne, prends <b>Libre</b> pour tourner autour, ou <b>4 angles</b> pour tout voir en même temps. Active le son, au casque de préférence.</p>
   </header>
 
   <section class="stage" aria-label="Prototype animé">
@@ -190,6 +190,7 @@
       <li>Onde de choc, flou radial, lignes de vitesse et images d'impact : un shader d'écran sur un <code>ColorRect</code>, dans la suite de ton <code>onde_choc.gdshader</code>.</li>
       <li>Braises, gouttes, éclats, fumée d'encre : <code>GPUParticles3D</code> (fumée en quads avec bruit), taches et fissure en <code>Decal</code>.</li>
       <li>Gel et arrêts sur coup : <code>ArretSurCoup.figer()</code> existe déjà ; la caméra cinéma passe par <code>CoupeArt</code>.</li>
+      <li>Son : chaque bruitage est une pile de couches (acier de la lame, souffle de feu, crépitements, coup sourd, grave, armure, éclats, gouttes). Dans Godot : un <code>AudioStreamPlayer</code> par couche ou des WAV prêts, un bus avec réverbération et compresseur, et le vent baissé pendant le gel et le silence.</li>
     </ul>
   </section>
 
@@ -1040,41 +1041,320 @@ function ghost(life) {
   fx.add(g); ghosts.push({ g, mat, age: 0, life });
 }
 
-// ================================================================== son (synthese, sans musique)
-const Son = (() => {
-  let ctx = null, out = null, buf = null, on = false;
-  function init() {
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 5;
-    out = ctx.createGain(); out.gain.value = 0.75; out.connect(comp); comp.connect(ctx.destination);
-    buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+// ================================================================== son (bruitages calcules, sans musique ni fichier)
+/* <synthese> : JS pur, sans DOM ni WebAudio, pour pouvoir le verifier hors navigateur */
+function creerBruitages(SR, graine) {
+  let a = graine >>> 0;
+  const R = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const RR = (x, y) => x + (y - x) * R();
+  const TAU = Math.PI * 2;
+  const N = s => Math.max(1, Math.round(s * SR));
+  const vide = s => ({ L: new Float32Array(N(s)), R: new Float32Array(N(s)) });
+  // mono -> stereo, panoramique fixe ou qui se deplace (fonction du temps)
+  function mix(d, x, t0, g, pan = 0) {
+    const o = Math.round(t0 * SR), n = d.L.length, pf = typeof pan === 'function';
+    let cl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, cr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+    for (let i = 0; i < x.length; i++) {
+      const j = o + i; if (j < 0) continue; if (j >= n) break;
+      if (pf && (i & 63) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
+      d.L[j] += x[i] * g * cl; d.R[j] += x[i] * g * cr;
+    }
   }
-  const env = (g, t0, a, peak, dur) => { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + Math.max(0.002, a)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); };
-  function noise(k, { dur, type = 'bandpass', f0, f1 = f0, q = 1, gain = 0.3, a = 0.005, delay = 0 }) {
-    const s = Math.sqrt(k), D = dur / k, t0 = ctx.currentTime + delay / k, src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
-    const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0 * s, t0); f.frequency.exponentialRampToValueAtTime(f1 * s, t0 + D);
-    const g = ctx.createGain(); env(g, t0, a / k, gain, D); src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random()); src.stop(t0 + D + 0.05);
+  const blanc = n => { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = R() * 2 - 1; return x; };
+  const rose = n => { const x = new Float32Array(n); let b0 = 0, b1 = 0, b2 = 0; for (let i = 0; i < n; i++) { const w = R() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099046; b1 = 0.963 * b1 + w * 0.2965164; b2 = 0.57 * b2 + w * 1.0526913; x[i] = (b0 + b1 + b2 + w * 0.1848) * 0.22; } return x; };
+  const brun = n => { const x = new Float32Array(n); let l = 0; for (let i = 0; i < n; i++) { l = (l + 0.02 * (R() * 2 - 1)) / 1.02; x[i] = l * 3.5; } return x; };
+  // biquad (RBJ), frequence fixe ou fonction du temps
+  function filtre(x, type, f, q = 0.707) {
+    const y = new Float32Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0, b0 = 0, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+    const maj = fr => {
+      fr = Math.min(Math.max(fr, 15), SR * 0.45); const w = TAU * fr / SR, cs = Math.cos(w), al = Math.sin(w) / (2 * q); let B0, B1, B2;
+      if (type === 'lp') { B0 = (1 - cs) / 2; B1 = 1 - cs; B2 = B0; } else if (type === 'hp') { B0 = (1 + cs) / 2; B1 = -(1 + cs); B2 = B0; } else { B0 = al; B1 = 0; B2 = -al; }
+      const A0 = 1 + al; b0 = B0 / A0; b1 = B1 / A0; b2 = B2 / A0; a1 = -2 * cs / A0; a2 = (1 - al) / A0;
+    };
+    const vf = typeof f === 'function'; if (!vf) maj(f);
+    for (let i = 0; i < x.length; i++) {
+      if (vf && (i & 31) === 0) maj(f(i / SR));
+      const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
   }
-  function tone(k, { dur, type = 'sine', f0, f1 = f0, gain = 0.3, a = 0.005, delay = 0, drive = 0 }) {
-    const s = Math.sqrt(k), D = dur / k, t0 = ctx.currentTime + delay / k, o = ctx.createOscillator(); o.type = type;
-    o.frequency.setValueAtTime(f0 * s, t0); o.frequency.exponentialRampToValueAtTime(f1 * s, t0 + D);
-    const g = ctx.createGain(); env(g, t0, a / k, gain, D); let node = o;
-    if (drive) { const ws = ctx.createWaveShaper(), c = new Float32Array(256); for (let i = 0; i < 256; i++) c[i] = Math.tanh((i / 128 - 1) * drive); ws.curve = c; o.connect(ws); node = ws; }
-    node.connect(g); g.connect(out); o.start(t0); o.stop(t0 + D + 0.05);
+  const env = (x, fn) => { for (let i = 0; i < x.length; i++) x[i] *= fn(i / SR); return x; };
+  const sat = (x, dr) => { const k = Math.tanh(dr); for (let i = 0; i < x.length; i++) x[i] = Math.tanh(x[i] * dr) / k; return x; };
+  const ad = (att, dec) => t => t < att ? t / att : Math.exp(-(t - att) / dec);
+  function lent(n, hz) { // modulation aleatoire douce
+    const m = Math.ceil(n / SR * hz) + 3, v = new Float32Array(m); for (let k = 0; k < m; k++) v[k] = R() * 2 - 1;
+    const y = new Float32Array(n); for (let i = 0; i < n; i++) { const p = i / SR * hz, k = Math.floor(p), f = p - k; y[i] = v[k] + (v[k + 1] - v[k]) * f * f * (3 - 2 * f); } return y;
   }
-  const crackle = (k, n, span, gain, delay = 0) => { for (let i = 0; i < n; i++) noise(k, { dur: 0.012 + Math.random() * 0.02, type: 'highpass', f0: 2500 + Math.random() * 3000, q: 0.7, gain: gain * (0.4 + Math.random() * 0.6), a: 0.002, delay: delay + Math.random() * span }); };
-  const ev = {
-    charge(k, d) { noise(k, { dur: d, f0: 180, f1: 2600, q: 1.2, gain: 0.2, a: d * 0.85 }); tone(k, { dur: d, f0: 46, f1: 72, gain: 0.32, a: d * 0.8, drive: 2 }); crackle(k, 24, d, 0.1); },
-    lacher(k) { tone(k, { dur: 0.3, f0: 70, f1: 40, gain: 0.4, drive: 2 }); noise(k, { dur: 0.25, type: 'lowpass', f0: 900, f1: 200, gain: 0.25 }); },
-    ruee(k) { noise(k, { dur: 0.22, f0: 1500, f1: 260, q: 0.8, gain: 0.45 }); noise(k, { dur: 0.17, type: 'highpass', f0: 2200, f1: 7000, gain: 0.35, delay: 0.02 }); tone(k, { dur: 0.35, f0: 2300, gain: 0.05, a: 0.002, delay: 0.02 }); tone(k, { dur: 0.3, f0: 1730, gain: 0.04, a: 0.002, delay: 0.02 }); },
-    impact(k) { tone(k, { dur: 0.6, f0: 120, f1: 30, gain: 0.9, drive: 3 }); noise(k, { dur: 0.32, type: 'lowpass', f0: 1200, f1: 280, gain: 0.7 }); noise(k, { dur: 0.05, type: 'highpass', f0: 4000, gain: 0.45 }); crackle(k, 14, 0.6, 0.1, 0.05); },
-    entaille(k) { noise(k, { dur: 0.06, f0: 3500, q: 3, gain: 0.22 }); tone(k, { dur: 0.08, f0: 900, f1: 600, gain: 0.05 }); },
-    eclat(k) { tone(k, { dur: 0.85, f0: 95, f1: 26, gain: 1.0, drive: 3.5 }); noise(k, { dur: 0.6, type: 'lowpass', f0: 900, f1: 200, gain: 0.8 });
-      for (let i = 0; i < 12; i++) noise(k, { dur: 0.05, type: 'lowpass', f0: 1800, gain: 0.22, delay: Math.random() * 0.35 });
-      noise(k, { dur: 0.9, f0: 1000, f1: 240, q: 0.6, gain: 0.3 }); crackle(k, 30, 1.4, 0.09, 0.1); },
-    chiburi(k) { noise(k, { dur: 0.14, f0: 2600, f1: 700, gain: 0.4 }); for (let i = 0; i < 6; i++) noise(k, { dur: 0.02, f0: 3000 + Math.random() * 2000, q: 2, gain: 0.12, delay: 0.15 + Math.random() * 0.3 }); }
+  function sinus(n, fn) { const y = new Float32Array(n); let ph = 0; for (let i = 0; i < n; i++) { ph += TAU * fn(i / SR) / SR; y[i] = Math.sin(ph); } return y; }
+  // resonance modale : partiels amortis, doubles et legerement desaccordes (le chatoiement du metal)
+  function modal(n, parts, bat) {
+    const y = new Float32Array(n);
+    for (const p of parts) {
+      const df = bat * RR(0.5, 1.5), w1 = TAU * (p.f - df / 2) / SR, w2 = TAU * (p.f + df / 2) / SR, ph1 = R() * TAU, ph2 = R() * TAU, k = Math.exp(-1 / (p.d * SR));
+      let e = p.a; for (let i = 0; i < n && e > 1e-5; i++) { y[i] += e * 0.5 * (Math.sin(w1 * i + ph1) + Math.sin(w2 * i + ph2)); e *= k; }
+    }
+    return y;
+  }
+  // crepitements : petites detonations au hasard (processus de Poisson)
+  function crepite(n, dens, gros) {
+    const y = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      if (R() >= dens(i / SR) / SR) continue;
+      const big = R() < gros, len = N(big ? RR(0.004, 0.014) : RR(0.0006, 0.003)), f = big ? RR(300, 1200) : RR(1500, 7500);
+      const amp = (big ? 0.7 : 0.35) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len);
+      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * Math.sin(w * j + ph); e *= k; }
+    }
+    return y;
+  }
+  const pic = s => { let m = 0; for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) m = Math.max(m, Math.abs(c[i])); return m; };
+  const normer = (s, p) => { const k = p / (pic(s) || 1); for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) c[i] *= k; return s; };
+  const densifier = (s, dr) => { sat(s.L, dr); sat(s.R, dr); return s; }; // plus de corps, moins de pic
+  const fondu = (s, t) => { const n = s.L.length, k = Math.min(n, N(t)); for (let i = 0; i < k; i++) { const g = i / k; s.L[n - 1 - i] *= g; s.R[n - 1 - i] *= g; } return s; };
+
+  // ---------------------------------------------------------------- briques
+  function souffleFeu(d, t0, dur, g, o = {}) { // le feu qui s'embrase d'un coup
+    const n = N(dur), att = o.att ?? 0.03, tau = o.tau ?? dur * 0.32, fmax = o.fmax ?? 3800;
+    for (const pan of [-0.55, 0.55]) {
+      const x = filtre(rose(n), 'lp', t => t < att ? 160 + (fmax - 160) * (t / att) : 520 + (fmax - 520) * Math.exp(-(t - att) / (tau * 0.6)), 0.9);
+      const f1 = lent(n, 13), f2 = lent(n, 4);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= (t < att ? Math.pow(t / att, 1.5) : Math.exp(-(t - att) / tau)) * (1 + 0.45 * f1[i] + 0.25 * f2[i]); }
+      mix(d, x, t0, g * 2.2, pan);
+    }
+    mix(d, env(filtre(brun(n), 'lp', 160, 0.7), ad(0.02, tau * 1.2)), t0, g * 1.2, 0);
+    mix(d, env(filtre(blanc(n), 'hp', 4500), ad(0.01, 0.12)), t0, g * 0.12, 0);
+    mix(d, crepite(n, t => (o.crep ?? 160) * Math.exp(-t / (tau * 1.3)), 0.1), t0 + 0.02, g * 0.55, 0.25);
+  }
+  function lame(d, t0, g, o = {}) { // la lame qui sonne : modes d'une barre d'acier libre
+    const f1 = o.f1 ?? 540, dec = o.dec ?? 1, br = o.br ?? 1, n = N(o.dur ?? 2.2);
+    const rat = [1, 2.756, 5.404, 8.933, 13.344, 18.64], amp = [0.3, 0.65, 1, 0.7 * br, 0.45 * br, 0.25 * br], dc = [1.9, 1.35, 0.95, 0.6, 0.38, 0.22];
+    const parts = []; rat.forEach((r, i) => { const f = f1 * r * RR(0.995, 1.005); if (f < SR * 0.45) parts.push({ f, a: amp[i], d: dc[i] * dec }); });
+    const x = modal(n, parts, o.bat ?? 1.2);
+    const exc = env(filtre(blanc(N(0.004)), 'hp', 3000), t => Math.exp(-t / 0.0008)); for (let i = 0; i < exc.length; i++) x[i] += exc[i] * 0.8;
+    mix(d, x, t0, g, o.pan ?? 0);
+  }
+  function armure(d, t0, g, o = {}) { // plaque de fer rouille : modes serres et vite etouffes
+    const f1 = o.f1 ?? 185, n = N(0.9);
+    const x = modal(n, [1, 1.59, 2.14, 2.3, 2.65, 2.92, 3.16, 3.5, 4.06, 4.6].map(r => ({ f: f1 * r * RR(0.98, 1.02), a: RR(0.3, 1), d: RR(0.08, 0.32) * (o.dec ?? 1) })), 3);
+    const cl = env(filtre(blanc(n), 'bp', 1900, 0.8), t => Math.exp(-t / 0.035)); for (let i = 0; i < n; i++) x[i] += cl[i] * 1.2;
+    mix(d, sat(x, 1.8), t0, g, o.pan ?? 0);
+  }
+  function coup(d, t0, g, o = {}) { // le poids du coup : un sinus qui chute, sature
+    const f0 = o.f0 ?? 165, f1 = o.f1 ?? 46, x = sinus(N(o.dur ?? 0.5), t => f1 + (f0 - f1) * Math.exp(-t / (o.chute ?? 0.035)));
+    mix(d, sat(env(x, t => Math.min(1, t / 0.002) * Math.exp(-t / (o.tau ?? 0.13))), o.drive ?? 2.5), t0, g, 0);
+  }
+  function grave(d, t0, g, o = {}) { // grave de cinema
+    const f0 = o.f0 ?? 58, f1 = o.f1 ?? 27, x = sinus(N(o.dur ?? 1.6), t => f1 + (f0 - f1) * Math.exp(-t / 0.22));
+    mix(d, env(x, t => Math.min(1, t / 0.012) * Math.exp(-t / (o.tau ?? 0.5))), t0, g, 0);
+  }
+  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.5; mix(d, x, t0, g, 0); }
+  function craque(d, t0, g, pan) { // l'armure qui cede
+    const n = N(0.14), x = sat(env(filtre(blanc(n), 'bp', 1150, 0.9), t => Math.exp(-t / 0.028)), 5), y = env(filtre(blanc(n), 'bp', 3200, 1.5), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] += y[i] * 0.6; mix(d, x, t0, g, pan);
+  }
+  function eclabousse(d, t0, g, pan) { // goutte de sang et d'encre qui s'ecrase
+    const n = N(0.07), f0 = RR(1800, 3200), fb = RR(420, 700);
+    const x = env(filtre(blanc(n), 'lp', t => f0 * Math.exp(-t / 0.015) + 250, 1.6), t => Math.min(1, t / 0.001) * Math.exp(-t / 0.014));
+    const b = env(sinus(n, t => fb * Math.exp(-t / 0.02) + 180), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 2 + b[i] * 0.25; mix(d, x, t0, g, pan);
+  }
+  function caillou(d, t0, g, pan) { // eclat de pierre qui retombe
+    const f = RR(1800, 4200), x = modal(N(0.08), [{ f, a: 1, d: RR(0.012, 0.03) }, { f: f * RR(1.4, 2.3), a: 0.6, d: RR(0.008, 0.02) }], 0);
+    const c = env(filtre(blanc(N(0.004)), 'hp', 2500), t => Math.exp(-t / 0.0007)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.5;
+    mix(d, x, t0, g, pan);
+  }
+  function souffle(d, t0, dur, g, o = {}) { // la lame fend l'air : bande de bruit qui monte et retombe, sifflement, dechirure
+    const n = N(dur), pk = o.pic ?? dur * 0.4, f0 = o.f0 ?? 280, f1 = o.f1 ?? 1900, f2 = o.f2 ?? 450;
+    const cf = t => t < pk ? f0 * Math.pow(f1 / f0, t / pk) : f1 * Math.pow(f2 / f1, (t - pk) / (dur - pk));
+    const e = t => t < pk ? Math.pow(t / pk, 2.2) : Math.exp(-(t - pk) / ((dur - pk) * 0.35));
+    const x = env(filtre(rose(n), 'bp', cf, 1.3), e), s = env(filtre(blanc(n), 'bp', t => cf(t) * 1.7, 11), e), air = env(filtre(blanc(n), 'hp', 5200), t => Math.exp(-Math.pow((t - pk) / 0.018, 2)));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 3 + s[i] * (o.siffle ?? 0.6) * 2 + air[i] * (o.dechire ?? 0.35);
+    const p0 = o.de ?? -0.7, p1 = o.vers ?? 0.7;
+    mix(d, x, t0, g, t => p0 + (p1 - p0) * Math.min(1, t / dur));
+  }
+  function encre(d, t0, dur, g) { // l'encre qui tourbillonne et monte : bruit resonant qui tourne de plus en plus vite
+    const n = N(dur);
+    for (const pan of [-0.5, 0.5]) {
+      const cf = new Float32Array(n); let ph = R() * TAU;
+      for (let i = 0; i < n; i++) { ph += TAU * (4 + 10 * i / n) / SR; cf[i] = 480 + 240 * Math.sin(ph) + 600 * i / n; }
+      const x = env(filtre(rose(n), 'bp', t => cf[Math.min(n - 1, Math.round(t * SR))], 3), t => Math.pow(Math.min(1, t / (dur * 0.7)), 1.2) * (t > dur - 0.03 ? Math.max(0, (dur - t) / 0.03) : 1));
+      mix(d, x, t0, g * 3.2, pan);
+    }
+    let t = 0.03; while (t < dur - 0.05) { // gouttes visqueuses
+      const L = RR(0.03, 0.06), f0 = RR(180, 300), f1 = f0 * RR(1.5, 2.1);
+      mix(d, env(sinus(N(L), s => f0 + (f1 - f0) * (s / L)), s => Math.sin(Math.PI * s / L) * Math.exp(-s / (L * 0.6))), t0 + t, g * 0.1 * (0.4 + t / dur), RR(-0.7, 0.7));
+      t += RR(0.035, 0.09) * (1.2 - t / dur);
+    }
+  }
+  function feuMonte(d, t0, dur, g) { // la lame s'embrase de la garde a la pointe et gronde
+    const n = N(dur + 0.25), e = t => Math.pow(Math.min(1, t / dur), 1.6) * (t > dur ? Math.exp(-(t - dur) / 0.08) : 1);
+    for (const pan of [-0.5, 0.5]) {
+      const x = filtre(rose(n), 'lp', t => 220 + 1500 * Math.min(1, t / dur), 0.8), f1 = lent(n, 9), f2 = lent(n, 2.5);
+      for (let i = 0; i < n; i++) x[i] *= e(i / SR) * (1 + 0.5 * f1[i] + 0.3 * f2[i]);
+      mix(d, x, t0, g * 2.4, pan);
+    }
+    mix(d, crepite(n, t => 25 + 190 * Math.min(1, t / dur), 0.1), t0, g * 0.55, 0.2);
+    mix(d, env(filtre(blanc(n), 'hp', 3500), t => e(t) * Math.min(1, t / dur)), t0, g * 0.1, -0.2);
+  }
+  function aspire(d, t0, dur, g) { // souffle a l'envers qui monte jusqu'au coup
+    const n = N(dur);
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(n), 'lp', t => 300 + 6500 * Math.pow(t / dur, 2), 0.9), t => Math.pow(t / dur, 3.2)), t0, g * 2.2, pan);
+    mix(d, env(sinus(n, t => 40 + 30 * t / dur), t => Math.pow(t / dur, 2.5)), t0, g * 0.6, 0);
+  }
+  function gel(d, t0, dur, g) { // le monde se fige : le son du monde est aspire, un eclat de givre, un acouphene
+    mix(d, sat(env(sinus(N(0.7), t => 32 + 90 * Math.exp(-t / 0.12)), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.28)), 2), t0, g * 0.9, 0);
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(N(0.45)), 'lp', t => 150 + 4200 * Math.exp(-t / 0.09), 0.8), t => Math.min(1, t / 0.006) * Math.exp(-t / 0.16)), t0, g * 1.8, pan);
+    mix(d, modal(N(1.2), [3100, 4370, 5230, 6890, 8120].map(f => ({ f: f * RR(0.99, 1.01), a: RR(0.3, 0.7), d: RR(0.3, 0.7) })), 2), t0 + 0.01, g * 0.12, 0.3);
+    mix(d, env(sinus(N(dur + 0.15), () => 5200), t => Math.min(1, t / 0.15) * (t < dur ? 1 : Math.max(0, 1 - (t - dur) / 0.12))), t0, g * 0.02, 0);
+  }
+
+  // ---------------------------------------------------------------- les bruitages de la Taille Rouge
+  return {
+    charge(total, avecGel) {
+      const d = vide(total + 0.5), asp = Math.min(0.3, total * 0.6);
+      if (avecGel) gel(d, 0, 0.42, 1);
+      encre(d, 0, total, 0.5); feuMonte(d, total * 0.32, total * 0.68, 0.7); aspire(d, total - asp, asp, 0.55);
+      return fondu(normer(d, 0.8), 0.05);
+    },
+    lacher() { const d = vide(0.8); coup(d, 0, 0.6, { f0: 110, f1: 38, tau: 0.16, drive: 2 }); souffleFeu(d, 0, 0.5, 0.3, { fmax: 1800, tau: 0.12, crep: 60 }); return fondu(normer(d, 0.7), 0.05); },
+    ruee() {
+      const d = vide(0.9);
+      coup(d, 0, 0.5, { f0: 120, f1: 50, tau: 0.05, drive: 2 });
+      const n = N(0.18), cape = env(filtre(rose(n), 'lp', 1500, 0.7), t => Math.exp(-t / 0.06)); for (let i = 0; i < n; i++) cape[i] *= 0.6 + 0.4 * Math.sin(TAU * 27 * i / SR);
+      mix(d, cape, 0, 1.3, -0.3);
+      souffle(d, 0, 0.26, 1, { pic: 0.04, f0: 260, f1: 2300, f2: 380, de: -0.8, vers: 0.8 });
+      souffleFeu(d, 0.015, 0.6, 0.45, { fmax: 3000, tau: 0.16, crep: 90 });
+      return fondu(normer(densifier(normer(d, 0.9), 1.4), 0.85), 0.05);
+    },
+    impact() {
+      const d = vide(2.6);
+      claque(d, 0, 0.9); craque(d, 0.002, 0.7, 0.15);
+      armure(d, 0.001, 0.6, { f1: 182, pan: 0.2 }); lame(d, 0, 0.35, { f1: 545, dec: 0.8, pan: -0.1 });
+      coup(d, 0, 1, { f0: 170, f1: 44, tau: 0.14, drive: 3 }); grave(d, 0.005, 0.8, { f0: 56, f1: 27, tau: 0.55, dur: 1.8 });
+      souffleFeu(d, 0.012, 1.3, 0.75, { fmax: 4200, tau: 0.32, crep: 220 });
+      for (let i = 0; i < 12; i++) caillou(d, RR(0.05, 0.75), RR(0.08, 0.25), RR(-0.8, 0.8));
+      for (let i = 0; i < 9; i++) eclabousse(d, RR(0.12, 0.6), RR(0.12, 0.3), RR(-0.6, 0.9));
+      return fondu(normer(densifier(normer(d, 0.95), 1.8), 0.95), 0.2);
+    },
+    entaille() {
+      const d = vide(0.6); lame(d, 0, 0.5, { f1: RR(1050, 1350), dec: 0.25, br: 1.3, bat: 2, pan: RR(-0.4, 0.6), dur: 0.6 });
+      mix(d, env(filtre(blanc(N(0.04)), 'bp', 3600, 2), t => Math.exp(-t / 0.008)), 0, 0.6, 0.2);
+      return fondu(normer(d, 0.6), 0.05);
+    },
+    aspiration() { const d = vide(0.2); aspire(d, 0, 0.18, 1); return fondu(normer(d, 0.6), 0.004); },
+    eclat() {
+      const d = vide(3.2);
+      claque(d, 0, 1); coup(d, 0, 1, { f0: 190, f1: 40, tau: 0.18, drive: 3.5 }); grave(d, 0.004, 1, { f0: 62, f1: 24, tau: 0.8, dur: 2.6 });
+      for (let k = 0; k < 5; k++) souffle(d, k * 0.022, 0.12, 0.55, { pic: 0.03, f0: 500, f1: 3000, f2: 700, siffle: 0.3, de: k % 2 ? 0.8 : -0.8, vers: k % 2 ? -0.5 : 0.5 });
+      souffleFeu(d, 0.01, 2.2, 1, { fmax: 4500, tau: 0.6, crep: 260, att: 0.05 });
+      for (let i = 0; i < 16; i++) eclabousse(d, RR(0.06, 0.9), RR(0.15, 0.35), RR(-0.9, 0.9));
+      armure(d, 0.22, 0.5, { f1: 150, dec: 0.8, pan: 0.3 }); coup(d, 0.23, 0.5, { f0: 90, f1: 40, tau: 0.1, drive: 2 });
+      for (let i = 0; i < 10; i++) caillou(d, RR(0.1, 1.0), RR(0.06, 0.18), RR(-0.9, 0.9));
+      return fondu(normer(densifier(normer(d, 0.97), 1.8), 0.97), 0.3);
+    },
+    chiburi() {
+      const d = vide(2.4);
+      souffle(d, 0, 0.14, 0.8, { pic: 0.05, f0: 600, f1: 3400, f2: 900, siffle: 0.8, de: 0, vers: 0.6 });
+      lame(d, 0.06, 0.28, { f1: 560, dec: 1, pan: 0.2 });
+      for (let i = 0; i < 7; i++) eclabousse(d, RR(0.12, 0.45), RR(0.1, 0.22), RR(0.1, 0.9));
+      const n = N(0.7);
+      for (const pan of [-0.3, 0.3]) mix(d, env(filtre(blanc(n), 'bp', t => 2600 * Math.exp(-t / 0.25) + 600, 0.7), t => Math.min(1, t / 0.03) * Math.exp(-t / 0.18)), 0.1, 0.5, pan);
+      return fondu(normer(d, 0.75), 0.3);
+    },
+    ambiance() { // vent dans les ruines et lanterne, en boucle sans couture
+      const T = 8, X = 1, n = N(T + X), d = vide(T + X);
+      for (const pan of [-0.7, 0.7]) {
+        const m = lent(n, 0.35), am = lent(n, 0.22), x = filtre(rose(n), 'bp', t => 330 + 220 * m[Math.min(n - 1, Math.round(t * SR))], 0.6);
+        for (let i = 0; i < n; i++) x[i] *= 0.55 + 0.45 * am[i];
+        mix(d, x, 0, 2.2, pan);
+      }
+      mix(d, filtre(brun(n), 'lp', 70), 0, 0.8, 0);
+      mix(d, crepite(n, () => 3, 0.15), 0, 0.15, -0.6);
+      const out = vide(T), k = N(X), m = out.L.length;
+      for (let i = 0; i < m; i++) { out.L[i] = d.L[i]; out.R[i] = d.R[i]; }
+      for (let i = 0; i < k; i++) { const g = i / k; out.L[i] = d.L[i] * g + d.L[m + i] * (1 - g); out.R[i] = d.R[i] * g + d.R[m + i] * (1 - g); }
+      return normer(out, 0.5);
+    },
+    reverb(dur = 2.4) { // reponse de la place : bruit qui decroit et s'assombrit
+      const n = N(dur), d = vide(dur);
+      for (const c of [d.L, d.R]) { let lp = 0; for (let i = 0; i < n; i++) { const t = i / SR; lp += (R() * 2 - 1 - lp) * (1 - (0.15 + 0.8 * Math.min(1, t / dur)) * 0.9); c[i] = t < 0.012 ? 0 : lp * Math.exp(-t / 0.5); } }
+      for (let j = 0; j < 8; j++) { const i = N(RR(0.012, 0.06)); d.L[i] += RR(-0.6, 0.6); d.R[i] += RR(-0.6, 0.6); }
+      return d;
+    }
   };
-  return { get on() { return on; }, set(v) { if (v && !ctx) init(); on = v; if (ctx) (v ? ctx.resume() : ctx.suspend()); }, play(name, ...args) { if (!on || !ctx) return; try { ev[name](vitesse, ...args); } catch (e) { /* un son rate ne doit pas arreter l'animation */ } } };
+}
+function toutesLesRecettes(syn) {
+  return { reverb: syn.reverb(), charge660: syn.charge(0.66, true), charge240: syn.charge(0.24, false), lacher: syn.lacher(), ruee: syn.ruee(), impact: syn.impact(),
+    entaille: [syn.entaille(), syn.entaille(), syn.entaille()], aspiration: syn.aspiration(), eclat: syn.eclat(), chiburi: syn.chiburi(), ambiance: syn.ambiance() };
+}
+/* </synthese> */
+// La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
+function synthetiser(SR) {
+  return new Promise((ok, ko) => {
+    try {
+      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() +
+        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) tr.push(x.L.buffer, x.R.buffer); postMessage(o, tr); };';
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
+      w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
+      w.onerror = e => { w.terminate(); ko(e); };
+      w.postMessage({ SR });
+    } catch (e) { ko(e); }
+  });
+}
+
+const Son = (() => {
+  let ctx = null, on = false, pret = false, enCours = false, bus, envoi, retour, ambGain, ambFiltre, ambSrc = null, B = null;
+  const actifs = new Set();
+  const enBuffer = s => { const b = ctx.createBuffer(2, s.L.length, ctx.sampleRate); b.copyToChannel(s.L, 0); b.copyToChannel(s.R, 1); return b; };
+  async function preparer() {
+    enCours = true;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.9;
+    bus = ctx.createGain(); bus.connect(comp); comp.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
+    let S;
+    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)); window.__sonVia = 'page'; }
+    const verb = ctx.createConvolver(); verb.buffer = enBuffer(S.reverb);
+    envoi = ctx.createGain(); retour = ctx.createGain(); retour.gain.value = 0.55; envoi.connect(verb); verb.connect(retour); retour.connect(bus);
+    B = {};
+    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(enBuffer) : enBuffer(r);
+    ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
+    ambGain = ctx.createGain(); ambGain.gain.value = 0;
+    ambFiltre.connect(ambGain); ambGain.connect(bus);
+    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
+    pret = true; enCours = false;
+    ambiance('normal');
+  }
+  function jouer(nom, g = 1, envoiV = 0.3) {
+    if (!on || !pret) return;
+    let b = B[nom]; if (Array.isArray(b)) b = b[actifs.size % b.length];
+    const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = Math.pow(vitesse, 0.6);
+    const gn = ctx.createGain(); gn.gain.value = g; src.connect(gn); gn.connect(bus);
+    const s = ctx.createGain(); s.gain.value = envoiV; gn.connect(s); s.connect(envoi);
+    src.start(); actifs.add({ src, gn, g0: g }); src.onended = () => { for (const a of actifs) if (a.src === src) actifs.delete(a); };
+  }
+  function ambiance(etat) { // le vent se coupe pendant le gel et le silence, puis revient
+    if (!pret) return; const t = ctx.currentTime;
+    const [g, f, tc] = etat === 'fige' ? [0.3, 380, 0.04] : etat === 'silence' ? [0, 300, 0.05] : [1, 18000, 0.35];
+    ambGain.gain.setTargetAtTime(g * 0.22, t, tc); ambFiltre.frequency.setTargetAtTime(f, t, 0.05);
+    if (etat === 'silence') for (const a of actifs) a.gn.gain.setTargetAtTime(a.g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
+    retour.gain.setTargetAtTime(etat === 'silence' ? 0.12 : 0.55, t, etat === 'silence' ? 0.06 : 0.2);
+    ambSrc.playbackRate.value = Math.pow(vitesse, 0.6);
+  }
+  function couper() { // a chaque relance, les bruitages en cours s'eteignent vite
+    if (!pret) return; const t = ctx.currentTime;
+    for (const a of actifs) { a.gn.gain.setTargetAtTime(0, t, 0.03); try { a.src.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
+    actifs.clear(); ambiance('normal');
+  }
+  return {
+    get on() { return on; }, get pret() { return pret; },
+    async set(v) {
+      on = v;
+      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!ctx) return;
+      if (v) { await ctx.resume(); if (!pret && !enCours) await preparer(); } else await ctx.suspend();
+    },
+    jouer, ambiance, couper
+  };
 })();
 
 // ================================================================== mise en scene
@@ -1171,6 +1451,7 @@ function eclats(p, dir, n, hotFrac = 0.4) {
 }
 
 function start() {
+  Son.couper();
   rng = mulberry32(606);
   for (const grp of [fx, distFx]) for (const c of [...grp.children]) { grp.remove(c); c.traverse(o => { if (o.material && o.material.dispose) o.material.dispose(); if (o.isMesh && (o.userData.own || o.parent === null) && o.geometry) o.geometry.dispose(); }); }
   panneaux.length = 0; ghosts.length = 0;
@@ -1228,8 +1509,8 @@ function scenario(t, dt) {
   const T = run.T, F = run.flags;
   const c = clamp(t / T.act);
   // ---------------------------------------------------------------- charge (gel + anticipation)
-  if (t >= 0 && !F.charge) { F.charge = 1; Son.play('charge', T.act / 1000); }
-  if (T.gel > 0 && t >= T.gel && !F.lacher) { F.lacher = 1; Son.play('lacher'); panneau(FS_DSHOCK, joueur.position.clone().add(V3(0, 1, 0)), 0.5, 4.5, 0.32, { strength: 0.03 }); }
+  if (t >= 0 && !F.charge) { F.charge = 1; if (T.gel > 0) Son.ambiance('fige'); Son.jouer(T.gel > 0 ? 'charge660' : 'charge240', 0.75, 0.35); }
+  if (T.gel > 0 && t >= T.gel && !F.lacher) { F.lacher = 1; Son.ambiance('normal'); Son.jouer('lacher', 0.7, 0.4); panneau(FS_DSHOCK, joueur.position.clone().add(V3(0, 1, 0)), 0.5, 4.5, 0.32, { strength: 0.03 }); }
   run.aura = smooth(0, 0.5, c) * (1 - smooth(T.act + 60, T.fin, t)) + 0.35 * smooth(T.act, T.act + 40, t) * (1 - smooth(T.act + 80, T.fin, t));
   run.ign = smooth(0.32, 0.92, c);
   run.hot = run.ign * (1 - smooth(T.eclat + 200, T.chiburi + 120, t) * 0.6) * (1 - smooth(T.chiburi + 90, T.chiburi + 260, t));
@@ -1254,7 +1535,7 @@ function scenario(t, dt) {
   }
   if (t >= T.gel * 0.4 && !F.haze) { F.haze = 1; run.haze = panneau(FS_DHAZE, milieuLame, 1.6, 1.6, (T.act - T.gel * 0.4) / 1000 + 0.15, { strength: 0.012, follow: () => epee.localToWorld(V3(0.8, 0, 0)) }); }
   // ---------------------------------------------------------------- ruee
-  if (t >= T.act && !F.ruee) { F.ruee = 1; Son.play('ruee'); smoke(V3(DEPART_X - 0.1, 0.15, 0), 5, { speed: 1.2, size: 0.5, glow: 0.4, v: V3(-1.5, 0.3, 0) }); run.lines = Math.max(run.lines, 0.35); centreEcran(EP()); }
+  if (t >= T.act && !F.ruee) { F.ruee = 1; Son.jouer('ruee', 0.85, 0.3); smoke(V3(DEPART_X - 0.1, 0.15, 0), 5, { speed: 1.2, size: 0.5, glow: 0.4, v: V3(-1.5, 0.3, 0) }); run.lines = Math.max(run.lines, 0.35); centreEcran(EP()); }
   if (t >= T.act && t < T.act + 60) for (let i = 0; i < 4; i++) { const k = 'g' + i; if (!F[k] && t >= T.act + i * 15) { F[k] = 1; ghost(0.5 + i * 0.05); } }
   // ---------------------------------------------------------------- croissant
   const a = run.arc, prog = clamp((a.th0 - run.theta) / (a.th0 - a.th1));
@@ -1279,7 +1560,7 @@ function scenario(t, dt) {
     centreEcran(p);
     hitstop(110); shake(0.85); run.fovPunch = 7;
     if (!reduceMotion) { run.inv = 34; run.duo = 40; run.lines = 1; run.rad = 0.18; run.ca = 0.011; }
-    Son.play('impact');
+    Son.jouer('impact', 1, 0.45);
     panneau(FS_STAR, p, 2.0, 3.0, 0.16, { top: true }); panneau(FS_RING, p, 0.6, 6.5, 0.42); panneau(FS_DSHOCK, p, 0.6, 9, 0.5, { strength: 0.045 });
     halo(p, 1.5, 0.25);
     run.light = { p: p.clone(), peak: 40, age: 0 };
@@ -1305,7 +1586,7 @@ function scenario(t, dt) {
   run.desat = (T.gel > 0 ? 0.85 * (1 - smooth(T.gel - 40, T.gel + 60, t)) * smooth(0, 60, t) : 0) + 0.45 * smooth(T.gel, T.act, t) * (1 - smooth(T.eclat + 150, T.eclat + 1000, t)) + 0.3 * silence;
   // ---------------------------------------------------------------- entailles retardees
   for (const cut of run.cuts) {
-    if (!cut.obj && t >= cut.t) { cut.obj = makeCut({ at: EP().add(V3(0, cut.dy, cut.dz)), angle: cut.angle, len: cut.len, thick: 0.11, fringe: 0.16, dry: 0.25, filet: 0, heat: 1.4, fringeAmt: 1, tip: 0.6, sheen: 1.7, decay: 0.5 }); Son.play('entaille'); }
+    if (!cut.obj && t >= cut.t) { cut.obj = makeCut({ at: EP().add(V3(0, cut.dy, cut.dz)), angle: cut.angle, len: cut.len, thick: 0.11, fringe: 0.16, dry: 0.25, filet: 0, heat: 1.4, fringeAmt: 1, tip: 0.6, sheen: 1.7, decay: 0.5 }); if (!F.silence) { F.silence = 1; Son.ambiance('silence'); } Son.jouer('entaille', 0.35, 0.6); }
     if (!cut.obj) continue;
     const cu = cut.obj.mat.uniforms;
     cu.uReveal.value = easeOutCubic(clamp((t - cut.t) / 34));
@@ -1313,12 +1594,13 @@ function scenario(t, dt) {
     cu.uIgnite.value = 1.4 * easeOutCubic(clamp((t - T.eclat) / 45));
     cu.uCool.value = 1 - 0.8 * smooth(T.eclat + 80, T.eclat + 300, t); cu.uBurn.value = smooth(T.eclat + 100, T.eclat + 560, t); cu.uFade.value = 1 - smooth(T.eclat + 520, T.eclat + 640, t);
   }
+  if (!F.aspi && t >= T.eclat - 170) { F.aspi = 1; Son.jouer('aspiration', 0.6, 0.2); }
   if (!F.eclat && t >= T.eclat) {
     F.eclat = 1; const E = EP();
     centreEcran(E);
     hitstop(70); shake(0.95); run.fovPunch = 5;
     if (!reduceMotion) { run.duo = 46; run.lines = 0.85; run.rad = 0.16; run.ca = 0.01; }
-    Son.play('eclat');
+    Son.ambiance('normal'); Son.jouer('eclat', 1, 0.5);
     panneau(FS_RING, E, 0.5, 7.5, 0.5); panneau(FS_DSHOCK, E, 0.5, 10, 0.55, { strength: 0.05 });
     halo(E, 1.8, 0.3, 1.6);
     run.light = { p: E.clone(), peak: 55, age: 0 };
@@ -1344,7 +1626,7 @@ function scenario(t, dt) {
   }
   // ---------------------------------------------------------------- chiburi
   if (!F.chiburi && t >= T.chiburi + 130) {
-    F.chiburi = 1; Son.play('chiburi');
+    F.chiburi = 1; Son.jouer('chiburi', 0.95, 0.45);
     const p0 = epee.localToWorld(V3(1.0, 0, 0)), dirC = V3(0.9, -0.2, 0.55).normalize();
     for (let i = 0; i < nq(20); i++) { const p = epee.localToWorld(V3(rand(0.3, 1.25), 0, 0)); streaks.spawn({ p, v: dirC.clone().multiplyScalar(rand(3, 6.5)).add(V3(0, rand(0, 1.5), rand(-0.4, 0.4))), c: [0.03, 0, 0.006], a: 0.95, len: 0.03, w: rand(0.02, 0.045), life: 3, grav: 9.8, drag: 0.3, ink: true }); }
     smoke(p0, 4, { size: 0.35, glow: 0.3, a: 0.5, speed: 0.4 });
@@ -1491,7 +1773,13 @@ document.querySelectorAll('input[name="vitesse"]').forEach(r => r.addEventListen
 document.getElementById('boucle').addEventListener('change', e => { boucle = e.target.checked; if (boucle && run.done) start(); });
 document.getElementById('rejouer').addEventListener('click', () => start());
 const btnSon = document.getElementById('son');
-btnSon.addEventListener('click', () => { const v = !Son.on; Son.set(v); btnSon.setAttribute('aria-pressed', String(v)); btnSon.textContent = v ? 'Son activé' : 'Son coupé'; if (v) start(); });
+btnSon.addEventListener('click', async () => {
+  const v = !Son.on; btnSon.setAttribute('aria-pressed', String(v));
+  btnSon.textContent = v && !Son.pret ? 'Son : préparation…' : v ? 'Son activé' : 'Son coupé';
+  try { await Son.set(v); } catch (e) { btnSon.textContent = 'Son indisponible'; btnSon.setAttribute('aria-pressed', 'false'); return; }
+  if (Son.on === v) btnSon.textContent = v ? 'Son activé' : 'Son coupé';
+  if (v) start();
+});
 window.addEventListener('keydown', e => { if (e.key === ' ' && !(e.target.closest && e.target.closest('input, button'))) { e.preventDefault(); start(); } });
 
 if (reduceMotion) { boucle = false; document.getElementById('boucle').checked = false; }
