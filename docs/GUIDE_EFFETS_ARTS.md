@@ -186,7 +186,7 @@ Pour chaque Art, change **au moins** :
 | Chorégraphie | `MiseEnSceneArts` et `donnees/rendu/corps.json` |
 | Sons | WAV dans le dossier audio, `donnees/audio/sons.json`, `bande_son.gd`. Les nouveaux moments (silence, éclatement, clôture) doivent être autorisés dans la validation de `depot.gd`. |
 
-Les sons de la Taille Rouge sont déjà exportés dans `prototypes/sons/taille-rouge/`, avec la fiche des moments, volumes et réglages du bus. Le script `prototypes/sons/export_wav.js` les régénère.
+Les sons de la Taille Rouge sont déjà exportés dans `prototypes/sons/taille-rouge/`, avec la fiche des moments, volumes et réglages du bus. Le script `prototypes/sons/export_wav.js` les régénère ; pour un autre Art : `node prototypes/sons/export_wav.js prototypes/<art>.html prototypes/sons/<art> <prefixe>`.
 
 ## 7. Les autres Arts connus
 
@@ -196,7 +196,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 |---|---|---|
 | `TAILLE_ROUGE` | Sang | **Fait** en prototype : la barre de qualité. Son niveau en forme ONDE, « la Roue », fait tourner l'entaille autour du corps. |
 | Ruée du Sang | Sang | Là où le corps est passé, une ligne d'épines de verre de sang jaillit derrière lui (`VagueEpines`). |
-| `CLOCHE_FELEE` | Airain | Une cloche spectrale tombe du ciel pendant l'anticipation et sonne à l'ouverture. En repli : poussière en cercle et fissures. |
+| `CLOCHE_FELEE` | Airain | **Fait** en prototype : `prototypes/cloche-felee.html`, fiche `docs/arts/CLOCHE_FELEE.md`. La cloche est peinte dans le ciel, tombe, sonne, résonne trois fois et se brise. En repli : poussière en cercle et fissures. |
 | `COUP_DE_BELIER` | Airain | Forme ONDE : la masse frappe le sol, il se fend, la poussière s'ouvre en cercle. Sinon : la poussière file devant le bouclier, le sol se fend au bout. |
 | `TRAIT_D_ETOILE` | Astro | « La lance d'étoile tracée par une constellation ». |
 | `NUIT_LUE` | Astro | Une constellation se lève dans le ciel (environ 6 s). |
@@ -211,6 +211,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 
 - `prototypes/taille-rouge.html` : la barre de qualité, avec image, son, caméras et ralenti.
 - `prototypes/sons/taille-rouge/LISEZMOI.md` : la fiche son.
+- `prototypes/cloche-felee.html`, `docs/arts/CLOCHE_FELEE.md` et `prototypes/sons/cloche-felee/LISEZMOI.md` : un deuxième exemple, lourd et vertical, qui montre comment un Art se distingue du premier.
 - Dans le projet du jeu :
   - `docs/REPRISE_SESSION.md` ;
   - `docs/00_decisions/ADR-027-le-poids-des-combats.md` § 9 à 18 ;

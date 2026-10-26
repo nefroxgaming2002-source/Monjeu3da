@@ -1,0 +1,1772 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cloche Fêlée</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one column. The stage first (viewer, phase strip, controls), then the beat sheet of the Art, then the Godot notes. Single dark look, bronze and gold accents for the Airain. */
+  :root {
+    --nuit: #0a0c11;
+    --ardoise: #14161d;
+    --trait: #2a2a30;
+    --cendre: #9a958c;
+    --os: #ede6d8;
+    --or: #e2a443;
+    --braise: #ff9a3c;
+    --or-sombre: #5c3d14;
+    --f-titre: "IM Fell English SC", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --f-texte: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+    --f-mesure: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--nuit); color: var(--os); }
+  [hidden] { display: none !important; }
+  body { font-family: var(--f-texte); font-size: 16px; line-height: 1.5; }
+  .wrap {
+    max-width: 1180px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 26px 48px;
+    display: grid; gap: 22px;
+  }
+  header { display: grid; gap: 6px; }
+  .eyebrow { margin: 0; font-family: var(--f-mesure); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--cendre); }
+  h1 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: clamp(36px, 6.4vw, 60px); line-height: 1; text-wrap: balance; }
+  h1 span { color: var(--or); }
+  .lede { margin: 4px 0 0; max-width: 68ch; color: var(--cendre); }
+  .lede b { color: var(--os); font-weight: 500; }
+
+  .stage { display: grid; gap: 12px; }
+  .viewport { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; background: #05060a; border: 1px solid var(--trait); overflow: hidden; }
+  .viewport canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .viewport.libre { cursor: grab; touch-action: none; }
+  .viewport.libre:active { cursor: grabbing; }
+  .viewport:focus-visible { outline: 2px solid var(--braise); outline-offset: 2px; }
+  .etiquettes { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; pointer-events: none; }
+  .etiquettes span { padding: 8px 10px; font-family: var(--f-titre); font-size: clamp(11px, 1.5vw, 15px); letter-spacing: .04em; color: rgba(237, 230, 216, .88); text-shadow: 0 1px 3px #000; }
+  .consigne { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 4px 10px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--f-mesure); font-size: 12px; color: var(--os); background: rgba(10, 12, 17, .65); border: 1px solid var(--trait); pointer-events: none; }
+  .hud { position: absolute; left: 12px; bottom: 10px; right: 12px; display: flex; gap: 4px 10px; align-items: baseline; flex-wrap: wrap;
+    font-family: var(--f-titre); font-size: clamp(11px, 1.5vw, 15px); color: rgba(237, 230, 216, .88); text-shadow: 0 1px 3px #000; pointer-events: none; }
+  .hud .art { letter-spacing: .06em; }
+  .hud .mesure { font-family: var(--f-mesure); font-size: .8em; color: rgba(237, 230, 216, .7); }
+  .hud .etat { font-family: var(--f-mesure); font-size: .8em; color: var(--braise); }
+  .erreur { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--cendre); }
+
+  .timeline { display: grid; gap: 6px; }
+  .bar { position: relative; height: 14px; background: var(--ardoise); border: 1px solid var(--trait); }
+  .seg { position: absolute; top: 0; bottom: 0; }
+  .seg.anti { background: color-mix(in srgb, var(--or) 28%, transparent); }
+  .seg.actif { background: color-mix(in srgb, var(--or) 80%, transparent); }
+  .seg.recup { background: color-mix(in srgb, var(--or-sombre) 95%, transparent); }
+  .tick { position: absolute; top: -4px; width: 2px; height: 20px; background: var(--braise); transform: translateX(-1px); }
+  .tete { position: absolute; top: -6px; width: 2px; height: 24px; background: var(--os); transform: translateX(-1px); box-shadow: 0 0 6px rgba(255,255,255,.5); }
+  .legende { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--f-mesure); font-size: 12px; color: var(--cendre); font-variant-numeric: tabular-nums; }
+  .legende i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+  .legende .k-anti { background: color-mix(in srgb, var(--or) 28%, transparent); }
+  .legende .k-actif { background: color-mix(in srgb, var(--or) 80%, transparent); }
+  .legende .k-recup { background: var(--or-sombre); }
+  .legende .k-tick { background: var(--braise); width: 3px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  .groupe { display: flex; flex-wrap: wrap; border: 1px solid var(--trait); }
+  .groupe input { position: absolute; opacity: 0; pointer-events: none; }
+  .groupe label { padding: 8px 14px; cursor: pointer; font-size: 15px; color: var(--cendre); border-right: 1px solid var(--trait); user-select: none; }
+  .groupe label:last-of-type { border-right: 0; }
+  .groupe input:checked + label { background: var(--os); color: var(--nuit); }
+  .groupe input:focus-visible + label { outline: 2px solid var(--braise); outline-offset: -2px; }
+  .bouton { padding: 8px 16px; font: inherit; font-size: 15px; color: var(--cendre); background: transparent; border: 1px solid var(--trait); cursor: pointer; }
+  .bouton[aria-pressed="true"] { background: var(--os); color: var(--nuit); }
+  .bouton:focus-visible, .rejouer:focus-visible { outline: 2px solid var(--braise); outline-offset: 2px; }
+  .rejouer { padding: 8px 18px; font: inherit; font-weight: 700; color: #1b1205; background: var(--or); border: 1px solid var(--or); cursor: pointer; }
+  .rejouer:hover { background: #efb758; }
+  .boucle { display: flex; align-items: center; gap: 8px; color: var(--cendre); cursor: pointer; }
+  .boucle input { accent-color: var(--or); width: 16px; height: 16px; }
+  .astuce { font-family: var(--f-mesure); font-size: 12px; color: var(--cendre); }
+
+  .decoupage { display: grid; gap: 14px; }
+  .decoupage h2, .godot h2 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: 28px; }
+  .temps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--trait); }
+  .temps li { padding: 16px 18px 16px 0; display: grid; gap: 6px; align-content: start; min-width: 0; border-bottom: 1px solid var(--trait); }
+  .temps li:not(:nth-child(3n + 1)) { padding-left: 18px; border-left: 1px solid var(--trait); }
+  .temps .quand { font-family: var(--f-mesure); font-size: 12px; letter-spacing: .06em; color: var(--or); font-variant-numeric: tabular-nums; }
+  .temps h3 { margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: 22px; line-height: 1.1; }
+  .temps p { margin: 0; color: #d3cdc1; }
+  .godot { display: grid; gap: 10px; max-width: 80ch; }
+  .godot ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: #d3cdc1; }
+  .godot code { font-family: var(--f-mesure); font-size: .88em; color: var(--os); }
+  footer { color: var(--cendre); font-size: 14px; max-width: 72ch; }
+  @media (max-width: 860px) {
+    .temps { grid-template-columns: minmax(0, 1fr); }
+    .temps li, .temps li:not(:nth-child(3n + 1)) { padding: 14px 0; border-left: 0; }
+    .groupe label { padding: 8px 10px; font-size: 14px; }
+    .astuce { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">MonJeu3d · Voie de l'Airain · Art de zone</p>
+    <h1>Cloche <span>fêlée</span></h1>
+    <p class="lede">Une cloche de bronze spectrale, peinte à l'encre dans le ciel, tombe sur le combattant et sonne au moment où sa masse frappe le sol. <b>Le son devient visible</b> : des anneaux d'or balaient la zone de 3 m. Trois échos fêlent la cloche jusqu'à ce qu'elle éclate. Change d'angle pendant qu'elle tourne, et active le son, au casque de préférence.</p>
+  </header>
+
+  <section class="stage" aria-label="Prototype animé">
+    <div class="viewport" id="viewport">
+      <canvas id="scene" aria-label="Le combattant de l'Airain fait tomber la Cloche fêlée au milieu de trois Rouillards"></canvas>
+      <div class="etiquettes" id="etiquettes" hidden><span>Jeu</span><span>Côté</span><span>Face</span><span>Dessus</span></div>
+      <p class="consigne" id="consigne" hidden>Glisse pour tourner autour · pince ou molette pour zoomer</p>
+      <div class="hud"><span class="art">ART&nbsp;&nbsp;CLOCHE FÊLÉE</span><span id="hud-phase">Garde</span><span class="mesure" id="hud-ms"></span><span class="etat" id="hud-etat"></span></div>
+    </div>
+
+    <div class="timeline">
+      <div class="bar" id="bar" aria-hidden="true">
+        <div class="seg anti" id="seg-anti"></div>
+        <div class="seg actif" id="seg-actif"></div>
+        <div class="seg recup" id="seg-recup"></div>
+        <div id="ticks"></div>
+        <div class="tete" id="tete"></div>
+      </div>
+      <div class="legende">
+        <span><i class="k-anti"></i>Anticipation 700 ms (appel, chute)</span>
+        <span><i class="k-actif"></i>Active 180 ms</span>
+        <span><i class="k-recup"></i>Récupération 520 ms</span>
+        <span><i class="k-tick"></i>Sonnerie · trois échos · rupture · clôture</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="groupe" role="radiogroup" aria-label="Angle de vue">
+        <input type="radio" name="camera" id="c-cine" value="cine" checked><label for="c-cine">Cinéma</label>
+        <input type="radio" name="camera" id="c-jeu" value="jeu"><label for="c-jeu">Jeu</label>
+        <input type="radio" name="camera" id="c-cote" value="cote"><label for="c-cote">Côté</label>
+        <input type="radio" name="camera" id="c-face" value="face"><label for="c-face">Face</label>
+        <input type="radio" name="camera" id="c-dos" value="dos"><label for="c-dos">Dos</label>
+        <input type="radio" name="camera" id="c-dessus" value="dessus"><label for="c-dessus">Dessus</label>
+        <input type="radio" name="camera" id="c-libre" value="libre"><label for="c-libre">Libre</label>
+        <input type="radio" name="camera" id="c-mosaique" value="mosaique"><label for="c-mosaique">4 angles</label>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="rejouer" id="rejouer" type="button">Rejouer</button>
+      <div class="groupe" role="radiogroup" aria-label="Vitesse">
+        <input type="radio" name="vitesse" id="s-1" value="1" checked><label for="s-1">1×</label>
+        <input type="radio" name="vitesse" id="s-05" value="0.5"><label for="s-05">½×</label>
+        <input type="radio" name="vitesse" id="s-025" value="0.25"><label for="s-025">¼×</label>
+      </div>
+      <button class="bouton" id="son" type="button" aria-pressed="false">Son coupé</button>
+      <label class="boucle"><input type="checkbox" id="boucle" checked>Boucle</label>
+      <span class="astuce">Espace : rejouer</span>
+    </div>
+  </section>
+
+  <section class="decoupage" aria-labelledby="t-decoupage">
+    <h2 id="t-decoupage">Découpage</h2>
+    <ol class="temps">
+      <li><span class="quand">0 – 420 ms · anticipation</span><h3>Appel</h3><p>Le ciel se fend en un anneau d'or et une colonne de suie descend. La cloche se peint à l'encre de haut en bas, puis le bronze coule dedans. Le cercle de la zone se trace au sol, et la masse chauffe.</p></li>
+      <li><span class="quand">420 – 700 ms · anticipation</span><h3>Chute</h3><p>La cloche tombe en accélérant, traînée d'étincelles. Son souffle chasse la poussière et fait sauter les cailloux. La masse s'abat.</p></li>
+      <li><span class="quand">700 ms · active · arrêt 120 ms</span><h3>Sonnerie</h3><p>La cloche s'abat au moment où la masse frappe le sol. Image négative puis image or, onde de choc, premier anneau d'or, fissures en étoile, poussière en cercle, bêtes repoussées.</p></li>
+      <li><span class="quand">+260, +560, +900 ms</span><h3>Échos</h3><p>La cloche vibre et gonfle. Chaque écho est plus large et plus grave ; la fêlure grimpe et coule de l'or.</p></li>
+      <li><span class="quand">+1150 ms · arrêt 80 ms</span><h3>Rupture</h3><p>La cloche éclate en éclats de bronze brûlants et en gouttes d'or, dans un dernier anneau. Les bêtes tombent à genou.</p></li>
+      <li><span class="quand">ensuite</span><h3>Retombée</h3><p>Éclats et gouttes refroidissent en scories noires, l'empreinte du bord de la cloche reste brûlée au sol. Le combattant pose la masse sur l'épaule.</p></li>
+    </ol>
+  </section>
+
+  <section class="godot" aria-labelledby="t-godot">
+    <h2 id="t-godot">Dans Godot</h2>
+    <ul>
+      <li>La chute et la sonnerie existent déjà : <code>ClocheSpectrale.tomber()</code> pendant l'anticipation et <code>sonner()</code> à l'ouverture, appelés par <code>MiseEnSceneArts</code>.</li>
+      <li>La cloche : un maillage tourné (profil de cloche) avec un shader qui la peint à l'encre, la remplit de bronze, la fait vibrer et fend sa fêlure d'or.</li>
+      <li>Les anneaux d'or, le cercle de zone, l'empreinte et le ciel fendu : des plans avec shader ; les fissures reprennent celles de la Taille Rouge.</li>
+      <li>Éclats de bronze, gouttes d'or, poussière et suie : <code>GPUParticles3D</code> ; onde de choc et images d'impact : le shader d'écran commun.</li>
+      <li>Durées supposées ici (700 / 180 / 520 ms) : à caler sur <code>arts.json</code>. Les échos et la rupture restent du visuel.</li>
+    </ul>
+  </section>
+
+  <footer>Prototype navigateur : les personnages sont des maquettes, ce sont les effets, la caméra, le son et le rythme qui sont à juger.</footer>
+</main>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+
+// ================================================================== outils
+const DEG = Math.PI / 180;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let rng = mulberry32(1);
+const rand = (a = 0, b = 1) => a + (b - a) * rng();
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LOW = Math.min(window.innerWidth, window.innerHeight) < 700 || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const Q = LOW ? 0.6 : 1; // budget de particules sur mobile
+const nq = n => Math.max(1, Math.round(n * Q));
+
+// Palette AIRAIN (EncreBraise) en lineaire : or fondu, coeur blanc chaud, bronze profond
+const EMBER = V3(1.0, 0.5, 0.12);
+const CORE = V3(1.0, 0.86, 0.62);
+const BRONZE = V3(0.24, 0.11, 0.03);
+
+// Texture de bruit tuilable : r = fbm basse frequence, g = fbm haute, b = crete, a = fbm decalee
+const noiseTex = (() => {
+  const S = 256, data = new Uint8Array(S * S * 4), r0 = mulberry32(99);
+  const octs = [4, 8, 16, 32, 64].map(P => { const g = new Float32Array(P * P); for (let i = 0; i < P * P; i++) g[i] = r0(); return { P, g }; });
+  const sample = ({ P, g }, x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const X0 = ((xi % P) + P) % P, X1 = (X0 + 1) % P, Y0 = ((yi % P) + P) % P, Y1 = (Y0 + 1) % P;
+    const a = g[Y0 * P + X0], b = g[Y0 * P + X1], c = g[Y1 * P + X0], d = g[Y1 * P + X1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+  const fbm = (x, y, o0, n) => { let s = 0, a = 0.5, t = 0; for (let k = 0; k < n; k++) { const o = octs[o0 + k]; s += a * sample(o, x * o.P, y * o.P); t += a; a *= 0.5; } return s / t; };
+  const st = v => Math.round(clamp((v - 0.5) * 1.7 + 0.5) * 255);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const fx = x / S, fy = y / S, i = (y * S + x) * 4;
+    data[i] = st(fbm(fx, fy, 0, 4));
+    data[i + 1] = st(fbm(fx + 0.31, fy + 0.17, 1, 4));
+    data[i + 2] = Math.round(clamp(Math.pow(1 - Math.abs(fbm(fx + 0.5, fy + 0.25, 1, 3) * 2 - 1), 3) * 1.3) * 255);
+    data[i + 3] = st(fbm(fx + 0.73, fy + 0.59, 0, 3));
+  }
+  const t = new THREE.DataTexture(data, S, S, THREE.RGBAFormat);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true;
+  return t;
+})();
+
+const VS_UV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const PREMUL = { transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor };
+const ADDITIF = { transparent: true, depthWrite: false, depthTest: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor };
+// ================================================================== rendu
+const canvas = document.getElementById('scene');
+const viewport = document.getElementById('viewport');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+} catch (e) {
+  viewport.insertAdjacentHTML('beforeend', '<div class="erreur">WebGL est désactivé dans ce navigateur. Ouvre la page dans un navigateur récent (Chrome, Safari, Firefox) pour voir le prototype.</div>');
+  throw e;
+}
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.autoClear = false;
+const isGL2 = renderer.capabilities.isWebGL2;
+
+const scene = new THREE.Scene();
+const distScene = new THREE.Scene(); // ce qui tord l'image (onde de choc, chaleur)
+const camera = new THREE.PerspectiveCamera(48, 16 / 9, 0.1, 140);
+
+const rtScene = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: isGL2 ? 4 : 0 });
+const rtDist = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
+const levels = [0, 1, 2, 3, 4].map(() => new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false }));
+const postScene = new THREE.Scene();
+const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); quad.frustumCulled = false; postScene.add(quad);
+const VS_POST = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const postMat = (fs, uniforms, extra = {}) => new THREE.ShaderMaterial({ vertexShader: VS_POST, fragmentShader: fs, uniforms, depthTest: false, depthWrite: false, ...extra });
+const FS_BRIGHT = `uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uThr, uKnee; varying vec2 vUv;
+void main(){ vec2 t = uTexel;
+  vec3 c = 0.25 * (texture2D(tSrc, vUv + t * vec2(-1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(-1.0, 1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, 1.0)).rgb);
+  c = min(c, vec3(40.0));
+  float br = max(c.r, max(c.g, c.b));
+  float soft = clamp(br - uThr + uKnee, 0.0, 2.0 * uKnee); soft = soft * soft / (4.0 * uKnee + 1e-4);
+  gl_FragColor = vec4(c * max(soft, br - uThr) / max(br, 1e-4), 1.0); }`;
+const FS_DOWN = `uniform sampler2D tSrc; uniform vec2 uTexel; varying vec2 vUv;
+void main(){ vec2 t = uTexel;
+  gl_FragColor = vec4(0.25 * (texture2D(tSrc, vUv + t * vec2(-1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, -1.0)).rgb + texture2D(tSrc, vUv + t * vec2(-1.0, 1.0)).rgb + texture2D(tSrc, vUv + t * vec2(1.0, 1.0)).rgb), 1.0); }`;
+const FS_UP = `uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uScatter; varying vec2 vUv;
+void main(){ vec2 t = uTexel; vec3 s = texture2D(tSrc, vUv).rgb * 4.0;
+  s += (texture2D(tSrc, vUv + vec2(-t.x, 0.0)).rgb + texture2D(tSrc, vUv + vec2(t.x, 0.0)).rgb + texture2D(tSrc, vUv + vec2(0.0, -t.y)).rgb + texture2D(tSrc, vUv + vec2(0.0, t.y)).rgb) * 2.0;
+  s += texture2D(tSrc, vUv + vec2(-t.x, -t.y)).rgb + texture2D(tSrc, vUv + vec2(t.x, -t.y)).rgb + texture2D(tSrc, vUv + vec2(-t.x, t.y)).rgb + texture2D(tSrc, vUv + vec2(t.x, t.y)).rgb;
+  gl_FragColor = vec4(s / 16.0 * uScatter, 1.0); }`;
+// Composition finale : distorsion, flou radial + aberration, bloom, desaturation du monde, vignette, lignes de vitesse a l'encre, images d'impact.
+const FS_FINAL = `uniform sampler2D tScene, tBloom, tDist; uniform float uBloom, uVig, uRedVig, uDesat, uInv, uDuo, uRad, uCA, uLines, uSeed, uTime, uFade;
+uniform vec2 uRes, uCenter; varying vec2 vUv;
+vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+float h21(vec2 p){ p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
+void main(){
+  vec2 uv = vUv + texture2D(tDist, vUv).xy;
+  vec3 c;
+  if (uRad > 0.001 || uCA > 0.0005) {
+    vec2 toC = uv - uCenter; vec3 acc = vec3(0.0); float ws = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float t = float(i) / 11.0; vec2 p = uCenter + toC * (1.0 - uRad * t); vec2 ca = toC * uCA;
+      vec3 s = vec3(texture2D(tScene, p + ca).r, texture2D(tScene, p).g, texture2D(tScene, p - ca).b) + texture2D(tBloom, p).rgb * uBloom;
+      float w = 1.0 - t * 0.65; acc += s * w; ws += w;
+    }
+    c = acc / ws;
+  } else {
+    c = texture2D(tScene, uv).rgb + texture2D(tBloom, uv).rgb * uBloom;
+  }
+  float l0 = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+  float vif = smoothstep(0.1, 0.4, (mx - mn) / max(mx, 1e-3)) * smoothstep(0.03, 0.25, mx);
+  c = mix(c, mix(vec3(l0) * vec3(0.78, 0.86, 1.12), c, vif), uDesat);
+  vec2 q = vUv - 0.5; q.x *= 1.25;
+  float vig = smoothstep(0.82, 0.18, length(q));
+  c *= mix(1.0, 0.18 + 0.82 * vig, uVig);
+  c += vec3(0.09, 0.045, 0.006) * (1.0 - vig) * (1.0 - vig) * uRedVig;
+  vec3 m = aces(c);
+  if (uLines > 0.001) {
+    vec2 pc = (vUv - uCenter) * vec2(uRes.x / uRes.y, 1.0);
+    float k = atan(pc.y, pc.x) * 0.15915 + 0.5, r = length(pc);
+    float idx = floor(k * 110.0), fr = fract(k * 110.0);
+    float on = step(0.5, h21(vec2(idx, uSeed)));
+    float r0 = 0.22 + 0.35 * h21(vec2(idx + 3.1, uSeed));
+    float w = (0.25 + 0.6 * h21(vec2(idx + 7.7, uSeed))) * smoothstep(r0, r0 + 0.45, r);
+    float line = on * (1.0 - smoothstep(w * 0.6, w, abs(fr - 0.5) * 2.0));
+    m = mix(m, vec3(0.008, 0.0, 0.004), line * uLines * 0.9);
+  }
+  float l = dot(m, vec3(0.2126, 0.7152, 0.0722));
+  vec3 neg = mix(vec3(0.96, 0.94, 0.9), vec3(0.02, 0.0, 0.01), step(0.3, l));
+  vec3 duo = l > 0.5 ? vec3(1.0, 0.96, 0.9) : (l > 0.045 ? vec3(0.015, 0.0, 0.005) : vec3(0.58, 0.31, 0.04));
+  m = mix(m, neg, uInv); m = mix(m, duo, uDuo);
+  m += (h21(vUv * uRes + fract(uTime) * 100.0) - 0.5) * 0.012;
+  gl_FragColor = vec4(pow(max(m, 0.0), vec3(1.0 / 2.2)) * uFade, 1.0); }`;
+const matBright = postMat(FS_BRIGHT, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uThr: { value: 1.0 }, uKnee: { value: 0.45 } });
+const matDown = postMat(FS_DOWN, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() } });
+const matUp = postMat(FS_UP, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uScatter: { value: 0.85 } }, { blending: THREE.AdditiveBlending });
+const U = { tScene: { value: rtScene.texture }, tBloom: { value: levels[0].texture }, tDist: { value: rtDist.texture }, uBloom: { value: 0.75 }, uVig: { value: 0 }, uRedVig: { value: 0 }, uDesat: { value: 0 }, uInv: { value: 0 }, uDuo: { value: 0 }, uRad: { value: 0 }, uCA: { value: 0 }, uLines: { value: 0 }, uSeed: { value: 0 }, uTime: { value: 0 }, uFade: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) }, uCenter: { value: new THREE.Vector2(0.5, 0.5) } };
+const matFinal = postMat(FS_FINAL, U);
+
+function pass(mat, src, target, clear) {
+  quad.material = mat;
+  mat.uniforms.tSrc.value = src.texture; mat.uniforms.uTexel.value.set(1 / src.width, 1 / src.height);
+  renderer.setRenderTarget(target);
+  if (clear) renderer.clear();
+  renderer.render(postScene, postCam);
+}
+
+let W = 16, H = 9, echellePoints = 400;
+function resize() {
+  const r = viewport.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.25 : 1.5);
+  const w = Math.max(16, Math.round(r.width * dpr)), h = Math.max(9, Math.round(r.height * dpr));
+  if (w === W && h === H) return;
+  W = w; H = h;
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+  camera.aspect = W / H; camera.updateProjectionMatrix();
+  rtScene.setSize(W, H); rtDist.setSize(Math.max(1, W >> 1), Math.max(1, H >> 1));
+  let lw = W, lh = H;
+  for (const t of levels) { lw = Math.max(1, lw >> 1); lh = Math.max(1, lh >> 1); t.setSize(lw, lh); }
+  U.uRes.value.set(W, H);
+  echellePoints = H / (2 * Math.tan(24 * DEG));
+  streaks.mat.uniforms.uRes.value.set(W, H);
+}
+// ================================================================== decor
+const FOG = new THREE.Color('#38405a');
+scene.fog = new THREE.FogExp2(FOG.clone(), 0.05);
+const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { uTop: { value: new THREE.Color('#05070c') }, uHorizon: { value: FOG.clone() }, uDim: { value: 0 }, uMoon: { value: V3(-0.42, 0.42, -0.8).normalize() } },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 uTop, uHorizon, uMoon; uniform float uDim; varying vec3 vDir;
+  float h(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+  void main(){ vec3 d = normalize(vDir); float y = clamp(d.y * 1.6 + 0.05, 0.0, 1.0); vec3 c = mix(uHorizon, uTop, pow(y, 0.6));
+    vec2 sp = vec2(atan(d.z, d.x) * 90.0, d.y * 140.0); c += vec3(step(0.996, h(floor(sp))) * smoothstep(0.12, 0.5, d.y) * 0.5);
+    float md = dot(d, uMoon); c += vec3(0.9, 0.93, 1.0) * (smoothstep(0.9993, 0.9996, md) * 2.2 + pow(max(md, 0.0), 220.0) * 0.35);
+    gl_FragColor = vec4(c * (1.0 - 0.8 * uDim), 1.0); }`
+}));
+scene.add(sky);
+
+const hemi = new THREE.HemisphereLight(0x8f9cc0, 0x141820, 1.1);
+const moon = new THREE.DirectionalLight(0xa8b8e0, 1.0); moon.position.set(-4, 7, 5);
+const contre = new THREE.DirectionalLight(0x8ea4d8, 0.8); contre.position.set(7, 4, -7);
+scene.add(hemi, moon, contre);
+const LANTERNE = V3(-3.7, 1.85, -2.9);
+const lantern = new THREE.PointLight(0xffa14a, 9, 0, 2); lantern.position.copy(LANTERNE); scene.add(lantern);
+const impactLight = new THREE.PointLight(0xffa040, 0, 0, 2); scene.add(impactLight);
+const maceLight = new THREE.PointLight(0xff9a30, 0, 0, 2); scene.add(maceLight);
+const BASE = { hemi: hemi.intensity, moon: moon.intensity, contre: contre.intensity, lantern: lantern.intensity };
+
+function plazaTexture() {
+  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'); const R = 6.2, px = S / (2 * R), cx = S / 2, cy = S / 2, r0 = mulberry32(7);
+  g.fillStyle = '#0f1218'; g.fillRect(0, 0, S, S);
+  g.fillStyle = '#4b5263'; g.beginPath(); g.arc(cx, cy, 0.42 * px, 0, Math.PI * 2); g.fill();
+  let r = 0.48;
+  while (r < R - 0.05) {
+    const w = 0.48 + r0() * 0.12, r2 = Math.min(R, r + w), mid = (r + r2) / 2;
+    const n = Math.max(6, Math.round(2 * Math.PI * mid / 0.74)), off = r0() * Math.PI * 2, gap = 0.03 / mid;
+    for (let i = 0; i < n; i++) {
+      const a0 = off + i * 2 * Math.PI / n, a1 = off + (i + 1) * 2 * Math.PI / n;
+      g.fillStyle = `hsl(222 ${8 + r0() * 7}% ${24 + r0() * 17}%)`;
+      g.beginPath(); g.arc(cx, cy, (r2 - 0.03) * px, a0 + gap, a1 - gap); g.arc(cx, cy, (r + 0.03) * px, a1 - gap, a0 + gap, true); g.closePath(); g.fill();
+      if (r0() < 0.22) { g.fillStyle = 'rgba(205,214,235,0.16)'; g.fill(); }
+    }
+    r = r2;
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function dirtTexture() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), r0 = mulberry32(11);
+  g.fillStyle = '#1c2230'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 2600; i++) { g.fillStyle = r0() < .5 ? 'rgba(10,12,18,0.5)' : 'rgba(120,132,160,0.18)'; const s = 1 + r0() * 3; g.fillRect(r0() * S, r0() * S, s, s); }
+  for (let i = 0; i < 18; i++) { const x = r0() * S, y = r0() * S, rr = 20 + r0() * 60, gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, 'rgba(190,200,225,0.22)'); gr.addColorStop(1, 'rgba(190,200,225,0)'); g.fillStyle = gr; g.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 10); return t;
+}
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshStandardMaterial({ map: dirtTexture(), roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const PLACE = V3(0, 0, 0);
+const plaza = new THREE.Mesh(new THREE.CircleGeometry(6.2, 96), new THREE.MeshStandardMaterial({ map: plazaTexture(), roughness: 0.82 }));
+plaza.rotation.x = -Math.PI / 2; plaza.position.set(PLACE.x, 0.004, PLACE.z); scene.add(plaza);
+
+const flat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true, ...o });
+(function decor() {
+  const r0 = mulberry32(23), pierre = flat(0x171b24), bois = flat(0x1e1a1b);
+  for (let i = 0; i < 14; i++) {
+    const a = -0.35 * Math.PI + r0() * 1.3 * Math.PI, d = 11 + r0() * 9;
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), pierre);
+    m.scale.set(1 + r0() * 1.8, 2 + r0() * 4.5, 1 + r0() * 1.8);
+    m.position.set(PLACE.x + Math.cos(a) * d, m.scale.y * 0.45, -Math.sin(a) * d - 1); m.rotation.set(r0() * 0.3, r0() * 3, r0() * 0.3);
+    scene.add(m);
+  }
+  // ruines : colonnes brisees et une arche
+  for (const [x, z, h] of [[-4.5, -6.5, 3.4], [-2.8, -7.4, 2.1], [6.8, -6.0, 4.2], [8.6, -4.2, 1.6], [3.2, -8.6, 2.8]]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, h, 8), pierre); m.position.set(x, h / 2, z); m.rotation.z = (r0() - 0.5) * 0.12; scene.add(m);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.9), pierre); cap.position.set(x, h + 0.08, z); cap.rotation.set(0.1, r0(), 0.15); scene.add(cap);
+  }
+  for (const x of [0.4, 3.0]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.6, 0.6), pierre); p.position.set(x, 1.8, -9.5); scene.add(p); }
+  const linteau = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 0.7), pierre); linteau.position.set(1.7, 3.85, -9.5); linteau.rotation.z = 0.05; scene.add(linteau);
+  for (let i = 0; i < 12; i++) {
+    const a = r0() * Math.PI * 2, d = 6.8 + r0() * 1.6, h = 0.8 + r0() * 1.4;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, h, 6), bois);
+    m.position.set(PLACE.x + Math.cos(a) * d, h / 2, PLACE.z + Math.sin(a) * d - (Math.sin(a) > 0.5 ? 3 : 0)); scene.add(m);
+  }
+  const pilier = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8), flat(0x23262e, { metalness: 0.4 })); pilier.position.set(LANTERNE.x, 0.8, LANTERNE.z);
+  const lanterne = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.28), new THREE.MeshStandardMaterial({ color: 0xffc27a, emissive: 0xffa24d, emissiveIntensity: 2.2 })); lanterne.position.copy(LANTERNE);
+  const toit = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.22, 6), flat(0x1b2030)); toit.position.set(LANTERNE.x, LANTERNE.y + 0.32, LANTERNE.z);
+  scene.add(pilier, lanterne, toit);
+  const cristal = new THREE.MeshStandardMaterial({ color: 0xffb060, emissive: 0xff7a1c, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });
+  for (const [x, z] of [[-3.4, 1.8], [-2.9, -3.9], [6.2, -2.8], [6.4, 2.6], [-0.4, 4.0]]) for (let k = 0; k < 3; k++) {
+    const h = 0.25 + r0() * 0.45, m = new THREE.Mesh(new THREE.ConeGeometry(0.06 + r0() * 0.05, h, 5), cristal);
+    m.position.set(x + (r0() - .5) * 0.3, h / 2, z + (r0() - .5) * 0.3); m.rotation.set((r0() - .5) * 0.7, 0, (r0() - .5) * 0.7); scene.add(m);
+  }
+})();
+// Brume basse
+const brumes = [];
+for (const [y, a, s] of [[0.18, 0.16, 0.05], [0.42, 0.1, -0.035], [0.75, 0.06, 0.025]]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShaderMaterial({ ...PREMUL, fog: false,
+    uniforms: { tNoise: { value: noiseTex }, uTime: { value: 0 }, uA: { value: a }, uS: { value: s }, uDim: { value: 0 }, uCol: { value: V3(0.09, 0.105, 0.15) } },
+    vertexShader: `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform sampler2D tNoise; uniform float uTime, uA, uS, uDim; uniform vec3 uCol; varying vec2 vUv; varying vec3 vW;
+      void main(){ float n = texture2D(tNoise, vUv * 3.0 + vec2(uTime * uS, uTime * uS * 0.6)).r; float n2 = texture2D(tNoise, vUv * 7.0 - vec2(uTime * uS * 1.3, 0.0)).g;
+        float d = length(vW.xz); float a = smoothstep(0.35, 0.8, n * 0.7 + n2 * 0.4) * uA * smoothstep(20.0, 6.0, d) * (1.0 - 0.6 * uDim);
+        gl_FragColor = vec4(uCol * (1.0 - 0.7 * uDim) * a, a); }` }));
+  m.rotation.x = -Math.PI / 2; m.position.set(0, y, 0); m.renderOrder = 1; scene.add(m); brumes.push(m);
+}
+// Neige
+const snow = (() => {
+  const N = nq(650), pos = new Float32Array(N * 3), vel = new Float32Array(N), r0 = mulberry32(5);
+  for (let i = 0; i < N; i++) { pos[i * 3] = -8 + r0() * 20; pos[i * 3 + 1] = r0() * 7; pos[i * 3 + 2] = -9 + r0() * 16; vel[i] = 0.35 + r0() * 0.5; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const disc = document.createElement('canvas'); disc.width = disc.height = 32;
+  const dg = disc.getContext('2d'), gr = dg.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); dg.fillStyle = gr; dg.fillRect(0, 0, 32, 32);
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xd7deef, size: 0.04, map: new THREE.CanvasTexture(disc), transparent: true, opacity: 0.7, depthWrite: false })));
+  return { update(dt, t) { for (let i = 0; i < N; i++) { pos[i * 3 + 1] -= vel[i] * dt; pos[i * 3] += Math.sin(t * 0.7 + i) * 0.12 * dt; if (pos[i * 3 + 1] < 0) pos[i * 3 + 1] += 7; } geo.attributes.position.needsUpdate = true; } };
+})();
+// ================================================================== personnages
+// Le combattant de l'Airain : armure de bronze, heaume ferme (aucun visage), masse, cape lourde.
+const joueur = new THREE.Group(); scene.add(joueur);
+const corpsJ = new THREE.Group(); joueur.add(corpsJ);
+const mArmure = flat(0x6b4b28, { metalness: 0.7, roughness: 0.45 }), mSombre = flat(0x2a2019, { metalness: 0.5, roughness: 0.6 }), mCape = flat(0x3e2913, { side: THREE.DoubleSide });
+const mOr = flat(0xc8923a, { metalness: 0.85, roughness: 0.3, emissive: new THREE.Color(1, 0.42, 0.08), emissiveIntensity: 0 });
+(function () {
+  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = corpsJ) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); parent.add(m); return m; };
+  add(new THREE.CylinderGeometry(0.27, 0.3, 0.68, 8), mArmure, 0, 1.2, 0);
+  add(new THREE.CylinderGeometry(0.315, 0.315, 0.08, 8), mOr, 0, 0.9, 0);
+  for (const z of [-0.31, 0.31]) add(new THREE.SphereGeometry(0.17, 8, 6), mArmure, 0, 1.5, z);
+  add(new THREE.CylinderGeometry(0.17, 0.19, 0.34, 8), mArmure, 0, 1.73, 0);
+  add(new THREE.ConeGeometry(0.18, 0.17, 8), mArmure, 0, 1.98, 0);
+  add(new THREE.BoxGeometry(0.02, 0.03, 0.22), new THREE.MeshBasicMaterial({ color: 0x000000 }), 0.188, 1.75, 0);
+  add(new THREE.BoxGeometry(0.03, 0.28, 0.04), mOr, 0.172, 1.74, 0);
+  for (const z of [-0.12, 0.12]) add(new THREE.CylinderGeometry(0.09, 0.075, 0.8, 7), mSombre, 0, 0.4, z, 0, 0, 0, joueur);
+})();
+const bras = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 1, 7), mArmure); scene.add(bras);
+const masse = new THREE.Group(); scene.add(masse);
+(function () {
+  const manche = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.95, 7), mSombre); manche.rotation.z = -Math.PI / 2; manche.position.x = 0.4; masse.add(manche);
+  const tete = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15, 0), mOr); tete.position.x = 0.9; masse.add(tete);
+  for (let k = 0; k < 6; k++) { const ail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.21), mOr); ail.position.x = 0.9; ail.rotation.x = k * Math.PI / 6; masse.add(ail); }
+})();
+// Cape : maillage recalcule a chaque image dans le repere du joueur
+const CAPE_C = 12, CAPE_R = 5;
+const capeGeo = new THREE.BufferGeometry();
+capeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((CAPE_C + 1) * (CAPE_R + 1) * 3), 3).setUsage(THREE.DynamicDrawUsage));
+{ const idx = []; for (let r = 0; r < CAPE_R; r++) for (let c = 0; c < CAPE_C; c++) { const a = r * (CAPE_C + 1) + c, b = a + 1, d = a + CAPE_C + 1, e = d + 1; idx.push(a, d, b, b, d, e); } capeGeo.setIndex(idx); }
+const cape = new THREE.Mesh(capeGeo, mCape); cape.frustumCulled = false; scene.add(cape);
+const tmpV = V3();
+function majCape(souffle, t) {
+  const p = capeGeo.attributes.position.array, tw = corpsJ.rotation.y;
+  for (let r = 0; r <= CAPE_R; r++) {
+    const f = r / CAPE_R, y = lerp(1.46, 0.5, f), rx = lerp(0.3, 0.46, f), rz = lerp(0.3, 0.44, f);
+    for (let c = 0; c <= CAPE_C; c++) {
+      const a = c / CAPE_C * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a), dos = clamp(0.5 - ca * 0.9);
+      const onde = Math.sin(t * 7 + f * 3 + a * 2) * 0.04 * f * (0.3 + souffle);
+      const x = ca * rx - souffle * 0.5 * Math.pow(f, 1.3) * dos, z = sa * rz + onde * 0.6, yy = y + souffle * 0.3 * f * f * dos + onde * 0.4;
+      tmpV.set(x * Math.cos(tw * 0.6) + z * Math.sin(tw * 0.6), yy, -x * Math.sin(tw * 0.6) + z * Math.cos(tw * 0.6)); joueur.localToWorld(tmpV);
+      p.set([tmpV.x, tmpV.y, tmpV.z], (r * (CAPE_C + 1) + c) * 3);
+    }
+  }
+  capeGeo.attributes.position.needsUpdate = true; capeGeo.computeVertexNormals(); capeGeo.computeBoundingSphere();
+}
+
+// Trois Rouillards autour du combattant, dans la zone de 3 m.
+const mRouille = flat(0x5b3b2a, { metalness: 0.5, roughness: 0.6 }), mFer = flat(0x2c2a2e, { metalness: 0.6, roughness: 0.5 }), mToile = flat(0x5e5246);
+const matsEnnemi = [mRouille, mFer, mToile];
+function rouillard(angleDeg) {
+  const a = angleDeg * DEG, racine = new THREE.Group(), penche = new THREE.Group(), corps = new THREE.Group();
+  racine.rotation.y = -a; corps.rotation.y = Math.PI; racine.add(penche); penche.add(corps); scene.add(racine);
+  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); corps.add(m); return m; };
+  for (const z of [-0.16, 0.16]) { add(new THREE.BoxGeometry(0.22, 0.78, 0.22), mFer, 0, 0.39, z); add(new THREE.BoxGeometry(0.3, 0.14, 0.28), mRouille, -0.03, 0.07, z); }
+  add(new THREE.BoxGeometry(0.5, 0.42, 0.6), mToile, 0, 0.9, 0);
+  add(new THREE.BoxGeometry(0.62, 0.7, 0.72), mRouille, 0, 1.36, 0);
+  for (const z of [-0.45, 0.45]) {
+    add(new THREE.BoxGeometry(0.42, 0.24, 0.36), mFer, 0, 1.7, z, 0, 0, 0.12);
+    for (let k = 0; k < 3; k++) add(new THREE.ConeGeometry(0.05, 0.26, 5), mFer, -0.12 + k * 0.12, 1.88, z * 1.05, z > 0 ? -0.3 : 0.3, 0, 0);
+    add(new THREE.BoxGeometry(0.17, 0.72, 0.17), mRouille, 0.04, 1.22, z * 1.08);
+  }
+  add(new THREE.BoxGeometry(0.36, 0.4, 0.36), mFer, 0.02, 2.0, 0);
+  for (const z of [-0.14, 0.14]) add(new THREE.ConeGeometry(0.045, 0.32, 5), mFer, 0.02, 2.28, z, z > 0 ? -0.5 : 0.5, 0, 0);
+  add(new THREE.BoxGeometry(0.02, 0.045, 0.26), new THREE.MeshBasicMaterial({ color: 0x050505 }), -0.19, 2.02, 0);
+  add(new THREE.BoxGeometry(0.09, 0.95, 0.3), mRouille, -0.08, 0.72, 0.56, 0, 0, 0.22);
+  return { a, racine, penche, dir: V3(Math.cos(a), 0, Math.sin(a)) };
+}
+const R_ENNEMI = 2.7;
+const ennemis = [50, 170, 290].map(rouillard);
+
+// ================================================================== systemes de particules
+// Points : braises (rgb HDR, alpha 0 = additif) et cendre (rgb ~0, alpha = assombrit). Melange premultiplie.
+const points = (() => {
+  const N = nq(3200);
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 4), size = new Float32Array(N);
+  const P = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), s: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), turb: new Float32Array(N), seed: new Float32Array(N), kind: new Uint8Array(N), att: new Float32Array(N * 4) };
+  let n = 0;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aCol', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { uScale: { value: 400 } },
+    vertexShader: `attribute vec4 aCol; attribute float aSize; uniform float uScale; varying vec4 vCol;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 64.0); vCol = aCol; }`,
+    fragmentShader: `varying vec4 vCol; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vCol * smoothstep(1.0, 0.15, d); }` });
+  const obj = new THREE.Points(geo, mat); obj.frustumCulled = false; obj.renderOrder = 7; scene.add(obj);
+  function spawn(o) {
+    if (n >= N) return; const i = n++;
+    P.p.set([o.p.x, o.p.y, o.p.z], i * 3); P.v.set([o.v.x, o.v.y, o.v.z], i * 3); P.c.set([o.c[0], o.c[1], o.c[2], o.a ?? 0], i * 4);
+    P.s[i] = o.size; P.age[i] = 0; P.life[i] = o.life; P.grav[i] = o.grav ?? 0; P.drag[i] = o.drag ?? 0; P.turb[i] = o.turb ?? 0; P.seed[i] = rand(0, 100); P.kind[i] = o.kind ?? 0;
+    if (o.attract) P.att.set([o.attract.x, o.attract.y, o.attract.z, o.force], i * 4); else P.att[i * 4 + 3] = 0;
+  }
+  function kill(i) {
+    const j = --n; if (i === j) return;
+    P.p.copyWithin(i * 3, j * 3, j * 3 + 3); P.v.copyWithin(i * 3, j * 3, j * 3 + 3); P.c.copyWithin(i * 4, j * 4, j * 4 + 4); P.att.copyWithin(i * 4, j * 4, j * 4 + 4);
+    for (const k of ['s', 'age', 'life', 'grav', 'drag', 'turb', 'seed', 'kind']) P[k][i] = P[k][j];
+  }
+  function update(dt) {
+    for (let i = 0; i < n; i++) {
+      P.age[i] += dt; if (P.age[i] >= P.life[i]) { kill(i); i--; continue; }
+      const i3 = i * 3, t = P.age[i];
+      if (P.att[i * 4 + 3] > 0) { const f = P.att[i * 4 + 3]; P.v[i3] += (P.att[i * 4] - P.p[i3]) * f * dt; P.v[i3 + 1] += (P.att[i * 4 + 1] - P.p[i3 + 1]) * f * dt; P.v[i3 + 2] += (P.att[i * 4 + 2] - P.p[i3 + 2]) * f * dt; }
+      const tb = P.turb[i], sd = P.seed[i];
+      P.v[i3] += Math.sin(t * 7.0 + sd) * tb * dt; P.v[i3 + 2] += Math.cos(t * 6.1 + sd * 1.7) * tb * dt; P.v[i3 + 1] += Math.sin(t * 4.3 + sd * 2.3) * 0.5 * tb * dt;
+      P.v[i3 + 1] -= P.grav[i] * dt;
+      const k = Math.exp(-P.drag[i] * dt); P.v[i3] *= k; P.v[i3 + 1] *= k; P.v[i3 + 2] *= k;
+      P.p[i3] += P.v[i3] * dt; P.p[i3 + 1] += P.v[i3 + 1] * dt; P.p[i3 + 2] += P.v[i3 + 2] * dt;
+      if (P.p[i3 + 1] < 0.01) { P.p[i3 + 1] = 0.01; P.v[i3 + 1] *= -0.2; }
+    }
+  }
+  function write() {
+    for (let i = 0; i < n; i++) {
+      const u = P.age[i] / P.life[i], kd = P.kind[i];
+      const f = kd === 0 ? Math.pow(1 - u, 1.4) * (0.7 + 0.3 * Math.sin(P.age[i] * 34 + P.seed[i])) : kd === 1 ? (1 - u) * smooth(0, 0.12, u) : 1 - u;
+      pos.set(P.p.subarray(i * 3, i * 3 + 3), i * 3);
+      for (let k = 0; k < 4; k++) col[i * 4 + k] = P.c[i * 4 + k] * f;
+      size[i] = P.s[i] * (kd === 0 ? 1 - u * 0.5 : 1);
+    }
+    geo.setDrawRange(0, n);
+    geo.attributes.position.needsUpdate = true; geo.attributes.aCol.needsUpdate = true; geo.attributes.aSize.needsUpdate = true;
+  }
+  return { spawn, update, write, mat, clear() { n = 0; } };
+})();
+
+// Traits : etincelles et gouttes etirees le long de leur vitesse.
+const streaks = (() => {
+  const N = nq(1600);
+  const base = new THREE.InstancedBufferGeometry();
+  base.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+  base.setAttribute('corner', new THREE.BufferAttribute(new Float32Array([0, -1, 1, -1, 1, 1, 0, 1]), 2));
+  base.setIndex([0, 1, 2, 0, 2, 3]);
+  const iPos = new Float32Array(N * 3), iVel = new Float32Array(N * 3), iCol = new Float32Array(N * 4), iDim = new Float32Array(N * 2);
+  for (const [k, a, s] of [['iPos', iPos, 3], ['iVel', iVel, 3], ['iCol', iCol, 4], ['iDim', iDim, 2]]) base.setAttribute(k, new THREE.InstancedBufferAttribute(a, s).setUsage(THREE.DynamicDrawUsage));
+  base.instanceCount = 0;
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { uRes: { value: new THREE.Vector2(1, 1) } },
+    vertexShader: `attribute vec2 corner; attribute vec3 iPos, iVel; attribute vec4 iCol; attribute vec2 iDim; uniform vec2 uRes; varying vec4 vCol; varying vec2 vC;
+      void main(){
+        vec4 ch = projectionMatrix * viewMatrix * vec4(iPos, 1.0); vec4 ct = projectionMatrix * viewMatrix * vec4(iPos - iVel * iDim.x, 1.0);
+        vec2 dir = (ch.xy / ch.w - ct.xy / ct.w) * uRes; float len = length(dir); dir = len > 1e-3 ? dir / len : vec2(1.0, 0.0);
+        vec2 nrm = vec2(-dir.y, dir.x); vec4 c = mix(ch, ct, corner.x);
+        float wpx = max(iDim.y * uRes.y * projectionMatrix[1][1] / c.w * 0.5, 0.8);
+        c.xy += (nrm * corner.y + dir * (0.5 - corner.x) * 2.0) * wpx / uRes * 2.0 * c.w;
+        gl_Position = c; vCol = iCol; vC = corner; }`,
+    fragmentShader: `varying vec4 vCol; varying vec2 vC; void main(){ gl_FragColor = vCol * smoothstep(1.0, 0.2, abs(vC.y)) * mix(1.0, 0.15, vC.x); }` });
+  const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 8; scene.add(obj);
+  const S = { p: new Float32Array(N * 3), v: new Float32Array(N * 3), c: new Float32Array(N * 4), len: new Float32Array(N), w: new Float32Array(N), age: new Float32Array(N), life: new Float32Array(N), grav: new Float32Array(N), drag: new Float32Array(N), ink: new Uint8Array(N) };
+  let n = 0;
+  function spawn(o) {
+    if (n >= N) return; const i = n++;
+    S.p.set([o.p.x, o.p.y, o.p.z], i * 3); S.v.set([o.v.x, o.v.y, o.v.z], i * 3); S.c.set([o.c[0], o.c[1], o.c[2], o.a ?? 0], i * 4);
+    S.len[i] = o.len ?? 0.03; S.w[i] = o.w ?? 0.02; S.age[i] = 0; S.life[i] = o.life; S.grav[i] = o.grav ?? 0; S.drag[i] = o.drag ?? 0; S.ink[i] = o.ink ? 1 : 0;
+  }
+  function kill(i) { const j = --n; if (i === j) return; S.p.copyWithin(i * 3, j * 3, j * 3 + 3); S.v.copyWithin(i * 3, j * 3, j * 3 + 3); S.c.copyWithin(i * 4, j * 4, j * 4 + 4); for (const k of ['len', 'w', 'age', 'life', 'grav', 'drag', 'ink']) S[k][i] = S[k][j]; }
+  function update(dt) {
+    for (let i = 0; i < n; i++) {
+      S.age[i] += dt; if (S.age[i] >= S.life[i]) { kill(i); i--; continue; }
+      const i3 = i * 3; S.v[i3 + 1] -= S.grav[i] * dt;
+      const k = Math.exp(-S.drag[i] * dt); S.v[i3] *= k; S.v[i3 + 1] *= k; S.v[i3 + 2] *= k;
+      S.p[i3] += S.v[i3] * dt; S.p[i3 + 1] += S.v[i3 + 1] * dt; S.p[i3 + 2] += S.v[i3 + 2] * dt;
+      if (S.p[i3 + 1] < 0.015) {
+        if (S.ink[i]) splats.spawn({ x: S.p[i3], z: S.p[i3 + 2], size: 0.1 + S.w[i] * 4 + rand(0, 0.14), glow: S.c[i * 4] > 0.3 ? 1.0 : 0.2, stretch: 1 + rand(0, 0.9), rot: Math.atan2(S.v[i3 + 2], S.v[i3]) });
+        kill(i); i--; continue;
+      }
+    }
+  }
+  function write() {
+    for (let i = 0; i < n; i++) {
+      const u = S.age[i] / S.life[i], f = S.ink[i] ? 1 - smooth(0.85, 1, u) : Math.pow(1 - u, 1.2);
+      iPos.set(S.p.subarray(i * 3, i * 3 + 3), i * 3); iVel.set(S.v.subarray(i * 3, i * 3 + 3), i * 3);
+      for (let k = 0; k < 4; k++) iCol[i * 4 + k] = S.c[i * 4 + k] * f;
+      iDim[i * 2] = S.len[i]; iDim[i * 2 + 1] = S.w[i];
+    }
+    base.instanceCount = n;
+    for (const a of ['iPos', 'iVel', 'iCol', 'iDim']) base.attributes[a].needsUpdate = true;
+  }
+  return { spawn, update, write, mat, clear() { n = 0; } };
+})();
+
+// Fumee d'encre et halos : quads face camera, bruit qui se dechire avec l'age.
+const sprites = (() => {
+  const N = nq(320);
+  const base = new THREE.InstancedBufferGeometry();
+  base.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+  base.setAttribute('corner', new THREE.BufferAttribute(new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]), 2));
+  base.setIndex([0, 1, 2, 0, 2, 3]);
+  const A = { iPos: new Float32Array(N * 3), iCol: new Float32Array(N * 4), iMisc: new Float32Array(N * 4) }; // misc = taille, rotation, age, graine+genre
+  base.setAttribute('iPos', new THREE.InstancedBufferAttribute(A.iPos, 3).setUsage(THREE.DynamicDrawUsage));
+  base.setAttribute('iCol', new THREE.InstancedBufferAttribute(A.iCol, 4).setUsage(THREE.DynamicDrawUsage));
+  base.setAttribute('iMisc', new THREE.InstancedBufferAttribute(A.iMisc, 4).setUsage(THREE.DynamicDrawUsage));
+  base.instanceCount = 0;
+  const mat = new THREE.ShaderMaterial({ ...PREMUL, uniforms: { tNoise: { value: noiseTex }, uEmber: { value: EMBER } },
+    vertexShader: `attribute vec2 corner; attribute vec3 iPos; attribute vec4 iCol, iMisc; varying vec2 vUv; varying vec4 vCol; varying vec3 vM;
+      void main(){ vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]); vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+        float c = cos(iMisc.y), s = sin(iMisc.y); vec2 k = vec2(corner.x * c - corner.y * s, corner.x * s + corner.y * c) * iMisc.x;
+        vec3 w = iPos + right * k.x + up * k.y; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
+        vUv = corner * 0.5 + 0.5; vCol = iCol; vM = vec3(iMisc.z, fract(iMisc.w), floor(iMisc.w)); }`,
+    fragmentShader: `uniform sampler2D tNoise; uniform vec3 uEmber; varying vec2 vUv; varying vec4 vCol; varying vec3 vM;
+      void main(){ vec2 p = vUv * 2.0 - 1.0; float r = length(p); float age = vM.x;
+        if (vM.z > 0.5 && vM.z < 1.5) { float g = exp(-r * r * 3.2) * (1.0 - age); gl_FragColor = vec4(vCol.rgb * g, 0.0); return; }
+        vec2 nuv = vUv * 0.5 + vec2(vM.y * 7.0, vM.y * 3.1) + vec2(0.0, age * 0.1);
+        float n = texture2D(tNoise, nuv).r, n2 = texture2D(tNoise, nuv * 2.2 + 0.37).g;
+        float shape = smoothstep(1.0, 0.15, r + (n - 0.5) * 1.1);
+        float thr = age * 0.85; float dens = smoothstep(thr, thr + 0.28, shape * (0.45 + 0.7 * n2));
+        float a = dens * vCol.a * (1.0 - smoothstep(0.7, 1.0, age));
+        if (vM.z > 1.5) { gl_FragColor = vec4(vCol.rgb * a, a); return; } // poussiere
+        float lisiere = smoothstep(0.0, 0.2, dens) * (1.0 - smoothstep(0.2, 0.55, dens));
+        float chaud = vCol.r * (1.0 - smoothstep(0.0, 0.55, age));
+        gl_FragColor = vec4(vec3(0.012, 0.0, 0.006) * a + uEmber * lisiere * chaud * 1.5, a); }` });
+  const obj = new THREE.Mesh(base, mat); obj.frustumCulled = false; obj.renderOrder = 3; scene.add(obj);
+  const L = [];
+  function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v ? o.v.clone() : V3(), s0: o.size, grow: o.grow ?? 1, rot: rand(0, 6.28), spin: rand(-1, 1) * (o.spin ?? 0.8), age: 0, life: o.life, col: o.col, a: o.a ?? 0.8, glow: o.glow ?? 0, drag: o.drag ?? 2, rise: o.rise ?? 0.3, seed: rng(), kind: o.kind ?? 0 }); }
+  function update(dt) {
+    for (let i = L.length - 1; i >= 0; i--) {
+      const s = L[i]; s.age += dt; if (s.age >= s.life) { L.splice(i, 1); continue; }
+      const k = Math.exp(-s.drag * dt); s.v.multiplyScalar(k); s.v.y += s.rise * dt; s.p.addScaledVector(s.v, dt); s.rot += s.spin * dt;
+    }
+  }
+  function write() {
+    let i = 0;
+    for (const s of L) {
+      const u = s.age / s.life;
+      A.iPos.set([s.p.x, s.p.y, s.p.z], i * 3);
+      if (s.kind === 1) A.iCol.set(s.col, i * 4); else if (s.kind === 2) A.iCol.set([s.col[0], s.col[1], s.col[2], s.a], i * 4); else A.iCol.set([s.glow, 0, 0, s.a], i * 4);
+      A.iMisc.set([s.s0 * (1 + s.grow * Math.sqrt(u)), s.rot, u, s.kind + Math.min(s.seed, 0.999)], i * 4);
+      i++;
+    }
+    base.instanceCount = i;
+    for (const a of ['iPos', 'iCol', 'iMisc']) base.attributes[a].needsUpdate = true;
+  }
+  return { spawn, update, write, clear() { L.length = 0; } };
+})();
+
+// Eclats de pierre (froids) et de braise (chauds).
+const debris = (() => {
+  const N = nq(70), geo = new THREE.DodecahedronGeometry(1, 0);
+  const froid = new THREE.InstancedMesh(geo, flat(0x2c313c), N), chaud = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }), N);
+  chaud.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
+  for (const m of [froid, chaud]) { m.count = 0; m.frustumCulled = false; scene.add(m); }
+  const L = [], M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3();
+  function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v.clone(), ax: V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(), ang: rand(0, 6), spin: rand(8, 20), s: o.s, age: 0, life: o.life ?? 2.2, hot: !!o.hot }); }
+  function update(dt) {
+    for (let i = L.length - 1; i >= 0; i--) {
+      const d = L[i]; d.age += dt; if (d.age > d.life) { L.splice(i, 1); continue; }
+      d.v.y -= 9.8 * dt; d.p.addScaledVector(d.v, dt); d.ang += d.spin * dt;
+      if (d.p.y < d.s) { d.p.y = d.s; d.v.y *= -0.32; d.v.x *= 0.55; d.v.z *= 0.55; d.spin *= 0.6; }
+    }
+  }
+  function write() {
+    let a = 0, b = 0;
+    for (const d of L) {
+      q.setFromAxisAngle(d.ax, d.ang); const k = 1 - smooth(0.8, 1, d.age / d.life); sc.setScalar(d.s * k); M.compose(d.p, q, sc);
+      if (d.hot) { const h = Math.max(0.03, 4 * Math.exp(-d.age * 3.5)); chaud.setMatrixAt(b, M); chaud.instanceColor.setXYZ(b, EMBER.x * h, EMBER.y * h + 0.05, EMBER.z * h); b++; }
+      else { froid.setMatrixAt(a, M); a++; }
+    }
+    froid.count = a; chaud.count = b; froid.instanceMatrix.needsUpdate = true; chaud.instanceMatrix.needsUpdate = true; chaud.instanceColor.needsUpdate = true;
+  }
+  return { spawn, update, write, clear() { L.length = 0; } };
+})();
+
+// Taches d'encre au sol (fraiches et rougeoyantes, puis refroidies en encre).
+const FS_SPLAT = `uniform sampler2D tNoise; uniform float uSeed, uLife, uGlow, uRing; uniform vec3 uEmber; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p); float ang = atan(p.y, p.x);
+  float n = texture2D(tNoise, vec2(ang * 0.16 + uSeed, uSeed * 0.3)).r;
+  float edge = 0.55 + (n - 0.5) * 0.6; float blob = smoothstep(edge, edge - 0.07, r);
+  float sat = step(0.78, texture2D(tNoise, p * 0.6 + uSeed * 1.3).a) * smoothstep(1.0, 0.7, r) * step(edge + 0.06, r);
+  float m = max(blob, sat);
+  if (uRing > 0.0) m *= mix(1.0, smoothstep(0.15, 0.55, r / max(edge, 0.01)) * 0.75 + 0.25, uRing);
+  float a = m * 0.86 * uLife;
+  gl_FragColor = vec4(vec3(0.012, 0.0, 0.004) * a + uEmber * 1.1 * uGlow * m * (1.6 - r) * uLife, a); }`;
+const splats = (() => {
+  const N = nq(70), list = [], geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+  for (let i = 0; i < N; i++) {
+    const m = new THREE.Mesh(geo, new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -2, uniforms: { tNoise: { value: noiseTex }, uSeed: { value: 0 }, uLife: { value: 1 }, uGlow: { value: 0 }, uRing: { value: 0 }, uEmber: { value: EMBER } }, vertexShader: VS_UV, fragmentShader: FS_SPLAT }));
+    m.visible = false; m.renderOrder = 2; scene.add(m); list.push({ m, age: 0 });
+  }
+  let next = 0;
+  function spawn(o) {
+    const s = list[next]; next = (next + 1) % N;
+    Object.assign(s, { age: 0, life: o.life ?? 5, glow0: o.glow ?? 0, grow: o.grow ?? 0, size: o.size, stretch: o.stretch ?? 1, cool: o.cool ?? 3 });
+    s.m.visible = true; s.m.position.set(o.x, 0.012 + rand(0, 0.004), o.z); s.m.rotation.y = -(o.rot ?? rand(0, 6.28));
+    s.m.material.uniforms.uSeed.value = rand(0, 10); s.m.material.uniforms.uRing.value = o.ring ?? 0; s.m.scale.set(o.size * s.stretch, 1, o.size);
+  }
+  function update(dt) {
+    for (const s of list) {
+      if (!s.m.visible) continue; s.age += dt; const u = s.m.material.uniforms;
+      u.uLife.value = 1 - smooth(s.life * 0.6, s.life, s.age); u.uGlow.value = s.glow0 * Math.exp(-s.age * s.cool);
+      if (s.grow > 0) { const g = s.size * (0.25 + 0.75 * easeOutCubic(clamp(s.age / s.grow))); s.m.scale.set(g * s.stretch, 1, g); }
+      if (s.age >= s.life) s.m.visible = false;
+    }
+  }
+  return { spawn, update, clear() { for (const s of list) s.m.visible = false; } };
+})();
+// ================================================================== pieces d'effet
+const fx = new THREE.Group(); scene.add(fx);
+const distFx = new THREE.Group(); distScene.add(distFx);
+const FS_CRACK = `uniform sampler2D tNoise; uniform float uReveal, uHeat, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
+void main(){ float x = vUv.x, y = vUv.y - 0.5;
+  float wob = texture2D(tNoise, vec2(x * 1.2, 0.3)).r - 0.5; float d = abs(y - wob * 0.35);
+  float crack = 1.0 - smoothstep(0.0, 0.02 + 0.035 * texture2D(tNoise, vec2(x * 3.0, 0.7)).g, d);
+  float br = texture2D(tNoise, vec2(x * 4.0, y * 2.0)).b; float branch = smoothstep(0.82, 0.95, br) * smoothstep(0.4, 0.1, abs(y));
+  float lines = max(crack, branch * 0.8);
+  float ends = smoothstep(0.0, 0.08, x) * smoothstep(1.0, 0.82, x) * step(x, uReveal);
+  float scorch = smoothstep(0.42, 0.0, d) * 0.75;
+  float a = max(scorch * 0.8, lines * 0.95) * ends * uFade;
+  vec3 col = (uEmber * 3.2 + uCore * crack * 1.6) * lines * uHeat * ends * uFade;
+  gl_FragColor = vec4(vec3(0.012, 0.0, 0.004) * a + col, a); }`;
+function makeCrack(p, dir, L) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.9), new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -4, vertexShader: VS_UV, fragmentShader: FS_CRACK, uniforms: { tNoise: { value: noiseTex }, uReveal: { value: 0 }, uHeat: { value: 1 }, uFade: { value: 1 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
+  m.geometry.rotateX(-Math.PI / 2); m.geometry.translate(L / 2, 0, 0);
+  m.position.set(p.x, 0.016, p.z); m.rotation.y = -Math.atan2(dir.z, dir.x); m.renderOrder = 2; fx.add(m);
+  return m;
+}
+// Etoile d'impact, anneaux et ondes (panneaux face camera).
+const FS_STAR = `uniform float uT; uniform vec3 uCore, uEmber; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float k = 1.0 - uT;
+  float h = exp(-abs(p.y) * 70.0) * exp(-abs(p.x) * 2.2), vv = exp(-abs(p.x) * 70.0) * exp(-abs(p.y) * 3.4) * 0.65;
+  vec2 q = mat2(0.866, -0.5, 0.5, 0.866) * p; float dg = exp(-abs(q.y) * 90.0) * exp(-abs(q.x) * 3.0) * 0.5;
+  vec2 q2 = mat2(0.5, 0.866, -0.866, 0.5) * p; float dg2 = exp(-abs(q2.y) * 110.0) * exp(-abs(q2.x) * 4.0) * 0.35;
+  float core = exp(-dot(p, p) * 40.0);
+  gl_FragColor = vec4((uCore * (h + vv + dg + dg2 + core * 2.5) * k) * 3.2, 0.0); }`;
+const FS_RING = `uniform float uT; uniform vec3 uCore, uEmber; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p);
+  float ring = exp(-pow((r - uT * 0.92) * 26.0, 2.0)) * (1.0 - uT);
+  gl_FragColor = vec4((uEmber * 1.8 + uCore * 0.7 * (1.0 - uT)) * ring * 1.6, 0.0); }`;
+const FS_DSHOCK = `uniform float uT, uStrength; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p);
+  float ring = exp(-pow((r - uT * 0.9) * 8.0, 2.0)) * (1.0 - uT) * smoothstep(1.0, 0.85, r);
+  gl_FragColor = vec4((r > 1e-3 ? p / r : vec2(0.0)) * ring * uStrength, 0.0, 1.0); }`;
+const FS_DHAZE = `uniform sampler2D tNoise; uniform float uTime, uStrength; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float m = smoothstep(1.0, 0.15, length(p));
+  vec2 n = texture2D(tNoise, vUv * 0.9 + vec2(0.0, -uTime * 0.7)).rg - 0.5;
+  gl_FragColor = vec4(n * uStrength * m, 0.0, 1.0); }`;
+const panneaux = [];
+function panneau(fs, p, s0, s1, life, opts = {}) {
+  const dist = fs === FS_DSHOCK || fs === FS_DHAZE;
+  const mat = new THREE.ShaderMaterial({ ...(dist ? ADDITIF : { ...PREMUL, depthTest: !opts.top }), vertexShader: VS_UV, fragmentShader: fs,
+    uniforms: { uT: { value: 0 }, uCore: { value: CORE }, uEmber: { value: EMBER }, uStrength: { value: opts.strength ?? 0.03 }, tNoise: { value: noiseTex }, uTime: { value: 0 } } });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); m.position.copy(p); m.renderOrder = 9;
+  (dist ? distFx : fx).add(m);
+  const o = { m, mat, age: 0, life, s0, s1, follow: opts.follow, hold: !!opts.hold };
+  panneaux.push(o); return o;
+}
+function halo(p, size, life, k = 1.4) { sprites.spawn({ p, size, grow: 0.6, life, kind: 1, col: [EMBER.x * k, EMBER.y * k, EMBER.z * k, 0], drag: 0, rise: 0, spin: 0 }); }
+
+// La cloche spectrale : profil de cloche tourne, peinte a l'encre puis coulee en bronze, fendue d'or.
+const PROFIL = [[1.62, 0.0], [1.67, 0.07], [1.6, 0.17], [1.46, 0.34], [1.24, 0.66], [1.08, 1.05], [0.99, 1.5], [0.95, 1.95], [0.9, 2.3], [0.78, 2.6], [0.55, 2.82], [0.28, 2.93], [0.0, 2.96]];
+const FELURE_U = 0.96; // la felure regarde la camera de jeu
+const VS_CLOCHE = `uniform float uWobble, uPulse, uTime; varying vec2 vUv; varying vec3 vN, vW;
+void main(){ vUv = uv; vec3 p = position; float lv = uv.y;
+  float w = sin(uv.x * 6.2832 * 2.0 + uTime * 95.0) * uWobble * 0.045 * (1.0 - lv) + uPulse * 0.07 * (1.0 - lv * 0.6);
+  p.xz *= 1.0 + w;
+  vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz; vN = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * wp; }`;
+const FS_CLOCHE = `uniform sampler2D tNoise; uniform float uReveal, uMetal, uHeat, uCrack, uCrackGlow, uFade, uU0;
+uniform vec3 uEmber, uCore, uBronze; varying vec2 vUv; varying vec3 vN, vW;
+void main(){
+  float u = vUv.x, v = vUv.y;
+  vec3 V = normalize(cameraPosition - vW), N = normalize(vN);
+  float fr = pow(1.0 - abs(dot(N, V)), 2.2);
+  float n = texture2D(tNoise, vec2(u * 3.0, v * 0.7)).r, bristle = texture2D(tNoise, vec2(u * 9.0, v * 0.5)).g;
+  float bord = 1.0 - uReveal + (n - 0.5) * 0.12;
+  float ink = smoothstep(bord, bord + 0.05, v);
+  float pinceau = ink * (1.0 - smoothstep(0.0, 0.08, v - bord));
+  float coule = 1.0 - uMetal * 1.15 + (bristle - 0.5) * 0.15;
+  float metal = smoothstep(coule, coule + 0.12, v);
+  float moulure = 0.0;
+  moulure += 1.0 - smoothstep(0.0, 0.007, abs(v - 0.06)); moulure += 1.0 - smoothstep(0.0, 0.005, abs(v - 0.14));
+  moulure += 1.0 - smoothstep(0.0, 0.005, abs(v - 0.72)); moulure += 1.0 - smoothstep(0.0, 0.007, abs(v - 0.8));
+  float du = u - uU0; du -= floor(du + 0.5);
+  float cx = (texture2D(tNoise, vec2(v * 1.8, 0.37)).r - 0.5) * 0.05 + (texture2D(tNoise, vec2(v * 6.0, 0.71)).g - 0.5) * 0.014;
+  float d = abs(du - cx) * 8.0;
+  float monte = step(v, uCrack * 0.92 + 0.01);
+  float br = texture2D(tNoise, vec2(u * 14.0, v * 3.0)).b;
+  float bran = smoothstep(0.88, 0.97, br) * smoothstep(0.4, 0.0, abs(du) * 8.0) * step(v, uCrack * 0.8);
+  float ligne = max((1.0 - smoothstep(0.008, 0.028, d)) * monte, bran * 0.7);
+  float lueur = exp(-d * 14.0) * monte * 0.45;
+  vec3 encre = vec3(0.012, 0.009, 0.006) + uEmber * pinceau * 2.0 + uEmber * pow(fr, 2.5) * 1.5;
+  vec3 bronze = uBronze * (0.55 + 1.5 * fr) + uEmber * pow(fr, 3.0) * 2.0 * uHeat + uEmber * min(moulure, 1.0) * 1.2 * (0.3 + uHeat);
+  vec3 c = mix(encre, bronze, metal);
+  float a = mix(0.9 * mix(0.75, 1.0, bristle), 0.4 + 0.52 * fr, metal) * ink;
+  vec3 feu = (uEmber * 2.0 + uCore * ligne * 2.0) * (ligne + lueur) * uCrackGlow * ink;
+  a = max(a, ligne * 0.9 * ink * step(0.01, uCrack));
+  gl_FragColor = vec4((c * a + feu) * uFade, a * uFade); }`;
+const clocheMat = new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, vertexShader: VS_CLOCHE, fragmentShader: FS_CLOCHE,
+  uniforms: { tNoise: { value: noiseTex }, uTime: { value: 0 }, uReveal: { value: 0 }, uMetal: { value: 0 }, uHeat: { value: 0 }, uCrack: { value: 0 }, uCrackGlow: { value: 0 }, uFade: { value: 1 },
+    uWobble: { value: 0 }, uPulse: { value: 0 }, uU0: { value: FELURE_U }, uEmber: { value: EMBER }, uCore: { value: CORE }, uBronze: { value: BRONZE } } });
+const cloche = new THREE.Group(); scene.add(cloche);
+const clocheMesh = new THREE.Mesh(new THREE.LatheGeometry(PROFIL.map(([r, y]) => new THREE.Vector2(r, y)), 72, 0, Math.PI * 2), clocheMat);
+clocheMesh.renderOrder = 4; cloche.add(clocheMesh);
+const anseMat = new THREE.MeshStandardMaterial({ color: 0x8a5a24, metalness: 0.9, roughness: 0.3, emissive: new THREE.Color(1, 0.45, 0.1), emissiveIntensity: 0, transparent: true, opacity: 0 });
+const anse = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.075, 8, 22), anseMat); anse.position.y = 3.15; cloche.add(anse);
+const clocheLumiere = new THREE.PointLight(0xffa040, 0, 0, 2); clocheLumiere.position.y = 1.2; cloche.add(clocheLumiere);
+// un point sur la surface de la cloche (v de 0 a 1 le long du profil, u autour)
+function surfaceCloche(u, v) {
+  const k = v * (PROFIL.length - 1), i = Math.min(PROFIL.length - 2, Math.floor(k)), f = k - i;
+  const r = lerp(PROFIL[i][0], PROFIL[i + 1][0], f), y = lerp(PROFIL[i][1], PROFIL[i + 1][1], f), phi = u * Math.PI * 2;
+  return cloche.localToWorld(V3(r * Math.sin(phi), y, r * Math.cos(phi)));
+}
+
+// Le ciel qui se fend au-dessus du combattant.
+const FS_CIEL = `uniform sampler2D tNoise; uniform float uOpen, uTime, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 10.0; float r = length(p), a = atan(p.y, p.x);
+  float R = uOpen * 3.3, n = texture2D(tNoise, vec2(a * 0.3, r * 0.2 - uTime * 0.2)).r;
+  float levre = exp(-pow((r - R - (n - 0.5) * 0.7) * 3.2, 2.0)) * step(0.01, uOpen);
+  float trou = smoothstep(R + 0.2, R - 0.5, r + (n - 0.5) * 0.7);
+  float tour = texture2D(tNoise, vec2(a * 0.5 + uTime * 0.3 + r * 0.15, r * 0.3)).g;
+  float nuage = smoothstep(R + 3.2, R, r) * (1.0 - trou) * smoothstep(0.4, 0.7, n) * uOpen;
+  vec3 col = uEmber * levre * 3.0 + uCore * levre * levre * 1.4 + (uEmber * (0.7 + 1.5 * smoothstep(0.4, 0.9, tour)) + uCore * smoothstep(0.75, 0.95, tour) * 0.8) * trou;
+  float al = trou * 0.45 + nuage * 0.65;
+  gl_FragColor = vec4((vec3(0.012, 0.009, 0.006) * al + col) * uFade, al * uFade); }`;
+const ciel = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShaderMaterial({ ...PREMUL, vertexShader: VS_UV, fragmentShader: FS_CIEL, fog: false,
+  uniforms: { tNoise: { value: noiseTex }, uOpen: { value: 0 }, uTime: { value: 0 }, uFade: { value: 0 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
+ciel.rotation.x = Math.PI / 2; ciel.position.y = 13; ciel.renderOrder = 2; scene.add(ciel);
+const lumiereCiel = new THREE.DirectionalLight(0xffb060, 0); lumiereCiel.position.set(0.6, 20, 0.8); scene.add(lumiereCiel); // la lumiere qui tombe du ciel fendu
+const HAUT_CLOCHE = 9.0;
+
+// Le sol : cercle de la zone trace a l'encre d'or, empreinte brulee du bord de la cloche.
+const FS_SOL = `uniform sampler2D tNoise; uniform float uTele, uTeleGlow, uImprint, uImprintHeat, uFade; uniform vec3 uEmber, uCore; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 8.0; float r = length(p), an = atan(p.y, p.x) / 6.2832 + 0.5;
+  float n = texture2D(tNoise, vec2(an * 6.0, r * 0.4)).r, b = texture2D(tNoise, vec2(an * 18.0, r * 2.0)).g;
+  float trace = step(an, uTele), tete = exp(-max(uTele - an, 0.0) * 50.0) * trace * step(uTele, 0.999) * (1.0 - smoothstep(0.1, 0.35, abs(r - 3.0)));
+  float anneau = (1.0 - smoothstep(0.05, 0.15, abs(r - 3.0 + (n - 0.5) * 0.14))) * trace * mix(0.55, 1.0, b);
+  float rayons = smoothstep(0.92, 0.99, texture2D(tNoise, vec2(an * 24.0, 0.3)).b) * smoothstep(3.0, 1.8, r) * smoothstep(1.7, 2.0, r) * trace * 0.6;
+  float levre = (1.0 - smoothstep(0.08, 0.32, abs(r - 1.64 + (n - 0.5) * 0.12))) * uImprint;
+  float suie = smoothstep(1.95, 1.2, r) * uImprint * 0.5 * smoothstep(0.3, 0.6, n);
+  float a = max(max(anneau, rayons) * 0.85, max(levre * 0.92, suie));
+  vec3 glow = uEmber * ((anneau + rayons) * uTeleGlow * 1.1 + tete * 2.5 + levre * uImprintHeat * 3.0) + uCore * (tete * 1.5 + levre * uImprintHeat * uImprintHeat);
+  gl_FragColor = vec4((vec3(0.012, 0.009, 0.006) * a + glow) * uFade, a * uFade); }`;
+const sol = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShaderMaterial({ ...PREMUL, polygonOffset: true, polygonOffsetFactor: -3, vertexShader: VS_UV, fragmentShader: FS_SOL,
+  uniforms: { tNoise: { value: noiseTex }, uTele: { value: 0 }, uTeleGlow: { value: 0 }, uImprint: { value: 0 }, uImprintHeat: { value: 0 }, uFade: { value: 1 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
+sol.rotation.x = -Math.PI / 2; sol.position.y = 0.015; sol.renderOrder = 2; scene.add(sol);
+
+// Les ondes : le son de la cloche rendu visible, anneaux d'or a plat qui balaient la zone.
+const FS_ONDE = `uniform sampler2D tNoise; uniform float uT, uForce; uniform vec3 uEmber, uCore; varying vec2 vUv;
+void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p), a = atan(p.y, p.x);
+  float R = 0.12 + 0.86 * (1.0 - pow(1.0 - uT, 2.2)), n = texture2D(tNoise, vec2(a * 0.8, uT * 2.0)).r;
+  float w = 0.012 + 0.03 * uT, front = exp(-pow((r - R) / w, 2.0));
+  float sillage = smoothstep(R, R - 0.22, r) * smoothstep(R - 0.45, R - 0.22, r) * 0.55;
+  float vie = (1.0 - uT) * uForce, brosse = mix(0.5, 1.0, smoothstep(0.3, 0.7, n));
+  vec3 col = (uEmber * 2.2 + uCore * front * 1.3) * front * brosse * vie;
+  float al = (sillage * 0.6 + front * 0.25) * brosse * vie;
+  gl_FragColor = vec4(vec3(0.012, 0.009, 0.006) * al + col, al); }`;
+const ondes = [];
+function onde(y, rmax, life, force, delai = 0) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ ...PREMUL, side: THREE.DoubleSide, vertexShader: VS_UV, fragmentShader: FS_ONDE,
+    uniforms: { tNoise: { value: noiseTex }, uT: { value: 0 }, uForce: { value: 0 }, uEmber: { value: EMBER }, uCore: { value: CORE } } }));
+  m.rotation.x = -Math.PI / 2; m.position.set(0, y, 0); m.scale.setScalar(rmax); m.renderOrder = 3; fx.add(m);
+  ondes.push({ m, age: -delai, life, force });
+}
+
+// Eclats de bronze : bronze froid, plus une lueur additive qui refroidit.
+const eclatsBronze = (() => {
+  const N = nq(90), geo = new THREE.TetrahedronGeometry(1, 0);
+  const froid = new THREE.InstancedMesh(geo, flat(0x4a3216, { metalness: 0.75, roughness: 0.45 }), N);
+  const lueur = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }), N);
+  lueur.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
+  for (const m of [froid, lueur]) { m.count = 0; m.frustumCulled = false; scene.add(m); }
+  const L = [], M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3();
+  function spawn(o) { if (L.length >= N) return; L.push({ p: o.p.clone(), v: o.v.clone(), ax: V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(), ang: rand(0, 6), spin: rand(6, 16), s: o.s, age: 0, life: o.life ?? 4.5, chaleur: o.chaleur ?? 1 }); }
+  function update(dt) {
+    for (let i = L.length - 1; i >= 0; i--) {
+      const d = L[i]; d.age += dt; if (d.age > d.life) { L.splice(i, 1); continue; }
+      d.v.y -= 9.8 * dt; d.p.addScaledVector(d.v, dt); d.ang += d.spin * dt;
+      if (d.p.y < d.s * 0.3) { d.p.y = d.s * 0.3; d.v.y *= -0.28; d.v.x *= 0.5; d.v.z *= 0.5; d.spin *= 0.5; }
+    }
+  }
+  function write() {
+    let i = 0;
+    for (const d of L) {
+      q.setFromAxisAngle(d.ax, d.ang); const k = 1 - smooth(0.85, 1, d.age / d.life);
+      sc.set(d.s * k, d.s * 0.28 * k, d.s * 0.75 * k); M.compose(d.p, q, sc); froid.setMatrixAt(i, M);
+      sc.multiplyScalar(1.06); M.compose(d.p, q, sc); lueur.setMatrixAt(i, M);
+      const h = 1.6 * d.chaleur * Math.exp(-d.age * 2.6); lueur.instanceColor.setXYZ(i, EMBER.x * h, EMBER.y * h, EMBER.z * h);
+      i++;
+    }
+    froid.count = i; lueur.count = i;
+    froid.instanceMatrix.needsUpdate = true; lueur.instanceMatrix.needsUpdate = true; lueur.instanceColor.needsUpdate = true;
+  }
+  return { spawn, update, write, clear() { L.length = 0; } };
+})();
+
+// ================================================================== son (bruitages calcules, sans musique ni fichier)
+/* <synthese> : JS pur, sans DOM ni WebAudio, pour pouvoir le verifier hors navigateur */
+function creerBruitages(SR, graine) {
+  let a = graine >>> 0;
+  const R = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const RR = (x, y) => x + (y - x) * R();
+  const TAU = Math.PI * 2;
+  const N = s => Math.max(1, Math.round(s * SR));
+  const vide = s => ({ L: new Float32Array(N(s)), R: new Float32Array(N(s)) });
+  // mono -> stereo, panoramique fixe ou qui se deplace (fonction du temps)
+  function mix(d, x, t0, g, pan = 0) {
+    const o = Math.round(t0 * SR), n = d.L.length, pf = typeof pan === 'function';
+    let cl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, cr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+    for (let i = 0; i < x.length; i++) {
+      const j = o + i; if (j < 0) continue; if (j >= n) break;
+      if (pf && (i & 63) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
+      d.L[j] += x[i] * g * cl; d.R[j] += x[i] * g * cr;
+    }
+  }
+  const blanc = n => { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = R() * 2 - 1; return x; };
+  const rose = n => { const x = new Float32Array(n); let b0 = 0, b1 = 0, b2 = 0; for (let i = 0; i < n; i++) { const w = R() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099046; b1 = 0.963 * b1 + w * 0.2965164; b2 = 0.57 * b2 + w * 1.0526913; x[i] = (b0 + b1 + b2 + w * 0.1848) * 0.22; } return x; };
+  const brun = n => { const x = new Float32Array(n); let l = 0; for (let i = 0; i < n; i++) { l = (l + 0.02 * (R() * 2 - 1)) / 1.02; x[i] = l * 3.5; } return x; };
+  // biquad (RBJ), frequence fixe ou fonction du temps
+  function filtre(x, type, f, q = 0.707) {
+    const y = new Float32Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0, b0 = 0, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+    const maj = fr => {
+      fr = Math.min(Math.max(fr, 15), SR * 0.45); const w = TAU * fr / SR, cs = Math.cos(w), al = Math.sin(w) / (2 * q); let B0, B1, B2;
+      if (type === 'lp') { B0 = (1 - cs) / 2; B1 = 1 - cs; B2 = B0; } else if (type === 'hp') { B0 = (1 + cs) / 2; B1 = -(1 + cs); B2 = B0; } else { B0 = al; B1 = 0; B2 = -al; }
+      const A0 = 1 + al; b0 = B0 / A0; b1 = B1 / A0; b2 = B2 / A0; a1 = -2 * cs / A0; a2 = (1 - al) / A0;
+    };
+    const vf = typeof f === 'function'; if (!vf) maj(f);
+    for (let i = 0; i < x.length; i++) {
+      if (vf && (i & 31) === 0) maj(f(i / SR));
+      const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  }
+  const env = (x, fn) => { for (let i = 0; i < x.length; i++) x[i] *= fn(i / SR); return x; };
+  const sat = (x, dr) => { const k = Math.tanh(dr); for (let i = 0; i < x.length; i++) x[i] = Math.tanh(x[i] * dr) / k; return x; };
+  const ad = (att, dec) => t => t < att ? t / att : Math.exp(-(t - att) / dec);
+  function lent(n, hz) { // modulation aleatoire douce
+    const m = Math.ceil(n / SR * hz) + 3, v = new Float32Array(m); for (let k = 0; k < m; k++) v[k] = R() * 2 - 1;
+    const y = new Float32Array(n); for (let i = 0; i < n; i++) { const p = i / SR * hz, k = Math.floor(p), f = p - k; y[i] = v[k] + (v[k + 1] - v[k]) * f * f * (3 - 2 * f); } return y;
+  }
+  function sinus(n, fn) { const y = new Float32Array(n); let ph = 0; for (let i = 0; i < n; i++) { ph += TAU * fn(i / SR) / SR; y[i] = Math.sin(ph); } return y; }
+  // resonance modale : partiels amortis, doubles et legerement desaccordes (le chatoiement du metal)
+  function modal(n, parts, bat) {
+    const y = new Float32Array(n);
+    for (const p of parts) {
+      const df = bat * RR(0.5, 1.5), w1 = TAU * (p.f - df / 2) / SR, w2 = TAU * (p.f + df / 2) / SR, ph1 = R() * TAU, ph2 = R() * TAU, k = Math.exp(-1 / (p.d * SR));
+      let e = p.a; for (let i = 0; i < n && e > 1e-5; i++) { y[i] += e * 0.5 * (Math.sin(w1 * i + ph1) + Math.sin(w2 * i + ph2)); e *= k; }
+    }
+    return y;
+  }
+  // crepitements : petites detonations au hasard (processus de Poisson)
+  function crepite(n, dens, gros) {
+    const y = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      if (R() >= dens(i / SR) / SR) continue;
+      const big = R() < gros, len = N(big ? RR(0.004, 0.014) : RR(0.0006, 0.003)), f = big ? RR(300, 1200) : RR(1500, 7500);
+      const amp = (big ? 0.7 : 0.35) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len);
+      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * Math.sin(w * j + ph); e *= k; }
+    }
+    return y;
+  }
+  const pic = s => { let m = 0; for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) m = Math.max(m, Math.abs(c[i])); return m; };
+  const normer = (s, p) => { const k = p / (pic(s) || 1); for (const c of [s.L, s.R]) for (let i = 0; i < c.length; i++) c[i] *= k; return s; };
+  const densifier = (s, dr) => { sat(s.L, dr); sat(s.R, dr); return s; }; // plus de corps, moins de pic
+  const fondu = (s, t) => { const n = s.L.length, k = Math.min(n, N(t)); for (let i = 0; i < k; i++) { const g = i / k; s.L[n - 1 - i] *= g; s.R[n - 1 - i] *= g; } return s; };
+
+  // ---------------------------------------------------------------- briques
+  function souffleFeu(d, t0, dur, g, o = {}) { // le feu qui s'embrase d'un coup
+    const n = N(dur), att = o.att ?? 0.03, tau = o.tau ?? dur * 0.32, fmax = o.fmax ?? 3800;
+    for (const pan of [-0.55, 0.55]) {
+      const x = filtre(rose(n), 'lp', t => t < att ? 160 + (fmax - 160) * (t / att) : 520 + (fmax - 520) * Math.exp(-(t - att) / (tau * 0.6)), 0.9);
+      const f1 = lent(n, 13), f2 = lent(n, 4);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= (t < att ? Math.pow(t / att, 1.5) : Math.exp(-(t - att) / tau)) * (1 + 0.45 * f1[i] + 0.25 * f2[i]); }
+      mix(d, x, t0, g * 2.2, pan);
+    }
+    mix(d, env(filtre(brun(n), 'lp', 160, 0.7), ad(0.02, tau * 1.2)), t0, g * 1.2, 0);
+    mix(d, env(filtre(blanc(n), 'hp', 4500), ad(0.01, 0.12)), t0, g * 0.12, 0);
+    mix(d, crepite(n, t => (o.crep ?? 160) * Math.exp(-t / (tau * 1.3)), 0.1), t0 + 0.02, g * 0.55, 0.25);
+  }
+  function armure(d, t0, g, o = {}) { // plaque de fer rouille : modes serres et vite etouffes
+    const f1 = o.f1 ?? 185, n = N(0.9);
+    const x = modal(n, [1, 1.59, 2.14, 2.3, 2.65, 2.92, 3.16, 3.5, 4.06, 4.6].map(r => ({ f: f1 * r * RR(0.98, 1.02), a: RR(0.3, 1), d: RR(0.08, 0.32) * (o.dec ?? 1) })), 3);
+    const cl = env(filtre(blanc(n), 'bp', 1900, 0.8), t => Math.exp(-t / 0.035)); for (let i = 0; i < n; i++) x[i] += cl[i] * 1.2;
+    mix(d, sat(x, 1.8), t0, g, o.pan ?? 0);
+  }
+  function coup(d, t0, g, o = {}) { // le poids du coup : un sinus qui chute, sature
+    const f0 = o.f0 ?? 165, f1 = o.f1 ?? 46, x = sinus(N(o.dur ?? 0.5), t => f1 + (f0 - f1) * Math.exp(-t / (o.chute ?? 0.035)));
+    mix(d, sat(env(x, t => Math.min(1, t / 0.002) * Math.exp(-t / (o.tau ?? 0.13))), o.drive ?? 2.5), t0, g, 0);
+  }
+  function grave(d, t0, g, o = {}) { // grave de cinema
+    const f0 = o.f0 ?? 58, f1 = o.f1 ?? 27, x = sinus(N(o.dur ?? 1.6), t => f1 + (f0 - f1) * Math.exp(-t / 0.22));
+    mix(d, env(x, t => Math.min(1, t / 0.012) * Math.exp(-t / (o.tau ?? 0.5))), t0, g, 0);
+  }
+  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.5; mix(d, x, t0, g, 0); }
+  function craque(d, t0, g, pan) { // l'armure qui cede
+    const n = N(0.14), x = sat(env(filtre(blanc(n), 'bp', 1150, 0.9), t => Math.exp(-t / 0.028)), 5), y = env(filtre(blanc(n), 'bp', 3200, 1.5), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] += y[i] * 0.6; mix(d, x, t0, g, pan);
+  }
+  function eclabousse(d, t0, g, pan) { // goutte de sang et d'encre qui s'ecrase
+    const n = N(0.07), f0 = RR(1800, 3200), fb = RR(420, 700);
+    const x = env(filtre(blanc(n), 'lp', t => f0 * Math.exp(-t / 0.015) + 250, 1.6), t => Math.min(1, t / 0.001) * Math.exp(-t / 0.014));
+    const b = env(sinus(n, t => fb * Math.exp(-t / 0.02) + 180), t => Math.exp(-t / 0.012));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 2 + b[i] * 0.25; mix(d, x, t0, g, pan);
+  }
+  function caillou(d, t0, g, pan) { // eclat de pierre qui retombe
+    const f = RR(1800, 4200), x = modal(N(0.08), [{ f, a: 1, d: RR(0.012, 0.03) }, { f: f * RR(1.4, 2.3), a: 0.6, d: RR(0.008, 0.02) }], 0);
+    const c = env(filtre(blanc(N(0.004)), 'hp', 2500), t => Math.exp(-t / 0.0007)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.5;
+    mix(d, x, t0, g, pan);
+  }
+  function souffle(d, t0, dur, g, o = {}) { // la lame fend l'air : bande de bruit qui monte et retombe, sifflement, dechirure
+    const n = N(dur), pk = o.pic ?? dur * 0.4, f0 = o.f0 ?? 280, f1 = o.f1 ?? 1900, f2 = o.f2 ?? 450;
+    const cf = t => t < pk ? f0 * Math.pow(f1 / f0, t / pk) : f1 * Math.pow(f2 / f1, (t - pk) / (dur - pk));
+    const e = t => t < pk ? Math.pow(t / pk, 2.2) : Math.exp(-(t - pk) / ((dur - pk) * 0.35));
+    const x = env(filtre(rose(n), 'bp', cf, 1.3), e), s = env(filtre(blanc(n), 'bp', t => cf(t) * 1.7, 11), e), air = env(filtre(blanc(n), 'hp', 5200), t => Math.exp(-Math.pow((t - pk) / 0.018, 2)));
+    for (let i = 0; i < n; i++) x[i] = x[i] * 3 + s[i] * (o.siffle ?? 0.6) * 2 + air[i] * (o.dechire ?? 0.35);
+    const p0 = o.de ?? -0.7, p1 = o.vers ?? 0.7;
+    mix(d, x, t0, g, t => p0 + (p1 - p0) * Math.min(1, t / dur));
+  }
+  function encre(d, t0, dur, g) { // l'encre qui tourbillonne et monte : bruit resonant qui tourne de plus en plus vite
+    const n = N(dur);
+    for (const pan of [-0.5, 0.5]) {
+      const cf = new Float32Array(n); let ph = R() * TAU;
+      for (let i = 0; i < n; i++) { ph += TAU * (4 + 10 * i / n) / SR; cf[i] = 480 + 240 * Math.sin(ph) + 600 * i / n; }
+      const x = env(filtre(rose(n), 'bp', t => cf[Math.min(n - 1, Math.round(t * SR))], 3), t => Math.pow(Math.min(1, t / (dur * 0.7)), 1.2) * (t > dur - 0.03 ? Math.max(0, (dur - t) / 0.03) : 1));
+      mix(d, x, t0, g * 3.2, pan);
+    }
+    let t = 0.03; while (t < dur - 0.05) { // gouttes visqueuses
+      const L = RR(0.03, 0.06), f0 = RR(180, 300), f1 = f0 * RR(1.5, 2.1);
+      mix(d, env(sinus(N(L), s => f0 + (f1 - f0) * (s / L)), s => Math.sin(Math.PI * s / L) * Math.exp(-s / (L * 0.6))), t0 + t, g * 0.1 * (0.4 + t / dur), RR(-0.7, 0.7));
+      t += RR(0.035, 0.09) * (1.2 - t / dur);
+    }
+  }
+  function feuMonte(d, t0, dur, g) { // la lame s'embrase de la garde a la pointe et gronde
+    const n = N(dur + 0.25), e = t => Math.pow(Math.min(1, t / dur), 1.6) * (t > dur ? Math.exp(-(t - dur) / 0.08) : 1);
+    for (const pan of [-0.5, 0.5]) {
+      const x = filtre(rose(n), 'lp', t => 220 + 1500 * Math.min(1, t / dur), 0.8), f1 = lent(n, 9), f2 = lent(n, 2.5);
+      for (let i = 0; i < n; i++) x[i] *= e(i / SR) * (1 + 0.5 * f1[i] + 0.3 * f2[i]);
+      mix(d, x, t0, g * 2.4, pan);
+    }
+    mix(d, crepite(n, t => 25 + 190 * Math.min(1, t / dur), 0.1), t0, g * 0.55, 0.2);
+    mix(d, env(filtre(blanc(n), 'hp', 3500), t => e(t) * Math.min(1, t / dur)), t0, g * 0.1, -0.2);
+  }
+  function aspire(d, t0, dur, g) { // souffle a l'envers qui monte jusqu'au coup
+    const n = N(dur);
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(n), 'lp', t => 300 + 6500 * Math.pow(t / dur, 2), 0.9), t => Math.pow(t / dur, 3.2)), t0, g * 2.2, pan);
+    mix(d, env(sinus(n, t => 40 + 30 * t / dur), t => Math.pow(t / dur, 2.5)), t0, g * 0.6, 0);
+  }
+  // scie a bande limitee (polyBLEP) : la matiere des montees de puissance
+  function scie(n, fn) {
+    const y = new Float32Array(n); let ph = R();
+    for (let i = 0; i < n; i++) {
+      const dt = fn(i / SR) / SR; ph += dt; if (ph >= 1) ph -= 1; let v = 2 * ph - 1;
+      if (ph < dt) { const u = ph / dt; v -= u + u - u * u - 1; } else if (ph > 1 - dt) { const u = (ph - 1) / dt; v -= u * u + u + u + 1; }
+      y[i] = v;
+    }
+    return y;
+  }
+  function montee(d, t0, dur, g, o = {}) { // la puissance monte : accord grave de scies qui grimpe, s'ouvre et vibre de plus en plus vite
+    const n = N(dur), f0 = o.f0 ?? 55, f1 = o.f1 ?? 110, k = t => Math.pow(Math.min(1, t / dur), 1.5);
+    for (const [pan, cents] of [[-0.6, -7], [0.6, 7]]) {
+      const x = new Float32Array(n);
+      for (const r of [1, 1.5, 2]) { const z = scie(n, t => f0 * Math.pow(f1 / f0, k(t)) * r * Math.pow(2, cents / 1200)); for (let i = 0; i < n; i++) x[i] += z[i] * (r === 1 ? 1 : 0.6); }
+      const y = filtre(x, 'lp', t => 220 + 5200 * Math.pow(Math.min(1, t / dur), 2), 1.2);
+      let ph = 0;
+      for (let i = 0; i < n; i++) { const t = i / SR; ph += TAU * (6 + 24 * Math.min(1, t / dur)) / SR; y[i] *= Math.pow(Math.min(1, t / dur), o.courbe ?? 1.8) * (1 - 0.35 * (0.5 + 0.5 * Math.sin(ph))); }
+      mix(d, sat(y, 2.5), t0, g * 0.5, pan);
+    }
+  }
+  function chute(d, t0, g) { // le temps s'arrete : accord qui s'effondre vers le grave, etouffe
+    const n = N(0.9), x = new Float32Array(n);
+    for (const r of [1, 1.5, 2.01]) { const z = scie(n, t => 55 * r + 165 * r * Math.exp(-t / 0.16)); for (let i = 0; i < n; i++) x[i] += z[i]; }
+    mix(d, sat(env(filtre(x, 'lp', t => 180 + 2200 * Math.exp(-t / 0.14), 1), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
+  }
+  function explosion(d, t0, g, o = {}) { // le coeur des grands coups : claquement, coup sature, grave, corps qui gronde, debris
+    const tau = o.tau ?? 0.75, L = o.dur ?? 3.2, n = N(L);
+    mix(d, sat(env(filtre(blanc(N(0.02)), 'hp', 700), t => Math.exp(-t / 0.004)), 3), t0, g * 0.9, 0);
+    coup(d, t0, g * 0.9, { f0: 230, f1: 55, chute: 0.02, tau: 0.09, drive: 6, dur: 0.4 });
+    coup(d, t0 + 0.004, g * 0.9, { f0: 120, f1: 36, chute: 0.05, tau: 0.22, drive: 4, dur: 0.9 });
+    grave(d, t0 + 0.006, g * 0.85, { f0: 62, f1: 22, tau: tau * 1.3, dur: L });
+    for (const pan of [-0.65, 0.65]) {
+      const x = filtre(rose(n), 'lp', t => 180 + 2600 * Math.exp(-t / (tau * 0.5)), 0.7), b = filtre(brun(n), 'lp', 400), am = lent(n, 9);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.2 + b[i] * 1.6) * Math.min(1, t / 0.003) * Math.exp(-t / tau) * (1 + 0.5 * am[i]); }
+      mix(d, sat(x, 2.4), t0, g * 1.1, pan);
+    }
+    mix(d, env(filtre(blanc(n), 'hp', 3000), t => Math.exp(-t / (tau * 0.35))), t0, g * 0.18, 0.2);
+    mix(d, crepite(n, t => (o.crep ?? 280) * Math.exp(-t / (tau * 1.4)), 0.18), t0 + 0.03, g * 0.7, -0.15);
+    mix(d, env(filtre(brun(n), 'lp', 110), t => Math.min(1, t / 0.05) * Math.exp(-t / (tau * 2.2))), t0, g * 1.4, 0);
+  }
+  function zan(d, t0, g, pan = 0) { // le "zan" de la lame : dechirure claire et courte, eclat metallique bref
+    mix(d, env(filtre(blanc(N(0.12)), 'hp', 2400), t => Math.min(1, t / 0.002) * Math.exp(-t / 0.05)), t0, g * 0.9, pan);
+    mix(d, env(filtre(blanc(N(0.1)), 'bp', 4200, 3.5), t => Math.exp(-t / 0.03)), t0, g * 1.4, pan);
+    mix(d, modal(N(0.25), [2700, 3900, 5300, 6900].map(f => ({ f: f * RR(0.97, 1.03), a: RR(0.4, 1), d: RR(0.03, 0.07) })), 6), t0, g * 0.5, pan);
+    mix(d, env(filtre(rose(N(0.14)), 'bp', t => 900 * Math.exp(-t / 0.05) + 180, 1.2), t => Math.exp(-t / 0.045)), t0, g * 2.2, pan);
+  }
+  function rugit(d, t0, dur, g, o = {}) { // le grand feu qui rugit : grondement grave tourmente, souffle, crepitements
+    const n = N(dur), tau = o.tau ?? dur * 0.4, att = o.att ?? 0.06;
+    for (const pan of [-0.6, 0.6]) {
+      const x = filtre(rose(n), 'lp', t => 300 + 2400 * Math.exp(-t / (tau * 0.7)) * Math.min(1, t / att), 0.8), b = filtre(brun(n), 'lp', 260), a1 = lent(n, 11), a2 = lent(n, 3);
+      for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.4 + b[i] * 1.8) * Math.min(1, Math.pow(t / att, 1.4)) * Math.exp(-Math.max(0, t - att) / tau) * (1 + 0.6 * a1[i] + 0.35 * a2[i]); }
+      mix(d, sat(x, 2), t0, g, pan);
+    }
+    mix(d, crepite(n, t => (o.crep ?? 220) * Math.exp(-t / (tau * 1.2)), 0.15), t0 + 0.02, g * 0.6, 0.25);
+    mix(d, env(filtre(blanc(n), 'hp', 4000), t => Math.min(1, t / att) * Math.exp(-t / (tau * 0.5))), t0, g * 0.1, -0.25);
+  }
+  function battement(d, t0, g) { // un seul battement sourd dans le silence
+    coup(d, t0, g, { f0: 75, f1: 42, chute: 0.04, tau: 0.11, drive: 2.2, dur: 0.5 });
+    mix(d, env(filtre(brun(N(0.3)), 'lp', 150), t => Math.min(1, t / 0.004) * Math.exp(-t / 0.08)), t0, g * 0.8, 0);
+  }
+  function gel(d, t0, g) { // le monde se fige : tout s'effondre vers le grave et s'etouffe
+    chute(d, t0, g);
+    coup(d, t0, g * 0.9, { f0: 140, f1: 34, chute: 0.05, tau: 0.25, drive: 3, dur: 0.9 });
+    for (const pan of [-0.6, 0.6]) mix(d, env(filtre(rose(N(0.5)), 'lp', t => 150 + 4200 * Math.exp(-t / 0.08), 0.8), t => Math.min(1, t / 0.006) * Math.exp(-t / 0.14)), t0, g * 1.6, pan);
+  }
+  // ---------------------------------------------------------------- l'Airain : cloches, bronze, poussiere
+  // partiels d'une grande cloche (rapport, amplitude, duree) : bourdon, fondamentale, tierce mineure, quinte, nominale, puis des partiels hauts tres courts
+  const PARTIELS = [[0.5, 0.55, 4.0], [1, 0.7, 3.0], [1.19, 0.85, 2.4], [1.5, 0.35, 1.6], [2, 1.0, 1.8], [2.51, 0.45, 0.9], [2.66, 0.35, 0.8], [3.01, 0.25, 0.55], [4.07, 0.18, 0.32], [5.33, 0.16, 0.24], [6.67, 0.1, 0.18], [8.0, 0.07, 0.12]];
+  function cloche(d, t0, g, o = {}) { // la cloche felee : battements forts, gresillement de la felure, frappe sourde
+    const f = o.f ?? 98, L = o.dur ?? 4.5, n = N(L), fel = o.felure ?? 0.5, bend = o.bend ?? 0, dec = o.dec ?? 1;
+    for (const [pan, sgn] of [[-0.5, 1], [0.5, -1]]) {
+      const x = new Float32Array(n);
+      for (const [r, a0, dc] of PARTIELS) {
+        const fr = f * r; if (fr > 1000) continue;
+        const det = (0.8 + fel * 3.5) * RR(0.6, 1.4) * sgn, k = Math.exp(-1 / (dc * dec * SR));
+        let e = a0, ph1 = R() * TAU, ph2 = R() * TAU;
+        for (let i = 0; i < n && e > 1e-5; i++) {
+          const pb = 1 + bend * (1 - Math.exp(-i / SR / 0.8));
+          ph1 += TAU * (fr - det / 2) * pb / SR; ph2 += TAU * (fr + det / 2) * pb / SR;
+          x[i] += e * 0.5 * (Math.sin(ph1) + Math.sin(ph2)); e *= k;
+        }
+      }
+      const z = filtre(blanc(n), 'bp', 650, 0.9); let ph = 0;
+      for (let i = 0; i < n; i++) { ph += TAU * f / SR; x[i] += z[i] * fel * 1.8 * Math.pow(Math.abs(Math.sin(ph)), 6) * Math.exp(-i / SR / (1.1 * dec)); }
+      const fr2 = env(filtre(blanc(N(0.06)), 'lp', 2000, 0.8), t => Math.exp(-t / 0.012)); for (let i = 0; i < fr2.length; i++) x[i] += fr2[i] * 1.4 * (o.frappe ?? 1);
+      mix(d, sat(x, 1.3 + fel), t0, g * 0.5, pan);
+    }
+  }
+  function clocheInverse(d, t0, dur, g) { // la cloche se peint : sa sonnerie jouee a l'envers, qui monte
+    const tmp = vide(dur + 0.05); cloche(tmp, 0, 1, { f: 98, dur: dur + 0.05, felure: 0.2, dec: 0.6, frappe: 0 });
+    const n = N(dur);
+    for (const [c, pan] of [[tmp.L, -0.4], [tmp.R, 0.4]]) { const x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = c[n - 1 - i] * Math.pow(i / n, 1.5); mix(d, x, t0, g, pan); }
+  }
+  function cielSon(d, t0, dur, g) { // le ciel se fend : orage sourd, gresillement d'or
+    const n = N(dur);
+    for (const pan of [-0.7, 0.7]) { const x = filtre(brun(n), 'lp', 220, 0.7), am = lent(n, 4); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.15) * (0.6 + 0.4 * am[i]) * (t > dur - 0.1 ? Math.max(0, (dur - t) / 0.1) : 1); } mix(d, x, t0, g * 2.2, pan); }
+    mix(d, crepite(n, t => 40 + 120 * t / dur, 0.05), t0, g * 0.35, 0);
+  }
+  function chuteSon(d, t0, dur, g) { // la cloche tombe : souffle qui descend et enfle
+    const n = N(dur);
+    for (const pan of [-0.4, 0.4]) mix(d, env(filtre(rose(n), 'bp', t => 1800 * Math.pow(220 / 1800, t / dur), 1.1), t => Math.pow(t / dur, 2.4)), t0, g * 3, pan);
+    mix(d, env(sinus(n, t => 38 + 20 * t / dur), t => Math.pow(t / dur, 2)), t0, g * 0.5, 0);
+  }
+  function poussiere(d, t0, dur, g) { // la poussiere chassee
+    const n = N(dur);
+    for (const pan of [-0.7, 0.7]) mix(d, env(filtre(rose(n), 'lp', t => 1600 * Math.exp(-t / 0.2) + 250, 0.7), t => Math.min(1, t / 0.01) * Math.exp(-t / (dur * 0.35))), t0, g * 1.6, pan);
+  }
+  function bronze(d, t0, g, pan) { // eclat de bronze qui rebondit : court, sans resonance
+    const f = RR(380, 1500), x = modal(N(0.12), [{ f, a: 1, d: RR(0.02, 0.06) }, { f: f * RR(1.6, 2.4), a: 0.5, d: RR(0.01, 0.03) }], 3);
+    const c = env(filtre(blanc(N(0.006)), 'hp', 1500), t => Math.exp(-t / 0.001)); for (let i = 0; i < c.length; i++) x[i] += c[i] * 0.6;
+    mix(d, x, t0, g, pan);
+  }
+  function grillade(d, t0, dur, g) { // le metal en fusion qui gresille et refroidit
+    const n = N(dur);
+    mix(d, env(filtre(blanc(n), 'hp', 3200), t => Math.min(1, t / 0.03) * Math.exp(-t / (dur * 0.3))), t0, g * 0.2, -0.3);
+    mix(d, crepite(n, t => 260 * Math.exp(-t / (dur * 0.4)), 0.05), t0, g * 0.5, 0.3);
+  }
+
+  // ---------------------------------------------------------------- les bruitages de la Cloche felee
+  return {
+    appel() { const d = vide(1.0); cielSon(d, 0, 0.72, 0.8); montee(d, 0, 0.7, 0.7, { f0: 37, f1: 74 }); clocheInverse(d, 0.06, 0.62, 0.8); aspire(d, 0.45, 0.25, 0.5); return fondu(normer(densifier(normer(d, 0.9), 1.4), 0.85), 0.05); },
+    chute() { const d = vide(0.35); chuteSon(d, 0, 0.28, 1); return fondu(normer(d, 0.8), 0.004); },
+    sonnerie() {
+      const d = vide(4.2);
+      explosion(d, 0, 0.9, { tau: 0.5, dur: 3.2, crep: 140 });
+      cloche(d, 0, 1.3, { f: 104, dur: 4.0, felure: 0.45, dec: 0.55 });
+      armure(d, 0.001, 0.35, { f1: 140, dec: 0.4, pan: 0.2 }); craque(d, 0.002, 0.5, -0.1);
+      poussiere(d, 0.01, 1.0, 0.6);
+      for (let i = 0; i < 16; i++) caillou(d, RR(0.08, 1.0), RR(0.05, 0.16), RR(-0.9, 0.9));
+      return fondu(normer(densifier(normer(d, 0.95), 2.0), 0.97), 0.5);
+    },
+    echo(k) {
+      const d = vide(2.0);
+      cloche(d, 0, 1, { f: 104 * (1 - 0.06 * k), dur: 2.0, felure: 0.55 + 0.18 * k, dec: 0.3 + 0.03 * k });
+      coup(d, 0, 0.6, { f0: 95, f1: 34, tau: 0.16, drive: 3 });
+      poussiere(d, 0.01, 0.8, 0.25 + 0.1 * k);
+      for (let i = 0; i < 3 + 2 * k; i++) bronze(d, RR(0.05, 0.6), RR(0.05, 0.12), RR(-0.8, 0.8));
+      return fondu(normer(densifier(normer(d, 0.9), 1.6), 0.6 + 0.12 * k), 0.4);
+    },
+    rupture() {
+      const d = vide(3.8);
+      explosion(d, 0, 1, { tau: 0.5, dur: 3.0, crep: 200 });
+      mix(d, sat(env(filtre(blanc(N(0.08)), 'bp', 900, 0.7), t => Math.exp(-t / 0.02)), 6), 0, 0.9, 0);
+      cloche(d, 0.01, 0.9, { f: 98, dur: 3.6, felure: 1.1, bend: -0.16, dec: 0.6, frappe: 0.5 });
+      for (let i = 0; i < 40; i++) bronze(d, 0.03 + Math.pow(R(), 1.6) * 1.5, RR(0.06, 0.2), RR(-0.95, 0.95));
+      grillade(d, 0.05, 3.0, 0.6);
+      rugit(d, 0.02, 1.2, 0.35, { tau: 0.3, crep: 120 });
+      for (let i = 0; i < 12; i++) eclabousse(d, RR(0.3, 1.2), RR(0.1, 0.25), RR(-0.9, 0.9));
+      return fondu(normer(densifier(normer(d, 0.97), 2.2), 0.98), 0.5);
+    },
+    cloture() { const d = vide(0.9); coup(d, 0, 0.6, { f0: 90, f1: 40, tau: 0.1, drive: 2 }); poussiere(d, 0, 0.5, 0.35); armure(d, 0.01, 0.15, { f1: 230, dec: 0.25 }); return fondu(normer(d, 0.7), 0.1); },
+    ambiance() { // vent dans les ruines et lanterne, en boucle sans couture
+      const T = 8, X = 1, n = N(T + X), d = vide(T + X);
+      for (const pan of [-0.7, 0.7]) {
+        const m = lent(n, 0.35), am = lent(n, 0.22), x = filtre(rose(n), 'bp', t => 330 + 220 * m[Math.min(n - 1, Math.round(t * SR))], 0.6);
+        for (let i = 0; i < n; i++) x[i] *= 0.55 + 0.45 * am[i];
+        mix(d, x, 0, 2.2, pan);
+      }
+      mix(d, filtre(brun(n), 'lp', 70), 0, 0.8, 0);
+      mix(d, crepite(n, () => 3, 0.15), 0, 0.15, -0.6);
+      const out = vide(T), k = N(X), m = out.L.length;
+      for (let i = 0; i < m; i++) { out.L[i] = d.L[i]; out.R[i] = d.R[i]; }
+      for (let i = 0; i < k; i++) { const g = i / k; out.L[i] = d.L[i] * g + d.L[m + i] * (1 - g); out.R[i] = d.R[i] * g + d.R[m + i] * (1 - g); }
+      return normer(out, 0.5);
+    },
+    reverb(dur = 3.4) { // reponse de la place : bruit qui decroit et s'assombrit
+      const n = N(dur), d = vide(dur);
+      for (const c of [d.L, d.R]) { let lp = 0; for (let i = 0; i < n; i++) { const t = i / SR; lp += (R() * 2 - 1 - lp) * (1 - (0.15 + 0.8 * Math.min(1, t / dur)) * 0.9); c[i] = t < 0.015 ? 0 : lp * Math.exp(-t / 0.8); } }
+      for (let j = 0; j < 8; j++) { const i = N(RR(0.012, 0.06)); d.L[i] += RR(-0.6, 0.6); d.R[i] += RR(-0.6, 0.6); }
+      return d;
+    }
+  };
+}
+function toutesLesRecettes(syn) {
+  return { reverb: syn.reverb(), appel: syn.appel(), chute: syn.chute(), sonnerie: syn.sonnerie(), echo: [syn.echo(1), syn.echo(2), syn.echo(3)], rupture: syn.rupture(), cloture: syn.cloture(), ambiance: syn.ambiance() };
+}
+/* </synthese> */
+// La synthese tourne dans un worker pour ne pas figer l'animation ; si le navigateur le refuse, on la fait ici.
+function synthetiser(SR) {
+  return new Promise((ok, ko) => {
+    try {
+      const code = creerBruitages.toString() + '\n' + toutesLesRecettes.toString() +
+        '\nonmessage = e => { const o = toutesLesRecettes(creerBruitages(e.data.SR, 4242)), tr = []; for (const v of Object.values(o)) for (const x of (Array.isArray(v) ? v : [v])) tr.push(x.L.buffer, x.R.buffer); postMessage(o, tr); };';
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), w = new Worker(url);
+      w.onmessage = e => { ok(e.data); w.terminate(); URL.revokeObjectURL(url); };
+      w.onerror = e => { w.terminate(); ko(e); };
+      w.postMessage({ SR });
+    } catch (e) { ko(e); }
+  });
+}
+
+const Son = (() => {
+  let ctx = null, on = false, pret = false, enCours = false, bus, envoi, retour, ambGain, ambFiltre, ambSrc = null, B = null;
+  const actifs = new Set();
+  const enBuffer = s => { const b = ctx.createBuffer(2, s.L.length, ctx.sampleRate); b.copyToChannel(s.L, 0); b.copyToChannel(s.R, 1); return b; };
+  async function preparer() {
+    enCours = true;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 6; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.3;
+    const chaleur = ctx.createWaveShaper(), cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) cv[i] = Math.tanh((i / 511.5 - 1) * 1.6) / Math.tanh(1.6); chaleur.curve = cv; chaleur.oversample = '2x';
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -1.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.95;
+    bus = ctx.createGain(); bus.connect(comp); comp.connect(chaleur); chaleur.connect(lim); lim.connect(sortie); sortie.connect(ctx.destination);
+    let S;
+    try { S = await synthetiser(ctx.sampleRate); window.__sonVia = 'worker'; } catch (e) { S = toutesLesRecettes(creerBruitages(ctx.sampleRate, 4242)); window.__sonVia = 'page'; }
+    const verb = ctx.createConvolver(); verb.buffer = enBuffer(S.reverb);
+    envoi = ctx.createGain(); retour = ctx.createGain(); retour.gain.value = 0.6; envoi.connect(verb); verb.connect(retour); retour.connect(bus);
+    B = {};
+    for (const [k, r] of Object.entries(S)) if (k !== 'reverb') B[k] = Array.isArray(r) ? r.map(enBuffer) : enBuffer(r);
+    ambFiltre = ctx.createBiquadFilter(); ambFiltre.type = 'lowpass'; ambFiltre.frequency.value = 18000;
+    ambGain = ctx.createGain(); ambGain.gain.value = 0;
+    ambFiltre.connect(ambGain); ambGain.connect(bus);
+    ambSrc = ctx.createBufferSource(); ambSrc.buffer = B.ambiance; ambSrc.loop = true; ambSrc.connect(ambFiltre); ambSrc.start();
+    pret = true; enCours = false;
+    ambiance('normal');
+  }
+  function jouer(nom, g = 1, envoiV = 0.3, idx, baisse) {
+    if (!on || !pret) return;
+    let b = B[nom]; if (Array.isArray(b)) b = b[idx ?? (actifs.size % b.length)];
+    if (baisse) for (const a of actifs) { a.niv = (a.niv ?? 1) * baisse; a.gn.gain.setTargetAtTime(a.g0 * a.niv, ctx.currentTime, 0.04); } // le nouveau coup passe devant
+    const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = Math.pow(vitesse, 0.6);
+    const gn = ctx.createGain(); gn.gain.value = g; src.connect(gn); gn.connect(bus);
+    const s = ctx.createGain(); s.gain.value = envoiV; gn.connect(s); s.connect(envoi);
+    src.start(); actifs.add({ src, gn, g0: g }); src.onended = () => { for (const a of actifs) if (a.src === src) actifs.delete(a); };
+  }
+  function ambiance(etat) { // le vent se coupe pendant le gel et le silence, puis revient
+    if (!pret) return; const t = ctx.currentTime;
+    const [g, f, tc] = etat === 'fige' ? [0.3, 380, 0.04] : etat === 'silence' ? [0, 300, 0.05] : [1, 18000, 0.35];
+    ambGain.gain.setTargetAtTime(g * 0.22, t, tc); ambFiltre.frequency.setTargetAtTime(f, t, 0.05);
+    if (etat === 'silence') for (const a of actifs) a.gn.gain.setTargetAtTime(a.g0 * 0.12, t, 0.06); // tout retombe avant l'eclatement
+    retour.gain.setTargetAtTime(etat === 'silence' ? 0.12 : 0.6, t, etat === 'silence' ? 0.06 : 0.2);
+    ambSrc.playbackRate.value = Math.pow(vitesse, 0.6);
+  }
+  function couper() { // a chaque relance, les bruitages en cours s'eteignent vite
+    if (!pret) return; const t = ctx.currentTime;
+    for (const a of actifs) { a.gn.gain.setTargetAtTime(0, t, 0.03); try { a.src.stop(t + 0.2); } catch (e) { /* deja arrete */ } }
+    actifs.clear(); ambiance('normal');
+  }
+  return {
+    get on() { return on; }, get pret() { return pret; },
+    async set(v) {
+      on = v;
+      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!ctx) return;
+      if (v) { await ctx.resume(); if (!pret && !enCours) await preparer(); } else await ctx.suspend();
+    },
+    jouer, ambiance, couper
+  };
+})();
+
+// ================================================================== mise en scene
+const T = { chute: 420, act: 700, rec: 880, fin: 1400, impact: 700, echos: [960, 1260, 1600], rupture: 1850, cloture: 2600, bout: 3500 };
+let vue = 'cine', vitesse = 1, boucle = true, run = null;
+const IDLE = 500;
+// angle du bras qui tient la masse, dans le plan vertical devant le combattant
+function brasAngle(t) {
+  const garde = -70, haut = 112, frappe = -96, epaule = 128;
+  if (t < 0) return garde * DEG;
+  if (t < T.chute) return lerp(garde, haut, easeInOut(t / T.chute)) * DEG;
+  if (t < 640) return (haut + Math.sin(t * 0.08) * 2) * DEG;
+  if (t < T.act) return lerp(haut, frappe, Math.pow((t - 640) / 60, 2)) * DEG;
+  if (t < T.rupture) return frappe * DEG;
+  if (t < T.rupture + 120) return lerp(frappe, 25, easeOutCubic((t - T.rupture) / 120)) * DEG;
+  if (t < T.cloture) return lerp(25, -40, smooth(T.rupture + 120, T.cloture, t)) * DEG;
+  return lerp(-40, epaule, easeInOut(clamp((t - T.cloture) / 450))) * DEG;
+}
+const tmpM = new THREE.Matrix4();
+function poseJoueur() {
+  const t = run.tau;
+  const accroupi = 0.08 * smooth(0, 300, t) * (1 - smooth(560, 640, t)) + 0.28 * smooth(650, T.act, t) * (1 - smooth(T.rupture + 300, T.cloture + 200, t));
+  joueur.position.set(0, -accroupi * 0.6, 0);
+  const pench = 0.16 * smooth(0, 380, t) * (1 - smooth(600, 680, t)) - 0.3 * smooth(640, T.act, t) * (1 - smooth(T.rupture, T.cloture + 300, t));
+  corpsJ.rotation.set(0, -0.25 * smooth(0, 400, t) * (1 - smooth(640, 720, t)), pench);
+  joueur.updateMatrixWorld(true);
+  const phi = brasAngle(t), dir = V3(Math.cos(phi), Math.sin(phi), 0.05).normalize();
+  const epauleW = corpsJ.localToWorld(V3(0.05, 1.5, 0.3));
+  const main = epauleW.clone().addScaledVector(dir, 0.6);
+  const d = main.clone().sub(epauleW), L = d.length();
+  bras.position.copy(epauleW).addScaledVector(d, 0.5); bras.quaternion.setFromUnitVectors(V3(0, 1, 0), d.normalize()); bras.scale.set(1, L, 1);
+  const Z = V3(0, 0, 1), Y = new THREE.Vector3().crossVectors(Z, dir).normalize(), Z2 = new THREE.Vector3().crossVectors(dir, Y);
+  masse.position.copy(main); masse.quaternion.setFromRotationMatrix(tmpM.makeBasis(dir, Y, Z2)); masse.updateMatrixWorld(true);
+}
+function poseEnnemis() {
+  const t = run.tau;
+  ennemis.forEach((e, i) => {
+    let kb = 0, lean = 0, flash = 0;
+    for (const h of run.hits) {
+      const dt = t - h.t; if (dt < 0) continue;
+      const k = easeOutCubic(clamp(dt / 200)) * (1 - easeInOut(clamp((dt - 1400) / 900)));
+      kb += h.s * 0.45 * k; lean += h.s * 0.28 * k * (1 - smooth(100, 400, dt) * 0.5); flash = Math.max(flash, Math.exp(-dt / 110) * h.s);
+    }
+    const genou = smooth(T.rupture + 80, T.rupture + 300, t) * (1 - smooth(T.bout - 500, T.bout - 60, t));
+    const tremble = run.tremble * Math.sin(t * 0.9 + i * 2) * 0.03;
+    e.racine.position.copy(e.dir).multiplyScalar(R_ENNEMI + kb + tremble); e.racine.position.y = -0.34 * genou;
+    e.penche.rotation.z = -lean + 0.4 * genou;
+  });
+  for (const m of matsEnnemi) { m.emissive.setRGB(1, 0.5, 0.12); m.emissiveIntensity = run.flash * 0.12; }
+}
+function shake(s) { if (!reduceMotion) run.trauma = Math.min(1, run.trauma + s); }
+function hitstop(ms) { run.hitstop = ms; run.stopLabel = ms; }
+function centreEcran(p) { const v = p.clone().project(camera); run.centre.set(v.x * 0.5 + 0.5, v.y * 0.5 + 0.5); }
+function sparks(p, dir, n, speed = 9, spread = 0.6, heat = 1) {
+  for (let i = 0; i < nq(n); i++) {
+    const v = dir.clone().normalize().add(V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).multiplyScalar(spread)).normalize().multiplyScalar(speed * rand(0.4, 1.3));
+    const k = rand(2.5, 5) * heat, hot = rand() < 0.3;
+    streaks.spawn({ p, v, c: hot ? [CORE.x * k, CORE.y * k, CORE.z * k] : [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, len: 0.05, w: rand(0.012, 0.028), life: rand(0.25, 0.6), grav: 7, drag: 2.5 });
+  }
+}
+function gouttesOr(p, dir, n, speed = 3.5, spread = 0.8) { // or fondu qui retombe et laisse une flaque qui refroidit
+  for (let i = 0; i < nq(n); i++) {
+    const v = dir.clone().normalize().add(V3(rand(-1, 1), rand(-0.3, 1), rand(-1, 1)).multiplyScalar(spread)).normalize().multiplyScalar(speed * rand(0.3, 1.2));
+    streaks.spawn({ p: p.clone().add(V3(rand(-.08, .08), rand(-.08, .08), rand(-.08, .08))), v, c: [EMBER.x * 1.6, EMBER.y * 1.6, EMBER.z * 1.6], a: 0.45, len: 0.03, w: rand(0.025, 0.055), life: 3, grav: 9.8, drag: 0.3, ink: true });
+  }
+}
+function embers(p, n, o = {}) {
+  for (let i = 0; i < nq(n); i++) {
+    const v = V3(rand(-1, 1), rand(0.2, 1.4), rand(-1, 1)).multiplyScalar(o.speed ?? 1.2).add(o.v ?? V3()), k = rand(2, 4.5) * (o.heat ?? 1);
+    points.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.05)), v, c: [EMBER.x * k, EMBER.y * k, EMBER.z * k], a: 0, size: rand(0.02, 0.05), life: rand(0.6, 1.6) * (o.life ?? 1), grav: -0.4, drag: 1.2, turb: 3, kind: 0 });
+  }
+}
+function suie(p, n, o = {}) { // fumee de suie a lisiere d'or
+  for (let i = 0; i < nq(n); i++) sprites.spawn({ p: p.clone().add(V3(rand(-1, 1), rand(-0.5, 1), rand(-1, 1)).multiplyScalar(o.jitter ?? 0.2)), v: (o.v ?? V3()).clone().add(V3(rand(-1, 1), rand(-0.2, 1), rand(-1, 1)).multiplyScalar(o.speed ?? 0.8)), size: rand(0.6, 1.1) * (o.size ?? 0.6), grow: o.grow ?? 1.3, life: rand(0.6, 1.0) * (o.life ?? 1), a: o.a ?? 0.75, glow: o.glow ?? 0.7, drag: 2.2, rise: o.rise ?? 0.35 });
+}
+const POUSSIERE = [0.13, 0.095, 0.06];
+function anneauPoussiere(r0, n, vitesse, o = {}) { // la poussiere chassee en cercle
+  for (let i = 0; i < nq(n); i++) {
+    const a = i / nq(n) * Math.PI * 2 + rand(-0.1, 0.1), d = V3(Math.cos(a), 0, Math.sin(a));
+    sprites.spawn({ p: d.clone().multiplyScalar(r0).add(V3(0, rand(0.1, 0.35), 0)), v: d.multiplyScalar(vitesse * rand(0.7, 1.2)).add(V3(0, rand(0.2, 0.8), 0)), size: rand(0.45, 0.8) * (o.size ?? 1), grow: 1.6, life: rand(0.8, 1.3) * (o.life ?? 1), kind: 2, col: POUSSIERE, a: o.a ?? 0.55, drag: 2.6, rise: 0.15 });
+  }
+}
+function cailloux(n, r0, force) { // les cailloux sautent sous la vibration
+  for (let i = 0; i < nq(n); i++) { const a = rand(0, 6.28), r = rand(r0 * 0.6, r0 * 1.6), p = V3(Math.cos(a) * r, 0.03, Math.sin(a) * r); debris.spawn({ p, v: V3(Math.cos(a) * rand(0, 1) * force, rand(1.2, 3) * force, Math.sin(a) * rand(0, 1) * force), s: rand(0.02, 0.05), hot: false, life: 1.6 }); }
+}
+function fissuresEtoile(n, r0, L) {
+  const liste = [];
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rand(-0.2, 0.2), d = V3(Math.cos(a), 0, Math.sin(a)); liste.push(makeCrack(d.clone().multiplyScalar(r0), d, L * rand(0.75, 1.15))); }
+  return liste;
+}
+
+function start() {
+  Son.couper();
+  rng = mulberry32(808);
+  for (const grp of [fx, distFx]) for (const c of [...grp.children]) { grp.remove(c); c.traverse(o => { if (o.material && o.material.dispose) o.material.dispose(); if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+  panneaux.length = 0; ondes.length = 0;
+  points.clear(); streaks.clear(); splats.clear(); sprites.clear(); debris.clear(); eclatsBronze.clear();
+  run = { tau: -IDLE, sim: 0, hitstop: 0, stopLabel: 0, trauma: 0, inv: 0, duo: 0, lines: 0, rad: 0, ca: 0, fovPunch: 0, dim: 0, desat: 0, flash: 0, tremble: 0, souffle: 0, pulse: 0, light: null, flags: {}, hits: [], centre: new THREE.Vector2(0.5, 0.5), done: false, wait: 0, fade: 0, lastSeed: -999, lineSeed: 0, fissures: [] };
+  const u = clocheMat.uniforms;
+  u.uReveal.value = 0; u.uMetal.value = 0; u.uHeat.value = 0; u.uCrack.value = 0; u.uCrackGlow.value = 0; u.uFade.value = 1; u.uWobble.value = 0; u.uPulse.value = 0;
+  cloche.position.set(0, HAUT_CLOCHE, 0); cloche.rotation.y = 0; cloche.visible = true; anseMat.opacity = 0;
+  const s = sol.material.uniforms; s.uTele.value = 0; s.uTeleGlow.value = 0; s.uImprint.value = 0; s.uImprintHeat.value = 0; s.uFade.value = 1;
+  ciel.material.uniforms.uOpen.value = 0; ciel.material.uniforms.uFade.value = 0;
+  poseJoueur(); poseEnnemis();
+  drawTimeline();
+}
+
+function step(dtMs) {
+  run.sim += dtMs; run.dtLast = dtMs;
+  const s = dtMs / 1000;
+  run.trauma = Math.max(0, run.trauma - s * 1.6);
+  if (run.inv > 0) run.inv -= dtMs; else run.duo = Math.max(0, run.duo - dtMs);
+  run.lines = Math.max(0, run.lines - s * 3.2); run.rad *= Math.exp(-s * 7); run.ca *= Math.exp(-s * 6); run.fovPunch *= Math.exp(-s * 6);
+  if (run.sim - run.lastSeed > 45) { run.lineSeed = rng() * 100; run.lastSeed = run.sim; }
+  if (run.hitstop > 0) { run.hitstop -= dtMs; return; }
+  run.stopLabel = 0;
+  if (run.done) { run.wait += dtMs; run.fade = Math.min(1, run.wait / 260); if (boucle && run.wait > 320) { start(); run.fade = 1; } return; }
+  run.fade = Math.max(0, run.fade - s * 5);
+  run.tau += dtMs;
+  scenario(run.tau, dtMs);
+  poseJoueur(); poseEnnemis();
+  majCape(run.souffle, run.sim / 1000);
+  points.update(s); streaks.update(s); splats.update(s); sprites.update(s); debris.update(s); eclatsBronze.update(s); snow.update(s, run.sim / 1000);
+  for (let i = panneaux.length - 1; i >= 0; i--) { const p = panneaux[i]; p.age += s; const u = clamp(p.age / p.life); p.mat.uniforms.uT.value = u; p.m.scale.setScalar(lerp(p.s0, p.s1, easeOutCubic(u))); if (p.follow) p.m.position.copy(p.follow()); if (p.age > p.life) { p.m.parent.remove(p.m); p.mat.dispose(); p.m.geometry.dispose(); panneaux.splice(i, 1); } }
+  for (let i = ondes.length - 1; i >= 0; i--) { const o = ondes[i]; o.age += s; const u = o.m.material.uniforms; u.uT.value = clamp(o.age / o.life); u.uForce.value = o.age < 0 ? 0 : o.force; if (o.age > o.life) { fx.remove(o.m); o.m.material.dispose(); o.m.geometry.dispose(); ondes.splice(i, 1); } }
+  const tt = run.sim / 1000;
+  for (const grp of [fx, distFx]) for (const o of grp.children) if (o.material && o.material.uniforms && o.material.uniforms.uTime) o.material.uniforms.uTime.value = tt;
+  clocheMat.uniforms.uTime.value = tt; ciel.material.uniforms.uTime.value = tt;
+  for (const b of brumes) b.material.uniforms.uTime.value += s;
+  if (run.light) { run.light.age += s; impactLight.position.copy(run.light.p); impactLight.intensity = run.light.peak * Math.exp(-run.light.age * 4); } else impactLight.intensity = 0;
+  if (run.tau > T.bout) run.done = true;
+}
+
+function scenario(t, dt) {
+  const F = run.flags, u = clocheMat.uniforms, so = sol.material.uniforms, ci = ciel.material.uniforms;
+  // ---------------------------------------------------------------- appel
+  if (t >= 0 && !F.appel) { F.appel = 1; Son.ambiance('fige'); Son.jouer('appel', 0.8, 0.35); }
+  ci.uOpen.value = easeOutCubic(clamp(t / 360)); ci.uFade.value = smooth(0, 120, t) * (1 - smooth(T.act + 200, T.act + 700, t));
+  lumiereCiel.intensity = 2.4 * ci.uOpen.value * ci.uFade.value;
+  u.uReveal.value = easeInOut(clamp((t - 70) / 300)); u.uMetal.value = easeInOut(clamp((t - 240) / 300));
+  u.uHeat.value = 0.5 * smooth(240, 500, t) + 0.8 * Math.exp(-Math.max(0, t - T.impact) / 300) * (t >= T.impact ? 1 : 0) + 0.4 * run.pulse;
+  anseMat.opacity = smooth(260, 520, t) * u.uFade.value; anseMat.emissiveIntensity = u.uHeat.value * 1.5;
+  so.uTele.value = easeInOut(clamp((t - 60) / 330)); so.uTeleGlow.value = smooth(60, 300, t) * (0.6 + 0.4 * Math.sin(t * 0.02)) * (1 - smooth(T.impact, T.impact + 400, t)) + 0.6 * run.pulse;
+  mOr.emissiveIntensity = 2.5 * smooth(80, 600, t) * (1 - smooth(T.rupture, T.cloture + 400, t));
+  run.souffle = 0.5 * smooth(0, 400, t) * (1 - smooth(T.act, T.act + 300, t)) + 0.7 * Math.exp(-Math.max(0, t - T.impact) / 250) * (t >= T.impact ? 1 : 0) + 0.6 * Math.exp(-Math.max(0, t - T.rupture) / 250) * (t >= T.rupture ? 1 : 0);
+  if (t > 0 && t < T.act) {
+    if (rng() < dt * 0.05) suie(V3(rand(-0.6, 0.6), lerp(12, Math.max(cloche.position.y + 3.5, 4), rand(0, 1)), rand(-0.6, 0.6)), 1, { v: V3(0, -4, 0), size: 0.9, glow: 0.8, rise: -1, a: 0.6 });
+    if (rng() < dt * 0.08) { const p = V3(rand(-1.4, 1.4), 12.5, rand(-1.4, 1.4)); streaks.spawn({ p, v: V3(rand(-0.4, 0.4), rand(-9, -5), rand(-0.4, 0.4)), c: [EMBER.x * 4, EMBER.y * 4, EMBER.z * 4], a: 0, len: 0.06, w: rand(0.015, 0.03), life: 1.6, grav: 4, drag: 0.4 }); }
+    if (rng() < dt * 0.012 * smooth(100, 600, t)) cailloux(1, 2.2, 0.5);
+    run.tremble = smooth(100, 650, t);
+  } else run.tremble = Math.max(0, run.tremble - dt / 600);
+  // ---------------------------------------------------------------- chute
+  if (t >= T.chute && !F.chute) { F.chute = 1; Son.jouer('chute', 0.8, 0.3); }
+  const kc = clamp((t - T.chute) / (T.act - T.chute));
+  cloche.position.y = t < T.chute ? HAUT_CLOCHE : t < T.act ? HAUT_CLOCHE * (1 - kc * kc) : 0;
+  if (t >= T.chute && t < T.act && rng() < dt * 0.25) { const p = surfaceCloche(rand(0, 1), rand(0, 0.3)); streaks.spawn({ p, v: V3(rand(-0.5, 0.5), rand(3, 7), rand(-0.5, 0.5)), c: [EMBER.x * 3, EMBER.y * 3, EMBER.z * 3], a: 0, len: 0.08, w: rand(0.012, 0.025), life: 0.5, grav: -2, drag: 1 }); }
+  if (t >= 620 && !F.souffle) { F.souffle = 1; anneauPoussiere(1.6, 14, 3.5, { a: 0.4 }); cailloux(10, 2.0, 0.8); }
+  // ---------------------------------------------------------------- sonnerie
+  if (!F.impact && t >= T.impact) {
+    F.impact = 1;
+    const coeur = V3(0, 1.2, 0), tete = masse.localToWorld(V3(0.9, 0, 0));
+    centreEcran(coeur);
+    hitstop(120); shake(0.95); run.fovPunch = 6; run.flash = 1;
+    if (!reduceMotion) { run.inv = 34; run.duo = 40; run.lines = 0.8; run.rad = 0.15; run.ca = 0.01; }
+    Son.ambiance('normal'); Son.jouer('sonnerie', 1, 0.5);
+    panneau(FS_STAR, tete.clone().add(V3(0, 0.15, 0)), 1.6, 2.4, 0.14, { top: true });
+    panneau(FS_DSHOCK, coeur, 0.6, 11, 0.6, { strength: 0.045 });
+    onde(0.12, 6.5, 0.95, 1.1); onde(1.25, 5.2, 0.7, 0.8);
+    halo(coeur, 2.0, 0.3, 1.4);
+    run.light = { p: V3(0, 1.0, 0), peak: 32, age: 0 };
+    anneauPoussiere(1.7, 22, 5.5, { a: 0.55 }); cailloux(18, 2.2, 1.2);
+    run.fissures = fissuresEtoile(9, 1.55, 2.6); run.fissT = t;
+    for (let i = 0; i < 6; i++) sparks(surfaceCloche(rand(0, 1), 0.02), V3(rand(-1, 1), 0.3, rand(-1, 1)), 8, 7);
+    sparks(tete, V3(0, 1, 0), 18, 8, 0.9);
+    suie(V3(0, 0.3, 0), 6, { speed: 1.2, size: 0.6, glow: 0.8, jitter: 1.2 });
+    u.uCrack.value = 0.22; u.uWobble.value = 1;
+    so.uImprint.value = 1; so.uImprintHeat.value = 1;
+    for (const e of ennemis) { e.hit = t; }
+    run.hits.push({ t, s: 1 });
+    run.haze = panneau(FS_DHAZE, V3(0, 1.6, 0), 4.0, 4.0, 2.6, { strength: 0.01 });
+  }
+  if (run.fissures.length) {
+    const dtc = t - run.fissT;
+    for (const c of run.fissures) { const cu = c.material.uniforms; cu.uReveal.value = easeOutCubic(clamp(dtc / 160)); cu.uHeat.value = Math.exp(-Math.max(0, dtc - 300) / 900) + 0.5 * run.pulse; cu.uFade.value = 1 - smooth(T.bout - 500, T.bout - 80, t); }
+  }
+  // ---------------------------------------------------------------- echos
+  run.pulse = 0;
+  T.echos.forEach((te, k) => {
+    const d = t - te; if (d >= -40 && d < 220) run.pulse = Math.max(run.pulse, d < 0 ? 0 : Math.exp(-d / 90) * (1 - Math.exp(-d / 12)));
+    const cle = 'e' + k;
+    if (!F[cle] && t >= te) {
+      F[cle] = 1; const n = k + 1;
+      Son.jouer('echo', 0.75 + 0.1 * k, 0.55, k, 0.5);
+      onde(0.12, 6.5 + n * 0.9, 1.0 + 0.15 * n, 0.85); onde(1.4, 4.5 + n * 0.5, 0.75, 0.55);
+      panneau(FS_DSHOCK, V3(0, 1.2, 0), 0.6, 8 + n, 0.55, { strength: 0.025 + 0.005 * n });
+      anneauPoussiere(1.7, 10 + 3 * n, 3.5 + n * 0.6, { a: 0.4 });
+      shake(0.25 + 0.1 * n); run.flash = 0.35 + 0.15 * n;
+      u.uWobble.value = Math.min(1.4, u.uWobble.value + 0.6);
+      const p = surfaceCloche(FELURE_U, 0.03); gouttesOr(p, V3(0, -0.4, 0.5), 4 + 2 * n, 1.2, 0.6); sparks(p, V3(0, 0.4, 1), 6 + 3 * n, 5);
+      run.light = { p: V3(0, 1.0, 0), peak: 10 + 4 * n, age: 0 };
+      run.hits.push({ t, s: 0.18 });
+    }
+  });
+  const crackCible = t < T.impact ? 0 : 0.22 + 0.23 * T.echos.filter(te => t >= te).length;
+  u.uCrack.value += (crackCible - u.uCrack.value) * Math.min(1, dt / 80);
+  u.uCrackGlow.value = t < T.impact ? 0 : 0.8 + 0.6 * run.pulse + 0.4 * smooth(T.echos[2], T.rupture, t);
+  u.uPulse.value = run.pulse;
+  u.uWobble.value *= Math.exp(-dt / 700);
+  clocheLumiere.intensity = t >= T.impact && t < T.rupture ? 2.5 + 8 * run.pulse + 5 * Math.exp(-(t - T.impact) / 200) : 0;
+  if (t > T.impact && t < T.rupture && rng() < dt * 0.02 * (0.4 + u.uCrack.value)) { const p = surfaceCloche(FELURE_U + rand(-0.01, 0.01), rand(0.0, u.uCrack.value * 0.9)); gouttesOr(p, V3(0, -1, 0.3), 1, 0.4, 0.3); }
+  so.uImprintHeat.value = t < T.impact ? 0 : Math.exp(-(t - T.impact) / 900) * 0.8 + 0.4 * run.pulse + (t >= T.rupture ? Math.exp(-(t - T.rupture) / 600) * 0.8 : 0);
+  // ---------------------------------------------------------------- rupture
+  if (!F.rupture && t >= T.rupture) {
+    F.rupture = 1;
+    const coeur = V3(0, 1.4, 0);
+    centreEcran(coeur);
+    hitstop(80); shake(1.0); run.fovPunch = 5; run.flash = 1.2;
+    if (!reduceMotion) { run.duo = 45; run.lines = 0.7; run.rad = 0.12; run.ca = 0.01; }
+    Son.jouer('rupture', 1, 0.5, undefined, 0.35);
+    cloche.visible = false;
+    panneau(FS_STAR, coeur, 2.2, 3.4, 0.16, { top: true });
+    panneau(FS_DSHOCK, coeur, 0.6, 12, 0.6, { strength: 0.05 });
+    onde(0.12, 8.0, 1.1, 1.2); onde(1.6, 6.0, 0.8, 0.9);
+    halo(coeur, 2.4, 0.35, 1.6);
+    run.light = { p: coeur.clone(), peak: 40, age: 0 };
+    for (let i = 0; i < 64; i++) {
+      const uu = rand(0, 1), vv = rand(0.02, 0.95), p = surfaceCloche(uu, vv), out = p.clone().setY(0).normalize();
+      eclatsBronze.spawn({ p, v: out.multiplyScalar(rand(2.5, 7)).add(V3(0, rand(1.5, 5.5), 0)), s: rand(0.07, 0.2), chaleur: rand(0.4, 1.2) });
+    }
+    for (let i = 0; i < 6; i++) gouttesOr(surfaceCloche(rand(0, 1), rand(0.1, 0.9)), V3(rand(-1, 1), 0.6, rand(-1, 1)), 6, 4.5, 0.7);
+    suie(coeur, 10, { speed: 2.2, size: 0.75, glow: 0.8, jitter: 1.0, life: 0.8 });
+    embers(coeur, 70, { speed: 2.6, heat: 1.1, jitter: 1.2 });
+    anneauPoussiere(1.7, 26, 6.5, { a: 0.6, size: 1.2 });
+    run.hits.push({ t, s: 1.3 });
+  }
+  if (t > T.rupture && t < T.rupture + 1500 && rng() < dt * 0.03) embers(V3(rand(-2.5, 2.5), 0.1, rand(-2.5, 2.5)), 1, { speed: 0.5 });
+  run.flash *= Math.exp(-dt / 160);
+  // ---------------------------------------------------------------- cloture
+  if (!F.cloture && t >= T.cloture + 300) { F.cloture = 1; Son.jouer('cloture', 0.7, 0.3); suie(V3(0.3, 0.1, 0.3), 3, { size: 0.4, glow: 0, a: 0.4, speed: 0.4 }); anneauPoussiere(0.4, 8, 1.2, { a: 0.35, size: 0.6 }); }
+  // ---------------------------------------------------------------- monde
+  run.dim = 0.62 * smooth(0, 300, t) * (1 - smooth(T.rupture + 300, T.rupture + 1300, t));
+  run.desat = 0.45 * smooth(0, 300, t) * (1 - smooth(T.impact, T.impact + 400, t)) + 0.2 * smooth(T.impact + 400, T.echos[0], t) * (1 - smooth(T.rupture, T.rupture + 800, t));
+  so.uFade.value = 1 - smooth(T.bout - 450, T.bout - 60, t);
+}
+
+// ================================================================== camera
+function lerpPose(a, b, k) { return { p: a.p.clone().lerp(b.p, k), l: a.l.clone().lerp(b.l, k), fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) }; }
+const CAM_JEU = V3(-1.8, 3.6, 7.4), LOOK_JEU = V3(0, 1.3, 0);
+const VUES = {
+  jeu: { p: CAM_JEU, l: LOOK_JEU, fov: 50 },
+  cote: { p: V3(0.2, 1.9, 9.4), l: V3(0, 1.9, 0), fov: 46 },
+  face: { p: V3(7.2, 2.4, 2.4), l: V3(0, 1.6, 0), fov: 46 },
+  dos: { p: V3(-6.0, 3.4, 4.6), l: V3(0.4, 1.5, 0), fov: 46 },
+  dessus: { p: V3(0, 12.5, 4.2), l: V3(0, 0, 0), fov: 48 }
+};
+const MOSAIQUE = ['jeu', 'cote', 'face', 'dessus'];
+const orbite = { az: -0.24, el: 0.34, dist: 9, cible: V3(0, 1.5, 0), dernier: -1e9 };
+function camPose(v) {
+  const t = run.tau;
+  if (v === 'cine' && t >= 0) return poseCine();
+  if (v === 'libre') { const c = Math.cos(orbite.el); return { p: orbite.cible.clone().add(V3(Math.sin(orbite.az) * c, Math.sin(orbite.el), Math.cos(orbite.az) * c).multiplyScalar(orbite.dist)), l: orbite.cible.clone(), fov: 48, roll: 0 }; }
+  const f = VUES[v] ?? VUES.jeu;
+  return { p: f.p.clone(), l: f.l.clone(), fov: f.fov, roll: 0 };
+}
+const orbitePos = (a, R, h) => V3(Math.cos(a * DEG) * R, h, Math.sin(a * DEG) * R);
+function poseCine() {
+  const t = run.tau;
+  const appel = { p: V3(-5.5, 1.1, 6.4).lerp(V3(-5.1, 1.2, 6.0), smooth(0, T.chute, t)), l: V3(0, 4.6, 0), fov: 62, roll: 3 * DEG };
+  if (t < T.chute) return appel;
+  if (t < T.act) {
+    const k = easeInOut(clamp((t - T.chute) / (T.act - T.chute)));
+    return { p: appel.p.clone().lerp(V3(-4.4, 1.5, 5.3), k), l: V3(0, Math.max(1.4, cloche.position.y * 0.55 + 1.3), 0), fov: lerp(62, 48, k), roll: lerp(3, 0, k) * DEG };
+  }
+  const ko = clamp((t - T.act) / (T.rupture - T.act));
+  const orb = { p: orbitePos(lerp(130, 72, easeInOut(ko)), lerp(6.9, 7.4, ko), lerp(1.6, 3.6, easeInOut(ko))), l: V3(0, 1.4, 0), fov: 48, roll: 0 };
+  if (t < T.rupture) return orb;
+  const kr = easeOutCubic(clamp((t - T.rupture) / 140));
+  const pousse = { p: orbitePos(72, lerp(7.4, 5.4, kr), lerp(3.6, 2.6, kr)), l: V3(0, 1.3, 0), fov: 50, roll: 0 };
+  const fin = { p: V3(1.6, 6.8, 8.2), l: V3(0, 0.5, 0), fov: 48, roll: 0 };
+  return lerpPose(pousse, fin, easeInOut(clamp((t - T.rupture - 500) / 1300)));
+}
+
+// ================================================================== image
+function applyFrame() {
+  const d = run.dim;
+  hemi.intensity = BASE.hemi * (1 - 0.8 * d); moon.intensity = BASE.moon * (1 - 0.85 * d); contre.intensity = BASE.contre * (1 - 0.5 * d); lantern.intensity = BASE.lantern * (1 - 0.65 * d);
+  scene.fog.color.copy(FOG).multiplyScalar(1 - 0.8 * d); sky.material.uniforms.uDim.value = d;
+  for (const b of brumes) b.material.uniforms.uDim.value = d;
+  U.uVig.value = Math.min(1, d * 1.1); U.uRedVig.value = d * 0.4; U.uDesat.value = clamp(run.desat);
+  U.uInv.value = run.inv > 0 ? 1 : 0; U.uDuo.value = run.inv <= 0 && run.duo > 0 ? 1 : 0;
+  const mos = vue === 'mosaique';
+  // budget mobile du guide : ni flou radial ni distorsion sur les appareils faibles
+  U.uLines.value = reduceMotion || mos ? 0 : run.lines; U.uSeed.value = run.lineSeed; U.uRad.value = mos || LOW ? 0 : run.rad; U.uCA.value = mos || LOW ? 0 : run.ca; U.uCenter.value.copy(run.centre);
+  points.mat.uniforms.uScale.value = echellePoints * (mos ? 0.5 : 1);
+  U.uFade.value = 1 - run.fade;
+  maceLight.position.copy(masse.localToWorld(V3(0.9, 0, 0))); maceLight.intensity = mOr.emissiveIntensity * 1.6;
+  points.write(); streaks.write(); sprites.write(); debris.write(); eclatsBronze.write();
+  U.uTime.value = run.sim / 1000;
+}
+function poserCamera(pose) {
+  const tr = run.trauma * run.trauma, s = run.sim / 1000;
+  camera.fov = pose.fov + run.fovPunch; camera.updateProjectionMatrix();
+  camera.position.copy(pose.p).add(V3(Math.sin(s * 63.1) * 0.1 * tr, Math.sin(s * 71.7 + 1.3) * 0.08 * tr, Math.sin(s * 57.3 + 2.1) * 0.06 * tr));
+  camera.lookAt(pose.l); camera.rotateZ(pose.roll + Math.sin(s * 49.9 + 0.7) * 0.03 * tr);
+  camera.updateMatrixWorld();
+  sky.position.copy(camera.position);
+  for (const p of panneaux) p.m.quaternion.copy(camera.quaternion);
+}
+function renderFrame() {
+  const mos = vue === 'mosaique', liste = mos ? MOSAIQUE : [vue];
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
+  renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 1); renderer.clear();
+  renderer.setRenderTarget(rtDist); renderer.setClearColor(0x000000, 0); renderer.clear();
+  liste.forEach((v, i) => {
+    poserCamera(camPose(v));
+    for (const rt of [rtScene, rtDist]) {
+      if (mos) {
+        const hw = Math.floor(rt.width / 2), hh = Math.floor(rt.height / 2), x = (i % 2) * hw, y = (i < 2 ? 1 : 0) * hh, g = rt === rtScene ? 1 : 0;
+        rt.viewport.set(x + (x > 0 ? g : 0), y + (y > 0 ? g : 0), hw - g, hh - g); rt.scissor.copy(rt.viewport); rt.scissorTest = true;
+      }
+      if (rt === rtDist && LOW) continue;
+      renderer.setRenderTarget(rt); renderer.render(rt === rtScene ? scene : distScene, camera);
+    }
+  });
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
+  pass(matBright, rtScene, levels[0], true);
+  for (let i = 1; i < levels.length; i++) pass(matDown, levels[i - 1], levels[i], true);
+  for (let i = levels.length - 2; i >= 0; i--) pass(matUp, levels[i + 1], levels[i], false);
+  quad.material = matFinal; renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(postScene, postCam);
+}
+
+// ================================================================== interface
+const hudPhase = document.getElementById('hud-phase'), hudMs = document.getElementById('hud-ms'), hudEtat = document.getElementById('hud-etat');
+const tete = document.getElementById('tete'), ticks = document.getElementById('ticks');
+const echelle = T.bout;
+const pct = ms => (clamp(ms / echelle) * 100).toFixed(2) + '%';
+function drawTimeline() {
+  const seg = (id, a, b) => { const el = document.getElementById(id); el.style.left = pct(a); el.style.width = pct(b - a); };
+  seg('seg-anti', 0, T.act); seg('seg-actif', T.act, T.rec); seg('seg-recup', T.rec, T.fin);
+  ticks.innerHTML = '';
+  for (const x of [T.impact, ...T.echos, T.rupture, T.cloture + 300]) { const d = document.createElement('div'); d.className = 'tick'; d.style.left = pct(x); ticks.appendChild(d); }
+}
+function updateHud() {
+  const t = run.tau;
+  let nom = 'Garde', txt = '';
+  if (t >= 0 && t < T.act) { nom = t < T.chute ? 'Appel' : 'Chute'; txt = `${Math.round(t)} / 700 ms`; }
+  else if (t >= T.act && t < T.rec) { nom = 'Active'; txt = `${Math.round(t - T.act)} / 180 ms`; }
+  else if (t >= T.rec && t < T.fin) { nom = 'Récupération'; txt = `${Math.round(t - T.rec)} / 520 ms`; }
+  else if (t >= T.fin) { nom = 'Suite'; txt = `+${Math.round(t - T.fin)} ms`; }
+  hudPhase.textContent = nom; hudMs.textContent = txt;
+  hudEtat.textContent = run.hitstop > 0 ? `arrêt sur coup ${run.stopLabel} ms` : '';
+  tete.style.left = pct(Math.max(0, t));
+}
+function changerVue(v) {
+  vue = v;
+  viewport.classList.toggle('libre', v === 'libre'); viewport.tabIndex = v === 'libre' ? 0 : -1;
+  document.getElementById('etiquettes').hidden = v !== 'mosaique';
+  document.getElementById('consigne').hidden = v !== 'libre';
+}
+document.querySelectorAll('input[name="camera"]').forEach(r => r.addEventListener('change', () => changerVue(r.value)));
+const pointeurs = new Map();
+const touche = () => { orbite.dernier = performance.now(); };
+viewport.addEventListener('pointerdown', e => { if (vue !== 'libre') return; viewport.setPointerCapture(e.pointerId); pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche(); document.getElementById('consigne').hidden = true; });
+viewport.addEventListener('pointermove', e => {
+  if (vue !== 'libre' || !pointeurs.has(e.pointerId)) return;
+  const avant = pointeurs.get(e.pointerId);
+  if (pointeurs.size === 1) { orbite.az -= (e.clientX - avant.x) * 0.008; orbite.el = clamp(orbite.el + (e.clientY - avant.y) * 0.006, 0.03, 1.45); }
+  else {
+    const autre = [...pointeurs.entries()].find(([id]) => id !== e.pointerId)[1];
+    const d0 = Math.hypot(avant.x - autre.x, avant.y - autre.y), d1 = Math.hypot(e.clientX - autre.x, e.clientY - autre.y);
+    if (d0 > 0 && d1 > 0) orbite.dist = clamp(orbite.dist * d0 / d1, 3, 18);
+  }
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche();
+});
+for (const n of ['pointerup', 'pointercancel', 'lostpointercapture']) viewport.addEventListener(n, e => pointeurs.delete(e.pointerId));
+viewport.addEventListener('wheel', e => { if (vue !== 'libre') return; e.preventDefault(); orbite.dist = clamp(orbite.dist * Math.exp(e.deltaY * 0.0012), 3, 18); touche(); }, { passive: false });
+viewport.addEventListener('keydown', e => {
+  if (vue !== 'libre') return;
+  const k = { ArrowLeft: [0.12, 0, 1], ArrowRight: [-0.12, 0, 1], ArrowUp: [0, 0.08, 1], ArrowDown: [0, -0.08, 1], '+': [0, 0, 0.9], '-': [0, 0, 1.1] }[e.key];
+  if (!k) return; e.preventDefault();
+  orbite.az += k[0]; orbite.el = clamp(orbite.el + k[1], 0.03, 1.45); orbite.dist = clamp(orbite.dist * k[2], 3, 18); touche();
+});
+document.querySelectorAll('input[name="vitesse"]').forEach(r => r.addEventListener('change', () => { vitesse = parseFloat(r.value); }));
+document.getElementById('boucle').addEventListener('change', e => { boucle = e.target.checked; if (boucle && run.done) start(); });
+document.getElementById('rejouer').addEventListener('click', () => start());
+const btnSon = document.getElementById('son');
+btnSon.addEventListener('click', async () => {
+  const v = !Son.on; btnSon.setAttribute('aria-pressed', String(v));
+  btnSon.textContent = v && !Son.pret ? 'Son : préparation…' : v ? 'Son activé' : 'Son coupé';
+  try { await Son.set(v); } catch (e) { btnSon.textContent = 'Son indisponible'; btnSon.setAttribute('aria-pressed', 'false'); return; }
+  if (Son.on === v) btnSon.textContent = v ? 'Son activé' : 'Son coupé';
+  if (v) start();
+});
+window.addEventListener('keydown', e => { if (e.key === ' ' && !(e.target.closest && e.target.closest('input, button'))) { e.preventDefault(); start(); } });
+
+if (reduceMotion) { boucle = false; document.getElementById('boucle').checked = false; }
+new ResizeObserver(resize).observe(viewport);
+resize();
+start();
+if (reduceMotion) { let n = 0; while (run.tau < T.impact + 80 && n++ < 400) step(1000 / 60); }
+
+let last = performance.now();
+function frame(now) {
+  const real = Math.min(50, now - last); last = now;
+  let sim = real * vitesse;
+  while (sim > 0) { const d = Math.min(sim, 1000 / 60); step(d); sim -= d; }
+  if (vue === 'libre' && !reduceMotion && now - orbite.dernier > 2500) orbite.az += real / 1000 * 0.22;
+  applyFrame(); updateHud(); renderFrame();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// Pour les captures de controle : rejoue jusqu'a l'instant tau (ms depuis le debut de l'Art), eventuellement pendant un arret sur coup.
+window.__clocheFelee = { seek(mode, ms, pendantArret) { changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 4000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
+</script>
+</body>
+</html>

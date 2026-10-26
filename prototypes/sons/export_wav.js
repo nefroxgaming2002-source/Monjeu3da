@@ -1,7 +1,8 @@
 // Exporte les bruitages du prototype en WAV 44,1 kHz 16 bits stereo, prets pour Godot.
 // Usage : node prototypes/sons/export_wav.js prototypes/taille-rouge.html prototypes/sons/taille-rouge
+//         node prototypes/sons/export_wav.js prototypes/cloche-felee.html prototypes/sons/cloche-felee cloche_felee
 const fs = require('fs');
-const [,, page, dossier] = process.argv;
+const [,, page, dossier, prefixe] = process.argv; // prefixe : nom de l'Art pour les sons sans nom fixe (ex. cloche_felee)
 const src = fs.readFileSync(page, 'utf8');
 const [creer, recettes] = new Function(src.slice(src.indexOf('/* <synthese>'), src.indexOf('/* </synthese> */')) + '; return [creerBruitages, toutesLesRecettes];')();
 const SR = 44100, o = recettes(creer(SR, 4242));
@@ -18,5 +19,6 @@ const noms = { charge660: 'taille_rouge_charge_gel', charge240: 'taille_rouge_ch
   battement: 'taille_rouge_battement', aspiration: 'taille_rouge_aspiration', eclat: 'taille_rouge_eclat', chiburi: 'taille_rouge_chiburi', ambiance: 'ambiance_vent_boucle' };
 for (const [k, v] of Object.entries(o)) {
   if (k === 'reverb') continue;
-  if (Array.isArray(v)) v.forEach((s, i) => wav(`taille_rouge_entaille_${i + 1}`, s)); else wav(noms[k], v);
+  const nom = noms[k] && !prefixe ? noms[k] : `${prefixe || 'taille_rouge'}_${k}`;
+  if (Array.isArray(v)) v.forEach((s, i) => wav(prefixe ? `${nom}_${i + 1}` : `taille_rouge_entaille_${i + 1}`, s)); else wav(k === 'ambiance' ? 'ambiance_vent_boucle' : nom, v);
 }
