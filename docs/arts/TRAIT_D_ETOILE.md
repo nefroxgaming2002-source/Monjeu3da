@@ -51,7 +51,7 @@ Les durées sont supposées, à caler sur `arts.json`.
 
 ## Son
 
-Un son de bande-annonce : des montées, des appels d'air inversés, l'air qui se déchire et des impacts graves. Aucun tintement de verre : le verre et le givre passent par des craquements graves et saturés. Aucun aigu tenu.
+Un son de bande-annonce : des montées, des appels d'air inversés, l'air qui se déchire et des impacts graves. Aucun tintement de verre : le verre et le givre passent par des craquements graves, saturés puis adoucis par un passe-bas. Aucun aigu tenu, aucune friture (voir la section 3.4 du guide).
 
 - **Tracé** :
   - grave lointain qui bat ;

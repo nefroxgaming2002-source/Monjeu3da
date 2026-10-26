@@ -58,6 +58,7 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
 | Tout désaturer et assombrir pendant le gel au point de ne plus rien lire | Assombrir modérément ; choisir un plan de caméra qui montre le sol et la lame. |
 | Pluie de petits éclats aigus de verre, de bronze ou de pierre (« bruits de pièces inutiles ») | Aucun tintement. La matière passe par des craquements graves, du bruit filtré et quelques chocs sourds. Le style vient des montées, des appels d'air inversés, des déchirements d'air et des impacts graves. |
+| Petits clics partout, « comme si le son buguait » : crépitements à attaque instantanée et aigus, lanterne qui claque dans l'ambiance, fêlure de cloche hachée, dents de scie graves | Appliquer la règle « aucune friture » de la section 3.4, puis compter les grains au-dessus de 2 kHz dans le rendu complet (compresseur et réverbération compris) : un impact en donne un ou deux, une friture des dizaines. |
 | Bips synthétiques (« son bizarre ») ; résonance aiguë qui traîne à la fin (« son aigu inutile ») | Son en **couches**, beaucoup de grave, **aucun son aigu tenu**, et un **silence** avant le climax. |
 | Effets qui s'empilent jusqu'à l'illisible | **Une seule forme principale par temps** ; le reste l'accompagne. |
 | Images d'impact trop longues ou trop fréquentes | Deux images au plus (négatif puis couleur de voie), seulement sur les vrais pics, coupées si l'option « réduction des flashs » est active. |
@@ -127,6 +128,14 @@ Le modèle est le son d'une attaque spéciale d'anime ou d'une bande-annonce : u
   - légère saturation, puis limiteur à −1,5 dB ;
   - ambiance baissée pendant le gel et le silence.
 - **Mesure de contrôle** : environ 15 dB d'écart entre l'impact et le silence. Le climax est au niveau de l'impact ou au-dessus.
+- **Aucune friture** : tout ce qui fait de petits clics réguliers ou au hasard donne l'impression que le son bugue. Donc :
+  - pas de grain qui démarre d'un coup (un saut d'échantillon est un clic) : chaque grain monte en 1 à 2 ms ;
+  - pas de crépitement aigu ni dense : quelques grains graves et doux suffisent pour la matière ;
+  - pas de bruit haché à chaque période (une « fêlure » hachée à 200 Hz sonne comme un haut-parleur abîmé) ;
+  - pas de dent de scie grave avec ses fronts raides : même spectre, mais harmoniques déphasées au hasard ;
+  - pas de clic dans l'ambiance en boucle, et pas de souffle aigu dans le vent ;
+  - un passe-bas après chaque saturation de bruit ;
+  - un fondu de quelques millisecondes à la fin d'un son joué à l'envers.
 - **Pour le jeu final**, de vrais enregistrements superposés selon la même recette donneront mieux que la synthèse. La synthèse sert au prototype.
 
 ### 3.5 La lisibilité et le budget

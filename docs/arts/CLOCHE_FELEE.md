@@ -62,13 +62,13 @@ Les durées sont supposées, à caler sur `arts.json`.
 
 ## Son
 
-Les grosses cloches font la vedette, sans aucun aigu tenu. Les partiels de cloche restent sous 1 kHz, et les plus hauts s'éteignent en moins de 0,3 s.
+Les grosses cloches font la vedette, sans aucun aigu tenu. Les partiels de cloche restent sous 1 kHz, et les plus hauts s'éteignent en moins de 0,3 s. La fêlure est un battement des partiels et un souffle sombre, jamais un bruit haché qui grésille. Aucune friture (voir la section 3.4 du guide).
 
 - **Appel** :
   - grondement du ciel ;
   - bourdon grave qui monte ;
   - cloche jouée à l'envers ;
-  - bronze qui coule (grondement visqueux, grésillement) ;
+  - bronze qui coule (grondement visqueux, quelques bulles sourdes) ;
   - souffle inversé.
 - **Chute** : souffle qui descend et enfle.
 - **Sonnerie** :
@@ -80,7 +80,7 @@ Les grosses cloches font la vedette, sans aucun aigu tenu. Les partiels de cloch
   - craquement ;
   - une douzaine de morceaux de bronze qui retombent lourdement, sans tintement ;
   - râle de la cloche qui se brise ;
-  - métal en fusion qui grésille.
+  - vapeur sombre et quelques bulles sourdes du métal en fusion.
 - **Clôture** : la masse posée.
 
 ## Budget mobile

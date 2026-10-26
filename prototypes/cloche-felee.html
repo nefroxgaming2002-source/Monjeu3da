@@ -1388,7 +1388,7 @@ function creerBruitages(SR, graine) {
     let cl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, cr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
     for (let i = 0; i < x.length; i++) {
       const j = o + i; if (j < 0) continue; if (j >= n) break;
-      if (pf && (i & 63) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
+      if (pf && (i & 7) === 0) { const p = pan(i / SR), an = (p + 1) * Math.PI / 4; cl = Math.cos(an) * Math.SQRT2; cr = Math.sin(an) * Math.SQRT2; }
       d.L[j] += x[i] * g * cl; d.R[j] += x[i] * g * cr;
     }
   }
@@ -1405,7 +1405,7 @@ function creerBruitages(SR, graine) {
     };
     const vf = typeof f === 'function'; if (!vf) maj(f);
     for (let i = 0; i < x.length; i++) {
-      if (vf && (i & 31) === 0) maj(f(i / SR));
+      if (vf && (i & 7) === 0) maj(f(i / SR));
       const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
     }
     return y;
@@ -1432,9 +1432,9 @@ function creerBruitages(SR, graine) {
     const y = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       if (R() >= dens(i / SR) / SR) continue;
-      const big = R() < gros, len = N(big ? RR(0.004, 0.014) : RR(0.0006, 0.003)), f = big ? RR(300, 1200) : RR(1500, 7500);
-      const amp = (big ? 0.7 : 0.35) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len);
-      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * Math.sin(w * j + ph); e *= k; }
+      const big = R() < gros, len = N(big ? RR(0.006, 0.016) : RR(0.003, 0.007)), f = big ? RR(150, 600) : RR(600, 1800);
+      const amp = (big ? 0.7 : 0.25) * (0.15 + Math.pow(R(), 2)), w = TAU * f / SR, ph = R() * TAU, k = Math.exp(-4 / len), att = N(big ? 0.002 : 0.0012);
+      let e = amp; for (let j = 0; j < len * 2 && i + j < n; j++) { y[i + j] += e * (j < att ? 0.5 - 0.5 * Math.cos(Math.PI * j / att) : 1) * Math.sin(w * j + ph); e *= k; } // monte en douceur : pas de clic
     }
     return y;
   }
@@ -1470,7 +1470,7 @@ function creerBruitages(SR, graine) {
     const f0 = o.f0 ?? 58, f1 = o.f1 ?? 27, x = sinus(N(o.dur ?? 1.6), t => f1 + (f0 - f1) * Math.exp(-t / 0.22));
     mix(d, env(x, t => Math.min(1, t / 0.012) * Math.exp(-t / (o.tau ?? 0.5))), t0, g, 0);
   }
-  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.5; mix(d, x, t0, g, 0); }
+  function claque(d, t0, g) { const x = env(filtre(blanc(N(0.012)), 'hp', 1800), t => Math.exp(-t / 0.0015)); x[0] += 0.15; x[1] += 0.3; x[2] += 0.15; mix(d, x, t0, g, 0); }
   function craque(d, t0, g, pan) { // l'armure qui cede
     const n = N(0.14), x = sat(env(filtre(blanc(n), 'bp', 1150, 0.9), t => Math.exp(-t / 0.028)), 5), y = env(filtre(blanc(n), 'bp', 3200, 1.5), t => Math.exp(-t / 0.012));
     for (let i = 0; i < n; i++) x[i] += y[i] * 0.6; mix(d, x, t0, g, pan);
@@ -1525,12 +1525,14 @@ function creerBruitages(SR, graine) {
     mix(d, env(sinus(n, t => 40 + 30 * t / dur), t => Math.pow(t / dur, 2.5)), t0, g * 0.6, 0);
   }
   // scie a bande limitee (polyBLEP) : la matiere des montees de puissance
-  function scie(n, fn) {
-    const y = new Float32Array(n); let ph = R();
+  function scie(n, fn) { // spectre de dent de scie, harmoniques dephasees au hasard (aucun front raide), coupees en douceur vers 3,2 kHz
+    const y = new Float32Array(n), H = 96, cp = new Float32Array(H + 1), sp = new Float32Array(H + 1), lim = Math.min(3200, SR * 0.4); let ph = R();
+    for (let h = 1; h <= H; h++) { const p = R() * TAU; cp[h] = Math.cos(p) / h; sp[h] = Math.sin(p) / h; }
     for (let i = 0; i < n; i++) {
-      const dt = fn(i / SR) / SR; ph += dt; if (ph >= 1) ph -= 1; let v = 2 * ph - 1;
-      if (ph < dt) { const u = ph / dt; v -= u + u - u * u - 1; } else if (ph > 1 - dt) { const u = (ph - 1) / dt; v -= u * u + u + u + 1; }
-      y[i] = v;
+      const f = fn(i / SR); ph += f / SR; if (ph >= 1) ph -= 1;
+      const c1 = Math.cos(TAU * ph), s1 = Math.sin(TAU * ph); let c = 1, s = 0, v = 0;
+      for (let h = 1; h <= H; h++) { const fh = f * h; if (fh > lim) break; const c2 = c * c1 - s * s1; s = s * c1 + c * s1; c = c2; v += (fh > 0.7 * lim ? (lim - fh) / (0.3 * lim) : 1) * (s * cp[h] + c * sp[h]); } // sin(h.a + p) par rotation
+      y[i] = v * 0.6366;
     }
     return y;
   }
@@ -1539,16 +1541,16 @@ function creerBruitages(SR, graine) {
     for (const [pan, cents] of [[-0.6, -7], [0.6, 7]]) {
       const x = new Float32Array(n);
       for (const r of [1, 1.5, 2]) { const z = scie(n, t => f0 * Math.pow(f1 / f0, k(t)) * r * Math.pow(2, cents / 1200)); for (let i = 0; i < n; i++) x[i] += z[i] * (r === 1 ? 1 : 0.6); }
-      const y = filtre(x, 'lp', t => 220 + 5200 * Math.pow(Math.min(1, t / dur), 2), 1.2);
+      const y = filtre(x, 'lp', t => 220 + 2400 * Math.pow(Math.min(1, t / dur), 2), 1.2);
       let ph = 0;
       for (let i = 0; i < n; i++) { const t = i / SR; ph += TAU * (6 + 24 * Math.min(1, t / dur)) / SR; y[i] *= Math.pow(Math.min(1, t / dur), o.courbe ?? 1.8) * (1 - 0.35 * (0.5 + 0.5 * Math.sin(ph))); }
-      mix(d, sat(y, 2.5), t0, g * 0.5, pan);
+      mix(d, sat(y, 1.8), t0, g * 0.5, pan);
     }
   }
   function chute(d, t0, g) { // le temps s'arrete : accord qui s'effondre vers le grave, etouffe
     const n = N(0.9), x = new Float32Array(n);
     for (const r of [1, 1.5, 2.01]) { const z = scie(n, t => 55 * r + 165 * r * Math.exp(-t / 0.16)); for (let i = 0; i < n; i++) x[i] += z[i]; }
-    mix(d, sat(env(filtre(x, 'lp', t => 180 + 2200 * Math.exp(-t / 0.14), 1), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
+    mix(d, sat(env(filtre(x, 'lp', t => 180 + 1300 * Math.exp(-t / 0.14), 0.8), t => Math.min(1, t / 0.008) * Math.exp(-t / 0.3)), 2), t0, g * 0.45, 0);
   }
   function explosion(d, t0, g, o = {}) { // le coeur des grands coups : claquement, coup sature, grave, corps qui gronde, debris
     const tau = o.tau ?? 0.75, L = o.dur ?? 3.2, n = N(L);
@@ -1562,7 +1564,7 @@ function creerBruitages(SR, graine) {
       mix(d, sat(x, 2.4), t0, g * 1.1, pan);
     }
     mix(d, env(filtre(blanc(n), 'hp', 3000), t => Math.exp(-t / (tau * 0.35))), t0, g * 0.18, 0.2);
-    mix(d, crepite(n, t => (o.crep ?? 280) * Math.exp(-t / (tau * 1.4)), 0.18), t0 + 0.03, g * 0.7, -0.15);
+    mix(d, crepite(n, t => (o.crep ?? 280) * 0.3 * Math.exp(-t / (tau * 1.4)), 0.7), t0 + 0.03, g * 0.6, -0.15);
     mix(d, env(filtre(brun(n), 'lp', 110), t => Math.min(1, t / 0.05) * Math.exp(-t / (tau * 2.2))), t0, g * 1.4, 0);
   }
   function zan(d, t0, g, pan = 0) { // le "zan" de la lame : dechirure claire et courte, eclat metallique bref
@@ -1578,7 +1580,7 @@ function creerBruitages(SR, graine) {
       for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (x[i] * 2.4 + b[i] * 1.8) * Math.min(1, Math.pow(t / att, 1.4)) * Math.exp(-Math.max(0, t - att) / tau) * (1 + 0.6 * a1[i] + 0.35 * a2[i]); }
       mix(d, sat(x, 2), t0, g, pan);
     }
-    mix(d, crepite(n, t => (o.crep ?? 220) * Math.exp(-t / (tau * 1.2)), 0.15), t0 + 0.02, g * 0.6, 0.25);
+    mix(d, crepite(n, t => (o.crep ?? 220) * 0.3 * Math.exp(-t / (tau * 1.2)), 0.7), t0 + 0.02, g * 0.5, 0.25);
     mix(d, env(filtre(blanc(n), 'hp', 4000), t => Math.min(1, t / att) * Math.exp(-t / (tau * 0.5))), t0, g * 0.1, -0.25);
   }
   function battement(d, t0, g) { // un seul battement sourd dans le silence
@@ -1607,10 +1609,10 @@ function creerBruitages(SR, graine) {
           x[i] += e * 0.5 * (Math.sin(ph1) + Math.sin(ph2)); e *= k;
         }
       }
-      const z = filtre(blanc(n), 'bp', 650, 0.9); let ph = 0;
-      for (let i = 0; i < n; i++) { ph += TAU * f / SR; x[i] += z[i] * fel * 1.8 * Math.pow(Math.abs(Math.sin(ph)), 6) * Math.exp(-i / SR / (1.1 * dec)); }
+      const z = filtre(filtre(blanc(n), 'bp', 520, 1.4), 'lp', 1300); let ph = 0;
+      for (let i = 0; i < n; i++) { ph += TAU * f / SR; x[i] += z[i] * fel * 0.8 * Math.pow(Math.abs(Math.sin(ph)), 2) * Math.exp(-i / SR / (1.1 * dec)); }
       const fr2 = env(filtre(blanc(N(0.06)), 'lp', 2000, 0.8), t => Math.exp(-t / 0.012)); for (let i = 0; i < fr2.length; i++) x[i] += fr2[i] * 1.4 * (o.frappe ?? 1);
-      mix(d, sat(x, 1.3 + fel), t0, g * 0.5, pan);
+      mix(d, sat(x, 1.2 + 0.5 * fel), t0, g * 0.5, pan);
     }
   }
   function clocheInverse(d, t0, dur, g) { // la cloche se peint : sa sonnerie jouee a l'envers, qui monte
@@ -1621,7 +1623,6 @@ function creerBruitages(SR, graine) {
   function cielSon(d, t0, dur, g) { // le ciel se fend : orage sourd, gresillement d'or
     const n = N(dur);
     for (const pan of [-0.7, 0.7]) { const x = filtre(brun(n), 'lp', 220, 0.7), am = lent(n, 4); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.15) * (0.6 + 0.4 * am[i]) * (t > dur - 0.1 ? Math.max(0, (dur - t) / 0.1) : 1); } mix(d, x, t0, g * 2.2, pan); }
-    mix(d, crepite(n, t => 40 + 120 * t / dur, 0.05), t0, g * 0.35, 0);
   }
   function chuteSon(d, t0, dur, g) { // la cloche tombe : souffle qui descend et enfle
     const n = N(dur);
@@ -1646,12 +1647,12 @@ function creerBruitages(SR, graine) {
   function couleeSon(d, t0, dur, g) { // le bronze coule du ciel : grondement visqueux, gresillement
     const n = N(dur);
     for (const pan of [-0.5, 0.5]) { const x = filtre(brun(n), 'lp', 320, 0.8), am = lent(n, 7); for (let i = 0; i < n; i++) { const t = i / SR; x[i] *= Math.min(1, t / 0.04) * (t > dur - 0.06 ? Math.max(0, (dur - t) / 0.06) : 1) * (0.7 + 0.3 * am[i]); } mix(d, x, t0, g * 2.4, pan); }
-    mix(d, crepite(n, () => 240, 0.12), t0, g * 0.45, 0.2);
+    mix(d, crepite(n, () => 50, 0.8), t0, g * 0.4, 0.2);
   }
   function grillade(d, t0, dur, g) { // le metal en fusion qui gresille et refroidit
     const n = N(dur);
-    mix(d, env(filtre(blanc(n), 'hp', 3200), t => Math.min(1, t / 0.03) * Math.exp(-t / (dur * 0.3))), t0, g * 0.2, -0.3);
-    mix(d, crepite(n, t => 260 * Math.exp(-t / (dur * 0.4)), 0.05), t0, g * 0.5, 0.3);
+    mix(d, env(filtre(rose(n), 'lp', t => 1400 * Math.exp(-t / dur) + 300, 0.7), t => Math.min(1, t / 0.05) * Math.exp(-t / (dur * 0.25))), t0, g * 0.5, -0.3); // vapeur sombre, sans sifflement
+    mix(d, crepite(n, t => 45 * Math.exp(-t / (dur * 0.4)), 0.85), t0, g * 0.4, 0.3); // quelques bulles sourdes
   }
 
   // ---------------------------------------------------------------- les bruitages de la Cloche felee
@@ -1691,10 +1692,9 @@ function creerBruitages(SR, graine) {
       for (const pan of [-0.7, 0.7]) {
         const m = lent(n, 0.35), am = lent(n, 0.22), x = filtre(rose(n), 'bp', t => 330 + 220 * m[Math.min(n - 1, Math.round(t * SR))], 0.6);
         for (let i = 0; i < n; i++) x[i] *= 0.55 + 0.45 * am[i];
-        mix(d, x, 0, 2.2, pan);
+        mix(d, filtre(x, 'lp', 1600), 0, 2.2, pan);
       }
       mix(d, filtre(brun(n), 'lp', 70), 0, 0.8, 0);
-      mix(d, crepite(n, () => 3, 0.15), 0, 0.15, -0.6);
       const out = vide(T), k = N(X), m = out.L.length;
       for (let i = 0; i < m; i++) { out.L[i] = d.L[i]; out.R[i] = d.R[i]; }
       for (let i = 0; i < k; i++) { const g = i / k; out.L[i] = d.L[i] * g + d.L[m + i] * (1 - g); out.R[i] = d.R[i] * g + d.R[m + i] * (1 - g); }
@@ -1776,7 +1776,7 @@ const Son = (() => {
     get on() { return on; }, get pret() { return pret; },
     async set(v) {
       on = v;
-      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (v && !ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
       if (!ctx) return;
       if (v) { await ctx.resume(); if (!pret && !enCours) await preparer(); } else await ctx.suspend();
     },
