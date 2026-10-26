@@ -25,6 +25,7 @@
     color-scheme: dark;
   }
   html, body { background: var(--nuit); color: var(--os); }
+  [hidden] { display: none !important; }
   body { font-family: var(--f-texte); font-size: 16px; line-height: 1.5; }
   .wrap {
     max-width: 1180px; margin: 0 auto;
@@ -48,6 +49,13 @@
   .hud .art { letter-spacing: .06em; }
   .hud .mesure { font-family: var(--f-mesure); font-size: .8em; color: rgba(236, 231, 222, .7); }
   .hud .etat { font-family: var(--f-mesure); font-size: .8em; color: var(--braise); }
+  .viewport.libre { cursor: grab; touch-action: none; }
+  .viewport.libre:active { cursor: grabbing; }
+  .viewport:focus-visible { outline: 2px solid var(--braise); outline-offset: 2px; }
+  .etiquettes { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; pointer-events: none; }
+  .etiquettes span { padding: 8px 10px; font-family: var(--f-titre); font-size: clamp(11px, 1.5vw, 15px); letter-spacing: .04em; color: rgba(236, 231, 222, .88); text-shadow: 0 1px 3px #000; }
+  .consigne { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 4px 10px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--f-mesure); font-size: 12px; color: var(--os); background: rgba(10, 13, 19, .65); border: 1px solid var(--trait); pointer-events: none; }
   .erreur { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--cendre); }
 
   .timeline { display: grid; gap: 6px; }
@@ -109,12 +117,14 @@
   <header>
     <p class="eyebrow">MonJeu3d · Voie du Sang · Art de frappe</p>
     <h1>Taille <span>Rouge</span></h1>
-    <p class="lede">Version Art majeur, style <b>Encre et braise</b>. Le monde se fige, l'encre monte dans la lame, la Ruée tranche, puis les entailles éclatent sur la bête. Les fenêtres de jeu restent celles du jeu : 240 ms d'anticipation, 140 ms actives, 360 ms de récupération. Active le son et passe en ¼× pour voir chaque couche.</p>
+    <p class="lede">Version Art majeur, style <b>Encre et braise</b>. Le monde se fige, l'encre monte dans la lame, la Ruée tranche, puis les entailles éclatent sur la bête. Les fenêtres de jeu restent celles du jeu : 240 ms d'anticipation, 140 ms actives, 360 ms de récupération. Change d'angle pendant qu'elle tourne, prends <b>Libre</b> pour tourner autour, ou <b>4 angles</b> pour tout voir en même temps.</p>
   </header>
 
   <section class="stage" aria-label="Prototype animé">
     <div class="viewport" id="viewport">
       <canvas id="scene" aria-label="Le Sculpteur de Sang lance la Taille Rouge sur le Rouillard"></canvas>
+      <div class="etiquettes" id="etiquettes" hidden><span>Jeu</span><span>Côté</span><span>Face</span><span>Dessus</span></div>
+      <p class="consigne" id="consigne" hidden>Glisse pour tourner autour · pince ou molette pour zoomer</p>
       <div class="hud"><span class="art">ART&nbsp;&nbsp;TAILLE ROUGE</span><span id="hud-phase">Garde</span><span class="mesure" id="hud-ms"></span><span class="etat" id="hud-etat"></span></div>
     </div>
 
@@ -137,10 +147,18 @@
     </div>
 
     <div class="controls">
-      <div class="groupe" role="radiogroup" aria-label="Caméra">
-        <input type="radio" name="camera" id="c-cine" value="cine" checked><label for="c-cine">Caméra cinéma</label>
-        <input type="radio" name="camera" id="c-jeu" value="jeu"><label for="c-jeu">Caméra de jeu</label>
+      <div class="groupe" role="radiogroup" aria-label="Angle de vue">
+        <input type="radio" name="camera" id="c-cine" value="cine" checked><label for="c-cine">Cinéma</label>
+        <input type="radio" name="camera" id="c-jeu" value="jeu"><label for="c-jeu">Jeu</label>
+        <input type="radio" name="camera" id="c-cote" value="cote"><label for="c-cote">Côté</label>
+        <input type="radio" name="camera" id="c-face" value="face"><label for="c-face">Face</label>
+        <input type="radio" name="camera" id="c-dos" value="dos"><label for="c-dos">Dos</label>
+        <input type="radio" name="camera" id="c-dessus" value="dessus"><label for="c-dessus">Dessus</label>
+        <input type="radio" name="camera" id="c-libre" value="libre"><label for="c-libre">Libre</label>
+        <input type="radio" name="camera" id="c-mosaique" value="mosaique"><label for="c-mosaique">4 angles</label>
       </div>
+    </div>
+    <div class="controls">
       <button class="rejouer" id="rejouer" type="button">Rejouer</button>
       <div class="groupe" role="radiogroup" aria-label="Vitesse">
         <input type="radio" name="vitesse" id="s-1" value="1" checked><label for="s-1">1×</label>
@@ -330,7 +348,7 @@ function pass(mat, src, target, clear) {
   renderer.render(postScene, postCam);
 }
 
-let W = 16, H = 9;
+let W = 16, H = 9, echellePoints = 400;
 function resize() {
   const r = viewport.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.25 : 1.5);
@@ -343,7 +361,7 @@ function resize() {
   let lw = W, lh = H;
   for (const t of levels) { lw = Math.max(1, lw >> 1); lh = Math.max(1, lh >> 1); t.setSize(lw, lh); }
   U.uRes.value.set(W, H);
-  points.mat.uniforms.uScale.value = H / (2 * Math.tan(24 * DEG));
+  echellePoints = H / (2 * Math.tan(24 * DEG));
   streaks.mat.uniforms.uRes.value.set(W, H);
 }
 
@@ -529,14 +547,17 @@ function majEcharpes(dt, aura, vit, t) {
       const a = e.pts[i - 1], b = e.pts[i], d = b.clone().sub(a), L = d.length() || 1e-4, s = (L - 0.085) / L;
       if (i === 1) b.addScaledVector(d, -s); else { a.addScaledVector(d, s * 0.5); b.addScaledVector(d, -s * 0.5); }
     }
-    const arr = e.geo.attributes.position.array;
-    for (let i = 0; i < e.N; i++) {
-      const p = e.pts[i], tg = (i < e.N - 1 ? e.pts[i + 1].clone().sub(p) : p.clone().sub(e.pts[i - 1])).normalize();
-      const vd = camera.position.clone().sub(p).normalize(), side = new THREE.Vector3().crossVectors(tg, vd).normalize().multiplyScalar(lerp(0.055, 0.02, i / (e.N - 1)));
-      arr.set([p.x + side.x, p.y + side.y, p.z + side.z, p.x - side.x, p.y - side.y, p.z - side.z], i * 6);
-    }
-    e.geo.attributes.position.needsUpdate = true; e.geo.computeVertexNormals(); e.geo.computeBoundingSphere();
   }
+}
+// Les rubans (echarpe, filets d'encre) font face a la camera : on les reoriente pour chaque angle de vue.
+function orienterEcharpe(e, cp) {
+  const arr = e.geo.attributes.position.array;
+  for (let i = 0; i < e.N; i++) {
+    const p = e.pts[i], tg = (i < e.N - 1 ? e.pts[i + 1].clone().sub(p) : p.clone().sub(e.pts[i - 1])).normalize();
+    const vd = cp.clone().sub(p).normalize(), side = new THREE.Vector3().crossVectors(tg, vd).normalize().multiplyScalar(lerp(0.055, 0.02, i / (e.N - 1)));
+    arr.set([p.x + side.x, p.y + side.y, p.z + side.z, p.x - side.x, p.y - side.y, p.z - side.z], i * 6);
+  }
+  e.geo.attributes.position.needsUpdate = true; e.geo.computeVertexNormals(); e.geo.computeBoundingSphere();
 }
 // Lame, avec une gaine de feu qui s'allume de la garde a la pointe.
 const epee = new THREE.Group(); scene.add(epee);
@@ -921,15 +942,19 @@ function makeTendril(seed, a0) {
   return { N, geo, mat, mesh, a0, seed };
 }
 function majTendril(t, centre, cible, w0) {
-  const arr = t.geo.attributes.position.array, P = [];
+  const P = [];
   for (let i = 0; i < t.N; i++) {
     const s = i / (t.N - 1), ang = t.a0 + s * 1.7 * Math.PI, r = 1.7 * Math.pow(1 - s, 0.85);
     const spir = V3(centre.x + Math.cos(ang) * r, 0.03 + Math.sin(s * Math.PI) * 0.7 + s * 0.4, centre.z + Math.sin(ang) * r);
     P.push(spir.lerp(cible, smooth(0.55, 1.0, s)));
   }
+  t.P = P; t.w0 = w0;
+}
+function orienterTendril(t, cp) {
+  const arr = t.geo.attributes.position.array, P = t.P, w0 = t.w0;
   for (let i = 0; i < t.N; i++) {
     const p = P[i], tg = (i < t.N - 1 ? P[i + 1].clone().sub(p) : p.clone().sub(P[i - 1])).normalize();
-    const vd = camera.position.clone().sub(p).normalize(), side = new THREE.Vector3().crossVectors(tg, vd).normalize();
+    const vd = cp.clone().sub(p).normalize(), side = new THREE.Vector3().crossVectors(tg, vd).normalize();
     const w = w0 * Math.pow(Math.sin(Math.PI * i / (t.N - 1)) + 0.0001, 0.45) * (1.15 - i / (t.N - 1) * 0.5);
     arr.set([p.x + side.x * w, p.y + side.y * w, p.z + side.z * w, p.x - side.x * w, p.y - side.y * w, p.z - side.z * w], i * 6);
   }
@@ -1057,7 +1082,7 @@ const CAM_JEU = V3(1.6 - 2.4, 2.8, 6.2), LOOK_JEU = V3(1.6, 1.15, 0);
 const ARC_C = V3(1.25, 1.05, 0), TILT = 36 * DEG;
 const ARC_X = V3(1, 0, 0), ARC_Y = V3(0, Math.cos(TILT), -Math.sin(TILT));
 const GARDE = -55 * DEG, ARME = 165 * DEG, FIN_TAILLE = -60 * DEG;
-let cine = true, vitesse = 1, boucle = true, run = null;
+let vue = 'cine', vitesse = 1, boucle = true, run = null;
 const IDLE = 500;
 
 function horaires(G) {
@@ -1150,7 +1175,7 @@ function start() {
   for (const grp of [fx, distFx]) for (const c of [...grp.children]) { grp.remove(c); c.traverse(o => { if (o.material && o.material.dispose) o.material.dispose(); if (o.isMesh && (o.userData.own || o.parent === null) && o.geometry) o.geometry.dispose(); }); }
   panneaux.length = 0; ghosts.length = 0;
   points.clear(); streaks.clear(); splats.clear(); sprites.clear(); debris.clear();
-  const T = horaires(cine ? 420 : 0);
+  const T = horaires(vue !== 'jeu' ? 420 : 0);
   run = { T, tau: -IDLE, sim: 0, hitstop: 0, stopLabel: 0, trauma: 0, inv: 0, duo: 0, lines: 0, rad: 0, ca: 0, fovPunch: 0, dim: 0, desat: 0, hot: 0, ign: 0, aura: 0, light: null, flags: {}, hits: [], centre: new THREE.Vector2(0.5, 0.5), done: false, wait: 0, fade: 0, dtLast: 16, lineSeed: 0 };
   run.theta = swingTheta(T, run.tau);
   // Le croissant et ses couches
@@ -1328,9 +1353,25 @@ function scenario(t, dt) {
 
 // ================================================================== camera
 function lerpPose(a, b, k) { return { p: a.p.clone().lerp(b.p, k), l: a.l.clone().lerp(b.l, k), fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) }; }
-function camPose() {
+// Angles fixes, en plus de la camera cinema et de la vue libre.
+const VUES = {
+  jeu: { p: CAM_JEU, l: LOOK_JEU, fov: 48 },
+  cote: { p: V3(1.6, 1.4, 7.6), l: V3(1.6, 1.15, 0), fov: 44 },
+  face: { p: V3(5.6, 2.2, 4.8), l: V3(1.3, 1.1, 0), fov: 46 },
+  dos: { p: V3(-4.0, 2.3, 1.5), l: V3(2.0, 1.15, 0), fov: 46 },
+  dessus: { p: V3(1.6, 9.2, 3.0), l: V3(1.6, 0.2, 0), fov: 46 }
+};
+const MOSAIQUE = ['jeu', 'cote', 'face', 'dessus'];
+const orbite = { az: -0.37, el: 0.27, dist: 6.9, cible: V3(1.6, 1.0, 0), dernier: -1e9 };
+function camPose(v) {
   const t = run.tau, T = run.T;
-  if (!cine || t < 0) return { p: CAM_JEU.clone(), l: LOOK_JEU.clone(), fov: 48 - 3 * smooth(0, T.act, t) * (1 - smooth(T.act, T.act + 60, t)), roll: 0 };
+  if (v === 'cine' && t >= 0) return poseCine();
+  if (v === 'libre') { const c = Math.cos(orbite.el); return { p: orbite.cible.clone().add(V3(Math.sin(orbite.az) * c, Math.sin(orbite.el), Math.cos(orbite.az) * c).multiplyScalar(orbite.dist)), l: orbite.cible.clone(), fov: 46, roll: 0 }; }
+  const f = VUES[v] ?? VUES.jeu;
+  return { p: f.p.clone(), l: f.l.clone(), fov: f.fov - 3 * smooth(0, T.act, t) * (1 - smooth(T.act, T.act + 60, t)), roll: 0 };
+}
+function poseCine() {
+  const t = run.tau, T = run.T;
   if (t < T.gel) { const k = easeInOut(clamp(t / T.gel)); return { p: V3(-2.5, 2.4, 3.3).lerp(V3(-1.9, 1.85, 2.5), k), l: V3(0.05, 0.85, -0.2), fov: lerp(46, 40, k), roll: lerp(4, -2, k) * DEG }; }
   const px = joueur.position.x;
   const suivi = { p: V3(px + 0.15, 1.3, 4.6), l: V3(px + 1.35, 1.15, 0), fov: 46, roll: -2 * DEG };
@@ -1347,24 +1388,43 @@ function applyFrame() {
   for (const b of brumes) b.material.uniforms.uDim.value = d;
   U.uVig.value = Math.min(1, d * 1.1); U.uRedVig.value = d * 0.4; U.uDesat.value = clamp(run.desat);
   U.uInv.value = run.inv > 0 ? 1 : 0; U.uDuo.value = run.inv <= 0 && run.duo > 0 ? 1 : 0;
-  U.uLines.value = reduceMotion ? 0 : run.lines; U.uSeed.value = run.lineSeed; U.uRad.value = run.rad; U.uCA.value = run.ca; U.uCenter.value.copy(run.centre);
+  const mos = vue === 'mosaique';
+  U.uLines.value = reduceMotion || mos ? 0 : run.lines; U.uSeed.value = run.lineSeed; U.uRad.value = mos ? 0 : run.rad; U.uCA.value = mos ? 0 : run.ca; U.uCenter.value.copy(run.centre);
+  points.mat.uniforms.uScale.value = echellePoints * (mos ? 0.5 : 1);
   U.uFade.value = 1 - run.fade;
   gaine.uniforms.uIgn.value = run.ign; gaine.uniforms.uHot.value = run.hot;
   mBras.emissiveIntensity = run.hot * 0.5;
   bladeLight.position.copy(epee.localToWorld(V3(0.7, 0, 0))); bladeLight.intensity = run.hot * 4;
-  const pose = camPose(), tr = run.trauma * run.trauma, s = run.sim / 1000;
+  points.write(); streaks.write(); sprites.write(); debris.write();
+  U.uTime.value = run.sim / 1000;
+}
+function poserCamera(pose) {
+  const tr = run.trauma * run.trauma, s = run.sim / 1000;
   camera.fov = pose.fov + run.fovPunch; camera.updateProjectionMatrix();
   camera.position.copy(pose.p).add(V3(Math.sin(s * 63.1) * 0.1 * tr, Math.sin(s * 71.7 + 1.3) * 0.08 * tr, Math.sin(s * 57.3 + 2.1) * 0.06 * tr));
   camera.lookAt(pose.l); camera.rotateZ(pose.roll + Math.sin(s * 49.9 + 0.7) * 0.03 * tr);
   camera.updateMatrixWorld();
   sky.position.copy(camera.position);
   for (const p of panneaux) p.m.quaternion.copy(camera.quaternion);
-  points.write(); streaks.write(); sprites.write(); debris.write();
-  U.uTime.value = s;
+  for (const tr2 of run.tendrils) if (tr2.mesh.visible && tr2.P) orienterTendril(tr2, camera.position);
+  for (const e of echarpes) orienterEcharpe(e, camera.position);
 }
 function renderFrame() {
-  renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(scene, camera);
-  renderer.setRenderTarget(rtDist); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(distScene, camera);
+  const mos = vue === 'mosaique', liste = mos ? MOSAIQUE : [vue];
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
+  renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 1); renderer.clear();
+  renderer.setRenderTarget(rtDist); renderer.setClearColor(0x000000, 0); renderer.clear();
+  liste.forEach((v, i) => {
+    poserCamera(camPose(v));
+    for (const rt of [rtScene, rtDist]) {
+      if (mos) {
+        const hw = Math.floor(rt.width / 2), hh = Math.floor(rt.height / 2), x = (i % 2) * hw, y = (i < 2 ? 1 : 0) * hh, g = rt === rtScene ? 1 : 0;
+        rt.viewport.set(x + (x > 0 ? g : 0), y + (y > 0 ? g : 0), hw - g, hh - g); rt.scissor.copy(rt.viewport); rt.scissorTest = true;
+      }
+      renderer.setRenderTarget(rt); renderer.render(rt === rtScene ? scene : distScene, camera);
+    }
+  });
+  for (const rt of [rtScene, rtDist]) { rt.viewport.set(0, 0, rt.width, rt.height); rt.scissorTest = false; }
   pass(matBright, rtScene, levels[0], true);
   for (let i = 1; i < levels.length; i++) pass(matDown, levels[i - 1], levels[i], true);
   for (let i = levels.length - 2; i >= 0; i--) pass(matUp, levels[i + 1], levels[i], false);
@@ -1396,7 +1456,37 @@ function updateHud() {
   hudEtat.textContent = run.hitstop > 0 ? `arrêt sur coup ${run.stopLabel} ms` : (t >= 0 && t < T.gel ? 'monde figé' : '');
   tete.style.left = pct(Math.max(0, t));
 }
-document.querySelectorAll('input[name="camera"]').forEach(r => r.addEventListener('change', () => { cine = r.value === 'cine'; start(); }));
+function changerVue(v) {
+  const avant = vue; vue = v;
+  viewport.classList.toggle('libre', v === 'libre'); viewport.tabIndex = v === 'libre' ? 0 : -1;
+  document.getElementById('etiquettes').hidden = v !== 'mosaique';
+  document.getElementById('consigne').hidden = v !== 'libre';
+  // seul le passage par la camera de jeu change le minutage (pas de gel) : les autres angles continuent sans relancer
+  if ((avant === 'jeu') !== (v === 'jeu')) start();
+}
+document.querySelectorAll('input[name="camera"]').forEach(r => r.addEventListener('change', () => changerVue(r.value)));
+const pointeurs = new Map();
+const touche = () => { orbite.dernier = performance.now(); };
+viewport.addEventListener('pointerdown', e => { if (vue !== 'libre') return; viewport.setPointerCapture(e.pointerId); pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche(); document.getElementById('consigne').hidden = true; });
+viewport.addEventListener('pointermove', e => {
+  if (vue !== 'libre' || !pointeurs.has(e.pointerId)) return;
+  const avant = pointeurs.get(e.pointerId);
+  if (pointeurs.size === 1) { orbite.az -= (e.clientX - avant.x) * 0.008; orbite.el = clamp(orbite.el + (e.clientY - avant.y) * 0.006, 0.03, 1.45); }
+  else {
+    const autre = [...pointeurs.entries()].find(([id]) => id !== e.pointerId)[1];
+    const d0 = Math.hypot(avant.x - autre.x, avant.y - autre.y), d1 = Math.hypot(e.clientX - autre.x, e.clientY - autre.y);
+    if (d0 > 0 && d1 > 0) orbite.dist = clamp(orbite.dist * d0 / d1, 2.5, 16);
+  }
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY }); touche();
+});
+for (const n of ['pointerup', 'pointercancel', 'lostpointercapture']) viewport.addEventListener(n, e => pointeurs.delete(e.pointerId));
+viewport.addEventListener('wheel', e => { if (vue !== 'libre') return; e.preventDefault(); orbite.dist = clamp(orbite.dist * Math.exp(e.deltaY * 0.0012), 2.5, 16); touche(); }, { passive: false });
+viewport.addEventListener('keydown', e => {
+  if (vue !== 'libre') return;
+  const k = { ArrowLeft: [0.12, 0, 1], ArrowRight: [-0.12, 0, 1], ArrowUp: [0, 0.08, 1], ArrowDown: [0, -0.08, 1], '+': [0, 0, 0.9], '-': [0, 0, 1.1] }[e.key];
+  if (!k) return; e.preventDefault();
+  orbite.az += k[0]; orbite.el = clamp(orbite.el + k[1], 0.03, 1.45); orbite.dist = clamp(orbite.dist * k[2], 2.5, 16); touche();
+});
 document.querySelectorAll('input[name="vitesse"]').forEach(r => r.addEventListener('change', () => { vitesse = parseFloat(r.value); }));
 document.getElementById('boucle').addEventListener('change', e => { boucle = e.target.checked; if (boucle && run.done) start(); });
 document.getElementById('rejouer').addEventListener('click', () => start());
@@ -1415,13 +1505,14 @@ function frame(now) {
   const real = Math.min(50, now - last); last = now;
   let sim = real * vitesse;
   while (sim > 0) { const d = Math.min(sim, 1000 / 60); step(d); sim -= d; }
+  if (vue === 'libre' && !reduceMotion && now - orbite.dernier > 2500) orbite.az += real / 1000 * 0.22; // tour lent quand personne ne touche
   applyFrame(); updateHud(); renderFrame();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
 // Pour les captures de controle : rejoue jusqu'a l'instant tau (ms depuis le debut de l'Art), eventuellement pendant un arret sur coup.
-window.__tailleRouge = { seek(mode, ms, pendantArret) { cine = mode !== 'jeu'; start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 3000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
+window.__tailleRouge = { seek(mode, ms, pendantArret) { changerVue(mode); start(); vitesse = 0; let n = 0; while (run.tau < ms && !run.done && n++ < 3000 && !(pendantArret && run.hitstop > 0 && run.tau > ms - 40)) step(1000 / 60); applyFrame(); updateHud(); renderFrame(); } };
 </script>
 </body>
 </html>
