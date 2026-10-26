@@ -44,6 +44,7 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Fissures et fêlures en traits fins, blancs, en zigzag : ce sont des éclairs | Une fente : bords sombres et charbonneux, largeur irrégulière, tracé sinueux, lueur orange au fond et par endroits seulement. |
 | Encre brillante (rugosité basse) sous une lumière forte : le reflet efface le trait | Encre mate (rugosité vers 0,85). |
 | Image négative vide : forme principale sombre dans une scène sombre | Faire flamber la forme principale à l'impact, puis vérifier le négatif en vue cinéma **et** en vue de jeu. |
+| Lueur « carrée » à l'explosion : un halo dessiné sur un quad n'était pas nul au bord, et le quad se voyait | Tout dégradé posé sur un quad doit tomber à zéro **avant** le bord (soustraire la valeur au bord, puis fondre vers 1). Vérifier chaque halo, éclat et étoile sur fond sombre. |
 | Erreur de shader silencieuse : `smoothstep` avec deux bornes égales (largeur nulle) a rendu tout le haut de la cloche blanc | Multiplier par `step(ε, largeur)` partout où une largeur peut tomber à zéro. |
 | Éclats chauds trop gros et à plat ; dissolution en blocs qui fait des tirets | Petits éclats qui refroidissent vite ; dissolution par bruit continu. |
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
