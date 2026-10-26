@@ -13,7 +13,9 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
   - « ça fait enfantin » (formes pastel, cercles peints) ;
   - « trop simple », « je m'attends à quelque chose de beaucoup plus impressionnant » ;
   - sur la première Cloche fêlée : « C'est trop simple encore une fois. Les traits sont simples, la cloche est simple, tout est simple, ça redonne l'effet dessin animé. » Voir la section 3.6 : c'est **le** défaut à ne plus jamais livrer.
-- **Ce qu'il a validé** : la Taille Rouge en version Art majeur (« Ok, là c'est beau »).
+- **Ce qu'il a validé** :
+  - la Taille Rouge en version Art majeur (« Ok, là c'est beau ») ;
+  - la Cloche fêlée refaite en vraie matière (« c'est pas mal »).
 - **Style choisi** : *Encre et braise*. C'est un mélange de ses références d'effets :
   - Elden Ring : Frenzied Flame (braises, rémanence de cendre), Bloodflame et Rivers of Blood, sorts astraux ;
   - des effets d'encre sous Unreal 5 ;
@@ -45,6 +47,12 @@ La Taille Rouge (`prototypes/taille-rouge.html`) est **la barre de qualité**, p
 | Encre brillante (rugosité basse) sous une lumière forte : le reflet efface le trait | Encre mate (rugosité vers 0,85). |
 | Image négative vide : forme principale sombre dans une scène sombre | Faire flamber la forme principale à l'impact, puis vérifier le négatif en vue cinéma **et** en vue de jeu. |
 | Lueur « carrée » à l'explosion : un halo dessiné sur un quad n'était pas nul au bord, et le quad se voyait | Tout dégradé posé sur un quad doit tomber à zéro **avant** le bord (soustraire la valeur au bord, puis fondre vers 1). Vérifier chaque halo, éclat et étoile sur fond sombre. |
+| Lumière d'impact et flash émissif froids trop forts : les bêtes deviennent des blocs blancs | Lumières d'impact faibles près des corps (3 à 9) et flash émissif très bas (environ 0,04). Vérifier une capture pendant l'arrêt sur coup. |
+| Lance fine et lumineuse sur toute sa longueur : un sabre laser | Un objet en verre lisible (épaisseur, facettes, réfraction), et la lumière concentrée en un point : l'étoile à la pointe. |
+| Marque de visée au sol en ligne droite et claire : encore un trait propre | Laisser la forme principale porter la visée (la constellation). Au sol, seulement des marques irrégulières, après le coup. |
+| Vapeur claire et opaque : du coton | Vapeur sombre, très transparente, qui tombe. |
+| Couture dans le ciel : une texture lue avec un angle multiplié par un nombre non entier | Multiplier l'angle par des entiers, pour retomber sur la période de la texture. |
+| Joints du dallage éclairés le long d'une ligne : des anneaux propres réapparaissent | Pas de lumière continue dans des joints concentriques. Si on en met, par plaques et faible. |
 | Erreur de shader silencieuse : `smoothstep` avec deux bornes égales (largeur nulle) a rendu tout le haut de la cloche blanc | Multiplier par `step(ε, largeur)` partout où une largeur peut tomber à zéro. |
 | Éclats chauds trop gros et à plat ; dissolution en blocs qui fait des tirets | Petits éclats qui refroidissent vite ; dissolution par bruit continu. |
 | Rubans ou filets d'encre qui ressortent blancs | Les éléments d'encre restent sombres, avec une lueur sur les bords. |
@@ -194,6 +202,13 @@ Pour chaque Art, change **au moins** :
 
    Garder ce socle, réécrire la scène de l'Art, publier, et attendre le retour avant Godot.
 
+   Pour le verre, le froid et le tir, partir de `prototypes/trait-etoile.html` :
+   - la passe de verre : la scène est copiée, puis le verre la lit de travers (réfraction et dispersion) ;
+   - la déchirure de nuit, dont les étoiles se lisent selon la direction du regard ;
+   - les cristaux en instances et le givre en fougère ;
+   - la fonction `froid()`, pendant de `corpsNoir()` ;
+   - le monde qui se fige (les particules ralenties à 6 %).
+
    Pour la matière, partir aussi de `prototypes/cloche-felee.html` :
    - le bronze : `MeshStandardMaterial` complété par `onBeforeCompile` (relief en bosselage, patine, usure, coulée qui fige en croûte, fêlure), avec une carte d'environnement ;
    - les fragments prédécoupés (Voronoi sur la coque) ;
@@ -247,7 +262,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 | Ruée du Sang | Sang | Là où le corps est passé, une ligne d'épines de verre de sang jaillit derrière lui (`VagueEpines`). |
 | `CLOCHE_FELEE` | Airain | **Fait** en prototype : `prototypes/cloche-felee.html`, fiche `docs/arts/CLOCHE_FELEE.md`. Le ciel tourne et s'ouvre ; la cloche s'y condense en suie, se remplit de bronze en fusion, tombe, sonne, résonne trois fois dans la pierre et se brise en vrais morceaux. En repli : poussière en cercle et fissures. |
 | `COUP_DE_BELIER` | Airain | Forme ONDE : la masse frappe le sol, il se fend, la poussière s'ouvre en cercle. Sinon : la poussière file devant le bouclier, le sol se fend au bout. |
-| `TRAIT_D_ETOILE` | Astro | « La lance d'étoile tracée par une constellation ». |
+| `TRAIT_D_ETOILE` | Astro | **Fait** en prototype : `prototypes/trait-etoile.html`, fiche `docs/arts/TRAIT_D_ETOILE.md`. L'Astrologue trace une constellation, la replie en une lance de verre, la jette à travers trois bêtes, et les vaincus deviennent une constellation qui s'éteint. |
 | `NUIT_LUE` | Astro | Une constellation se lève dans le ciel (environ 6 s). |
 | `INSTANT_FIGE` | à confirmer | Fissures au sol pour l'instant. |
 | `FLORAISON` | Miasme | « La fleur de spores qui s'ouvre » : cercle et colonne. |
@@ -261,6 +276,7 @@ D'après le code de `mise_en_scene_arts.gd` et les notes de la session du 25 oct
 - `prototypes/taille-rouge.html` : la barre de qualité, avec image, son, caméras et ralenti.
 - `prototypes/sons/taille-rouge/LISEZMOI.md` : la fiche son.
 - `prototypes/cloche-felee.html`, `docs/arts/CLOCHE_FELEE.md` et `prototypes/sons/cloche-felee/LISEZMOI.md` : un deuxième exemple, lourd et vertical, qui montre comment un Art se distingue du premier. C'est aussi **la référence pour la matière** (section 3.6).
+- `prototypes/trait-etoile.html`, `docs/arts/TRAIT_D_ETOILE.md` et `prototypes/sons/trait-etoile/LISEZMOI.md` : un troisième exemple, froid et à distance. C'est la référence pour le verre, la nuit et le tir.
 - Dans le projet du jeu :
   - `docs/REPRISE_SESSION.md` ;
   - `docs/00_decisions/ADR-027-le-poids-des-combats.md` § 9 à 18 ;
